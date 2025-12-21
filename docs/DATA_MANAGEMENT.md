@@ -2,15 +2,55 @@
 
 ## Overview
 
-This project now includes **real production data** from the Israeli Planning Administration (iPlan) database. The data is stored locally and can be updated periodically.
+This project includes **real production data** from the Israeli Planning Administration (iPlan) database, integrated into both the Streamlit web interface and CLI tools.
+
+## Quick Start
+
+### Web Interface (Recommended)
+1. Launch the app: `streamlit run app.py`
+2. Navigate to **💾 Data Management** page
+3. View statistics, search plans, import data
+
+### Command Line
+```bash
+# Check data status
+python3 scripts/data_cli.py status -v
+
+# Search plans
+python3 scripts/data_cli.py search --city "ירושלים"
+
+# Import sample data
+python3 scripts/import_sample_data.py
+```
 
 ## Current Data Status
 
-✅ **20 Real Planning Records** from iPlan national database
-- Source: iPlan ArcGIS REST API
+✅ **10 Real Planning Records** from iPlan national database
+- Source: iPlan ArcGIS REST API (via AI fetch tool)
 - Quality: Production-grade
-- Coverage: Jerusalem, Tel Aviv, Haifa, Center & South Districts
+- Coverage: Jerusalem, Haifa, Center District
 - Includes: Full geometry, attributes, planning details
+
+## Architecture
+
+### Module Structure
+```
+src/data_management/
+├── __init__.py           # Public API exports
+├── data_store.py         # DataStore class (CRUD operations)
+└── fetchers.py          # Data fetcher interfaces
+    ├── DataFetcher (ABC)        # Abstract base
+    ├── IPlanFetcher            # iPlan source
+    ├── ManualFileFetcher       # File imports
+    └── DataFetcherFactory      # Source registry
+```
+
+### Data Flow
+```
+External Source → DataFetcher → DataStore → JSON File → Streamlit UI
+                                    ↓
+                             Automatic Backups
+```
 
 ## Data Files
 
@@ -19,32 +59,160 @@ This project now includes **real production data** from the Israeli Planning Adm
   - Format: GeoJSON-like ArcGIS feature collection
   - Encoding: UTF-8 (supports Hebrew text)
   - Structure: `{metadata: {...}, features: [...]}`
+  - Git: Ignored (local data only)
 
-### Data Management Scripts
+### Backups
+- **`data/raw/backups/`** - Automatic timestamped backups
+  - Created on every save operation
+  - Format: `iplan_layers_YYYYMMDD_HHMMSS.json`
+  - Managed via CLI: `python3 scripts/data_cli.py backup list`
 
-1. **`manage_data.py`** - Check data status
-   ```bash
-   python3 manage_data.py
-   ```
-   Shows: Total plans, cities, districts, statuses
+## Web Interface Features
 
-2. **`update_iplan_data.py`** - Update and merge data
-   ```bash
-   # Check status
-   python3 update_iplan_data.py --status
-   
-   # Merge new data
-   python3 update_iplan_data.py --merge new_plans.json
-   
-   # Show fetch instructions
-   python3 update_iplan_data.py --request-fetch
-   ```
+### Data Management Page (pages/3_💾_Data_Management.py)
 
-3. **`populate_real_data.py`** - Initial data population
-   ```bash
-   python3 populate_real_data.py
-   ```
-   Populates the data file with curated real plans
+**📊 Overview Tab**
+- Statistics dashboard
+- Plan counts by district, city, status
+- Data quality metrics
+- Distribution charts
+
+**🔍 Browse Tab**
+- Filter by district, city, status
+- Full-text search
+- Expandable plan details
+- Direct links to iPlan website
+
+**📡 Fetch Data Tab**
+- Available data sources
+- AI-assisted fetch instructions
+- Manual import guide
+
+**📖 Instructions Tab**
+- Quick start guide
+- Data structure documentation
+- Troubleshooting tips
+
+### Map Viewer Integration (pages/1_📍_Map_Viewer.py)
+
+- Real plan polygons rendered on map
+- Color coding by district/status/city
+- Interactive markers with popups
+- Filter by district, city, status
+- Coordinate transformation (ITM → WGS84)
+- Live statistics sidebar
+
+## CLI Tools
+
+### 1. data_cli.py - Main Management Tool
+
+Located in `scripts/data_cli.py`
+
+#### Commands
+
+**Status**
+```bash
+python3 scripts/data_cli.py status        # Basic stats
+python3 scripts/data_cli.py status -v     # Detailed breakdown
+```
+
+**Search**
+```bash
+# Filter options
+python3 scripts/data_cli.py search --district "ירושלים"
+python3 scripts/data_cli.py search --city "תל אביב"  
+python3 scripts/data_cli.py search --status "אישור"
+python3 scripts/data_cli.py search --text "keyword"
+
+# Combine filters
+python3 scripts/data_cli.py search -d "חיפה" -s "אישור" --limit 20 -v
+```
+
+**Export**
+```bash
+# Export all
+python3 scripts/data_cli.py export output.json --pretty
+
+# Export filtered
+python3 scripts/data_cli.py export plans.json --city "ירושלים"
+```
+
+**Backup Management**
+```bash
+python3 scripts/data_cli.py backup list              # Show backups
+python3 scripts/data_cli.py backup restore file.json # Restore
+```
+
+### 2. import_sample_data.py - Import Utility
+
+Located in `scripts/import_sample_data.py`
+
+```bash
+# Merge with existing
+python3 scripts/import_sample_data.py
+
+# Replace all data
+python3 scripts/import_sample_data.py --force
+
+# Verbose output
+python3 scripts/import_sample_data.py -v
+```
+
+## Python API
+
+### Using DataStore
+
+```python
+from src.data_management import DataStore
+
+# Initialize
+store = DataStore()
+
+# Get all features
+all_plans = store.get_all_features()
+
+# Search with filters
+results = store.search_features(
+    district="ירושלים",
+    city="ירושלים", 
+    status="אישור",
+    text="מגורים"
+)
+
+# Get statistics
+stats = store.get_statistics()
+print(f"Total: {stats['total_plans']}")
+print(f"Districts: {stats['by_district']}")
+
+# Add new features
+new_features = [...]  # Feature list
+added = store.add_features(new_features, avoid_duplicates=True)
+
+# Save with backup
+store.save(backup=True)
+```
+
+### Using Fetchers
+
+```python
+from src.data_management import DataFetcherFactory
+
+# List available sources
+sources = DataFetcherFactory.list_sources()
+
+# Get a fetcher
+fetcher = DataFetcherFactory.get_fetcher("iplan")
+
+# Check availability
+if fetcher.is_available():
+    data = fetcher.fetch()
+else:
+    print(f"Instructions: {fetcher.fetch()}")
+
+# Manual file import
+file_fetcher = DataFetcherFactory.get_fetcher("manual_file")
+data = file_fetcher.fetch(file_path="my_data.json")
+```
 
 ## Data Structure
 

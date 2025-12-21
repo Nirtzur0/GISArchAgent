@@ -137,17 +137,21 @@ def main():
     
     # Quick access buttons
     st.markdown("### 🚀 Quick Access")
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
     
     with col1:
         if st.button("📍 **View Maps**", use_container_width=True, help="Interactive planning maps"):
             st.switch_page("pages/1_📍_Map_Viewer.py")
     
     with col2:
-        if st.button("� **Building Rights**", use_container_width=True, help="Calculate building rights"):
+        if st.button("📐 **Building Rights**", use_container_width=True, help="Calculate building rights"):
             st.switch_page("pages/2_📐_Plan_Analyzer.py")
     
     with col3:
+        if st.button("💾 **Data Management**", use_container_width=True, help="Manage planning data sources"):
+            st.switch_page("pages/3_💾_Data_Management.py")
+    
+    with col4:
         if st.button("💬 **Ask Questions**", use_container_width=True, help="Query planning regulations"):
             # Stay on main page, scroll to query section
             pass

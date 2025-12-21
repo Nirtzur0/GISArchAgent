@@ -8,10 +8,38 @@ This is a tool for architecture firms working in Israel. It helps you:
 - 🔍 Search through planning documents (תוכניות) from the iPlan system
 - 📋 Query planning regulations and get clear answers
 - 📐 Calculate building rights based on zoning
+- �️ Visualize plans on interactive maps
+- 💾 Manage planning data from multiple sources
 - 🖼️ Analyze plan images with AI vision
 - ✅ Check compliance with regulations
 
 Think of it as having a planning expert who knows all the regulations and can read Hebrew planning documents.
+
+## Features
+
+### 🗺️ Interactive Map Viewer
+- Real planning data from iPlan database
+- Filter by district, city, status
+- Color-coded plan boundaries
+- Interactive markers with details
+- ITM to WGS84 coordinate transformation
+
+### 💾 Data Management
+- Browse and search 10+ real plans
+- Import data from files or AI-assisted fetch
+- Automatic backups
+- Statistics dashboard
+- Extensible architecture for multiple data sources
+
+### 📐 Plan Analyzer
+- Calculate building rights
+- Query regulations
+- Compliance checking
+
+### 💬 Natural Language Interface
+- Ask questions in English or Hebrew
+- Get clear answers with sources
+- Context-aware responses
 
 ## Quick Start
 
@@ -20,7 +48,7 @@ Think of it as having a planning expert who knows all the regulations and can re
 pip install -r requirements.txt
 
 # Set up your API key (for vision analysis)
-echo \"GEMINI_API_KEY=your_key_here\" > .env
+echo "GEMINI_API_KEY=your_key_here" > .env
 
 # Run the app
 streamlit run app.py
@@ -28,14 +56,37 @@ streamlit run app.py
 
 Open your browser to http://localhost:8501 and start exploring!
 
+## Data Management
+
+### Web Interface
+1. Launch app: `streamlit run app.py`
+2. Go to **💾 Data Management** page
+3. Browse plans, view statistics, import data
+
+### Command Line
+```bash
+# Check data status
+python3 scripts/data_cli.py status -v
+
+# Search plans
+python3 scripts/data_cli.py search --city "ירושלים"
+
+# Import sample data
+python3 scripts/import_sample_data.py
+```
+
+See [docs/DATA_MANAGEMENT.md](docs/DATA_MANAGEMENT.md) for details.
+
 ## How to Use It
 
 ### In the Web App
 
 The Streamlit interface has everything you need:
+- **📍 Map Viewer** - Visualize plans on interactive maps
+- **📐 Plan Analyzer** - Calculate building rights
+- **💾 Data Management** - Manage planning data sources
 - Ask questions about regulations in natural language
 - Search for plans by location or ID
-- Calculate building rights for your plot
 - View results with sources and explanations
 
 ### In Your Code
@@ -43,9 +94,15 @@ The Streamlit interface has everything you need:
 ```python
 from src.infrastructure.factory import get_factory
 from src.application.dtos import PlanSearchQuery
+from src.data_management import DataStore
 
 # Get the factory
 factory = get_factory()
+
+# Use data store
+store = DataStore()
+plans = store.search_features(city="ירושלים")
+```
 
 # Get a service
 service = factory.get_plan_search_service()
