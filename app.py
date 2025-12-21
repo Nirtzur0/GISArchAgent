@@ -256,7 +256,7 @@ def show_query_page():
                 
                 # Create query DTO
                 reg_query = RegulationQuery(
-                    question=query,
+                    query_text=query,
                     max_results=5
                 )
                 
