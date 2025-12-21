@@ -8,7 +8,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langgraph.graph import StateGraph, END
-from langgraph.prebuilt import ToolExecutor
+from langgraph.prebuilt import ToolNode
 
 from src.config import settings
 from src.tools import ArchitectureTools
@@ -45,7 +45,7 @@ class ArchitectureAgent:
         # Initialize tools
         self.tools_manager = ArchitectureTools(vectorstore)
         self.tools = self.tools_manager.get_tools()
-        self.tool_executor = ToolExecutor(self.tools)
+        self.tool_node = ToolNode(self.tools)
         
         # Bind tools to LLM
         self.llm_with_tools = self.llm.bind_tools(self.tools)
@@ -151,16 +151,11 @@ Available information includes:
         if not tool_calls:
             return state
         
-        # Execute tools
-        tool_messages = []
-        for tool_call in tool_calls:
-            tool_result = self.tool_executor.invoke(tool_call)
-            tool_messages.append(tool_result)
+        # Execute tools using ToolNode
+        # ToolNode expects the state to have messages with tool_calls
+        tool_result_state = self.tool_node.invoke(state)
         
-        return {
-            **state,
-            "messages": tool_messages
-        }
+        return tool_result_state
     
     def _synthesize_node(self, state: AgentState) -> AgentState:
         """Synthesize final answer from gathered information.

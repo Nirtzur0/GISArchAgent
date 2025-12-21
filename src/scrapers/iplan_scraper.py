@@ -3,8 +3,11 @@
 import asyncio
 import logging
 from typing import List, Dict, Optional
+import ssl
+import certifi
 from bs4 import BeautifulSoup
 import aiohttp
+import requests
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
@@ -12,6 +15,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.service import Service
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 from src.config import settings
 
@@ -19,16 +23,49 @@ logger = logging.getLogger(__name__)
 
 
 class IPlanScraper:
-    """Scraper for the iPlan system to extract planning regulations and data."""
+    """Scraper for the iPlan system to extract planning regulations and data.
+    
+    Uses multiple strategies to bypass SSL errors:
+    1. Custom SSL context with relaxed verification
+    2. Fallback to requests library with custom adapters
+    3. Real-time querying of ArcGIS REST API instead of full scraping
+    """
     
     def __init__(self):
         self.base_url = settings.iplan_base_url
         self.api_url = settings.iplan_api_url
         self.session: Optional[aiohttp.ClientSession] = None
+        self._ssl_context = self._create_ssl_context()
+        
+    def _create_ssl_context(self) -> ssl.SSLContext:
+        """Create a custom SSL context that handles problematic certificates."""
+        # Try multiple SSL context strategies
+        try:
+            # Strategy 1: Use system certificates with fallback
+            ssl_context = ssl.create_default_context(cafile=certifi.where())
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+            return ssl_context
+        except Exception as e:
+            logger.warning(f"SSL context creation failed, using insecure context: {e}")
+            # Strategy 2: Completely disable SSL verification (last resort)
+            ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+            return ssl_context
         
     async def __aenter__(self):
         """Async context manager entry."""
-        self.session = aiohttp.ClientSession()
+        # Create session with custom SSL context and connector
+        connector = aiohttp.TCPConnector(ssl=self._ssl_context)
+        timeout = aiohttp.ClientTimeout(total=30)
+        self.session = aiohttp.ClientSession(
+            connector=connector,
+            timeout=timeout,
+            headers={
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+            }
+        )
         return self
         
     async def __aexit__(self, exc_type, exc_val, exc_tb):
@@ -48,28 +85,55 @@ class IPlanScraper:
         driver = webdriver.Chrome(service=service, options=chrome_options)
         return driver
     
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     async def fetch_arcgis_layer_info(self, layer_url: str) -> Dict:
-        """Fetch information about an ArcGIS map service layer."""
+        """Fetch information about an ArcGIS map service layer with retry logic."""
         if not self.session:
             raise RuntimeError("Session not initialized. Use async context manager.")
         
         try:
             params = {"f": "json"}
-            async with self.session.get(layer_url, params=params) as response:
-                response.raise_for_status()
-                return await response.json()
+            async with self.session.get(layer_url, params=params, ssl=self._ssl_context) as response:
+                if response.status == 200:
+                    return await response.json()
+                else:
+                    logger.warning(f"Non-200 status from {layer_url}: {response.status}")
+                    return {}
+        except aiohttp.ClientSSLError as e:
+            logger.warning(f"SSL error from {layer_url}, trying fallback: {e}")
+            return self._fetch_with_requests_fallback(layer_url)
         except Exception as e:
             logger.error(f"Error fetching layer info from {layer_url}: {e}")
             return {}
     
+    def _fetch_with_requests_fallback(self, url: str) -> Dict:
+        """Fallback method using requests library with SSL verification disabled."""
+        try:
+            params = {"f": "json"}
+            response = requests.get(
+                url, 
+                params=params, 
+                verify=False,  # Disable SSL verification
+                timeout=30,
+                headers={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'}
+            )
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            logger.error(f"Fallback fetch also failed for {url}: {e}")
+            return {}
+    
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     async def query_arcgis_layer(
         self, 
         layer_url: str, 
         where: str = "1=1",
         return_geometry: bool = False,
-        out_fields: str = "*"
+        out_fields: str = "*",
+        result_offset: int = 0,
+        result_record_count: int = 100
     ) -> List[Dict]:
-        """Query an ArcGIS layer for features."""
+        """Query an ArcGIS layer for features with pagination support."""
         if not self.session:
             raise RuntimeError("Session not initialized. Use async context manager.")
         
@@ -78,16 +142,41 @@ class IPlanScraper:
             "where": where,
             "outFields": out_fields,
             "returnGeometry": str(return_geometry).lower(),
+            "resultOffset": result_offset,
+            "resultRecordCount": result_record_count,
             "f": "json"
         }
         
         try:
-            async with self.session.get(query_url, params=params) as response:
-                response.raise_for_status()
-                data = await response.json()
-                return data.get("features", [])
+            async with self.session.get(query_url, params=params, ssl=self._ssl_context) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    return data.get("features", [])
+                else:
+                    logger.warning(f"Non-200 status from {query_url}: {response.status}")
+                    return []
+        except aiohttp.ClientSSLError as e:
+            logger.warning(f"SSL error querying {query_url}, trying fallback: {e}")
+            return self._query_with_requests_fallback(query_url, params)
         except Exception as e:
             logger.error(f"Error querying layer {layer_url}: {e}")
+            return []
+    
+    def _query_with_requests_fallback(self, url: str, params: Dict) -> List[Dict]:
+        """Fallback query method using requests library."""
+        try:
+            response = requests.get(
+                url,
+                params=params,
+                verify=False,
+                timeout=30,
+                headers={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'}
+            )
+            response.raise_for_status()
+            data = response.json()
+            return data.get("features", [])
+        except Exception as e:
+            logger.error(f"Fallback query also failed for {url}: {e}")
             return []
     
     def scrape_main_page(self) -> Dict[str, List[str]]:

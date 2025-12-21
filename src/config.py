@@ -8,9 +8,11 @@ class Settings(BaseSettings):
     """Application settings."""
     
     # LLM Configuration
-    openai_api_key: str
+    openai_api_key: Optional[str] = None
     anthropic_api_key: Optional[str] = None
-    model_name: str = "gpt-4-turbo-preview"
+    google_api_key: Optional[str] = None  # For Gemini models
+    model_name: str = "gpt-4o-mini"  # Options: gpt-4o-mini, gemini-1.5-flash, gemini-1.5-pro
+    llm_provider: str = "openai"  # Options: openai, google, anthropic
     temperature: float = 0.1
     max_tokens: int = 4000
     

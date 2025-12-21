@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import List, Dict
 import json
 
-from langchain.schema import Document
+from langchain_core.documents import Document
 
 from src.config import settings
 from src.scrapers import IPlanScraper
