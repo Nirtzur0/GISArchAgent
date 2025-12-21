@@ -191,21 +191,18 @@ GISArchAgent/
 └── data/                    # Databases and cache
 ```
 
-## Documentation
+## 📚 Documentation
 
-- 📘 [Quick Start](docs/QUICK_START.md) - Get running in 5 minutes
-- 🏛️ [Architecture Guide](docs/ARCHITECTURE.md) - How it all works
-- 📊 [Implementation Summary](docs/IMPLEMENTATION_SUMMARY.md) - What we built
+**→ See [DOCUMENTATION_MAP.md](DOCUMENTATION_MAP.md) for complete documentation index and maintenance guide**
 
-## Documentation
-
-📚 **[Complete documentation available in docs/](docs/README.md)**
-
-Key documents:
-- [Architecture Overview](docs/ARCHITECTURE.md)
-- [Generic Pipeline Guide](docs/GENERIC_PIPELINE_ARCHITECTURE.md)
-- [Data Management](docs/DATA_MANAGEMENT.md)
-- [Quick Start Guide](docs/QUICK_START.md)
+All detailed documentation is organized in `docs/`:
+- [Quick Start](docs/QUICK_START.md) - Get running in 5 minutes
+- [How It Works](docs/HOW_IT_WORKS.md) - Complete system explanation
+- [Architecture](docs/ARCHITECTURE.md) - Clean architecture details
+- [Vision Features](docs/VISION_FEATURES.md) - AI document analysis
+- [Vector DB Validation](docs/VECTOR_DB_VALIDATION.md) - Health monitoring
+- [Run Guide](docs/RUN_GUIDE.md) - Testing and usage
+- [Data Management](docs/DATA_MANAGEMENT.md) - Data pipeline
 
 ## Development
 

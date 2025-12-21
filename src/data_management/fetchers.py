@@ -2,9 +2,9 @@
 Data Fetchers - Abstract interfaces and implementations for fetching data.
 
 Provides a pluggable architecture for fetching planning data from various sources:
-- iPlan API (via AI assistant's fetch_webpage tool)
-- Future: MAVAT, municipal APIs, open data portals
+- iPlan API (via Selenium - bypasses WAF)
 - Manual file import
+- Future: MAVAT, municipal APIs, open data portals
 """
 
 from abc import ABC, abstractmethod
@@ -46,11 +46,11 @@ class DataFetcher(ABC):
 
 class IPlanFetcher(DataFetcher):
     """
-    iPlan data fetcher.
+    iPlan data fetcher (Legacy - deprecated).
     
-    Note: Direct API access is blocked by WAF. This fetcher provides
-    documentation and structure for when automated access becomes possible,
-    or for manual data import workflows.
+    Note: Direct API access is blocked by WAF. 
+    Use IPlanSeleniumFetcher instead for actual data fetching.
+    This class is kept for backwards compatibility and documentation.
     """
     
     API_ENDPOINT = (
@@ -85,17 +85,17 @@ class IPlanFetcher(DataFetcher):
         """
         logger.warning(
             "Direct iPlan API access is blocked by WAF. "
-            "Use AI assistant's fetch_webpage tool instead."
+            "Use IPlanSeleniumFetcher instead."
         )
         
         return {
             "metadata": {
-                "source": "iPlan API (manual fetch required)",
+                "source": "iPlan API (deprecated - use IPlanSeleniumFetcher)",
                 "endpoint": self.endpoint,
                 "fetched_at": datetime.now().isoformat(),
-                "status": "requires_manual_fetch",
+                "status": "deprecated",
                 "instructions": (
-                    "Ask AI assistant: 'Please fetch fresh iPlan data' "
+                    "Use IPlanSeleniumFetcher for automated data fetching "
                     "or export manually from https://www.iplan.gov.il"
                 )
             },
@@ -267,7 +267,88 @@ class DataFetcherFactory:
         logger.info(f"Registered new fetcher: {name}")
 
 
-# Future fetchers can be added here:
-# class MAVATFetcher(DataFetcher): ...
-# class MunicipalAPIFetcher(DataFetcher): ...
-# class OpenDataFetcher(DataFetcher): ...
+class IPlanSeleniumFetcher(DataFetcher):
+    """
+    iPlan data fetcher using Selenium (WAF bypass).
+    
+    This is the recommended way to fetch iPlan data. Uses browser automation
+    to bypass WAF protection and access the iPlan API reliably.
+    """
+    
+    def __init__(self, headless: bool = True):
+        """
+        Initialize Selenium-based iPlan fetcher.
+        
+        Args:
+            headless: Run browser in headless mode
+        """
+        from .selenium_fetcher import IPlanSeleniumSource
+        self.source = IPlanSeleniumSource(headless=headless)
+    
+    def fetch(
+        self,
+        service_name: str = 'xplan',
+        max_plans: Optional[int] = None,
+        where: str = "1=1"
+    ) -> Dict[str, Any]:
+        """
+        Fetch data from iPlan using Selenium.
+        
+        Args:
+            service_name: Service to query (xplan, xplan_full, tama35, tama)
+            max_plans: Maximum plans to fetch
+            where: SQL WHERE clause for filtering
+            
+        Returns:
+            Dict with metadata and features
+        """
+        try:
+            plans = self.source.discover_plans(
+                service_name=service_name,
+                max_plans=max_plans,
+                where=where
+            )
+            
+            return {
+                "metadata": {
+                    "source": f"iPlan API ({service_name})",
+                    "fetched_at": datetime.now().isoformat(),
+                    "status": "success",
+                    "count": len(plans),
+                    "method": "selenium"
+                },
+                "features": plans
+            }
+        except Exception as e:
+            logger.error(f"Failed to fetch from iPlan: {e}")
+            return {
+                "metadata": {
+                    "source": "iPlan API",
+                    "fetched_at": datetime.now().isoformat(),
+                    "status": "error",
+                    "error": str(e)
+                },
+                "features": []
+            }
+    
+    def get_source_name(self) -> str:
+        """Get human-readable source name."""
+        return "iPlan GIS (Selenium)"
+    
+    def is_available(self) -> bool:
+        """Check if Selenium fetcher is available."""
+        try:
+            from selenium import webdriver
+            return True
+        except ImportError:
+            return False
+    
+    def close(self):
+        """Close Selenium resources."""
+        if hasattr(self, 'source'):
+            self.source.close()
+
+
+# Register the Selenium fetcher as the default iPlan fetcher
+DataFetcherFactory.register_fetcher('iplan_selenium', IPlanSeleniumFetcher)
+DataFetcherFactory.register_fetcher('iplan', IPlanSeleniumFetcher)  # Make it default

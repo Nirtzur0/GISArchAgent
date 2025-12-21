@@ -9,16 +9,21 @@ import logging
 import os
 from typing import Optional
 from pathlib import Path
+from datetime import datetime
 
 from src.domain.repositories import IPlanRepository, IRegulationRepository
 from src.infrastructure.repositories.iplan_repository import IPlanGISRepository
 from src.infrastructure.repositories.chroma_repository import ChromaRegulationRepository
 from src.infrastructure.services.vision_service import GeminiVisionService
 from src.infrastructure.services.cache_service import FileCacheService
+from src.infrastructure.services.document_service import MavatDocumentFetcher, DocumentProcessor
 from src.application.services.plan_search_service import PlanSearchService
 from src.application.services.regulation_query_service import RegulationQueryService
 from src.application.services.building_rights_service import BuildingRightsService
+from src.application.services.plan_upload_service import PlanUploadService
 from src.vectorstore.initializer import VectorDBInitializer
+from src.vectorstore.health_check import VectorDBHealthChecker, check_vectordb_health
+from src.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +41,8 @@ class ApplicationFactory:
         cache_dir: str = "data/cache"
     ):
         """Set up the factory with your config."""
-        self.gemini_api_key = gemini_api_key or os.getenv('GEMINI_API_KEY')
+        # Use settings.gemini_api_key if available, fall back to passed parameter
+        self.gemini_api_key = gemini_api_key or settings.gemini_api_key or settings.google_api_key
         self.chroma_persist_dir = chroma_persist_dir
         self.cache_dir = cache_dir
         
@@ -45,11 +51,14 @@ class ApplicationFactory:
         self._regulation_repository: Optional[IRegulationRepository] = None
         self._vision_service: Optional[GeminiVisionService] = None
         self._cache_service: Optional[FileCacheService] = None
+        self._document_fetcher: Optional[MavatDocumentFetcher] = None
+        self._document_processor: Optional[DocumentProcessor] = None
         
         # Application services (singletons)
         self._plan_search_service: Optional[PlanSearchService] = None
         self._regulation_query_service: Optional[RegulationQueryService] = None
         self._building_rights_service: Optional[BuildingRightsService] = None
+        self._plan_upload_service: Optional[PlanUploadService] = None
         
         logger.info("Factory ready to go!")
     
@@ -75,29 +84,55 @@ class ApplicationFactory:
         return self._regulation_repository
     
     def _ensure_vectordb_initialized(self):
-        """Ensure vector database is initialized with data."""
+        """Ensure vector database is initialized with data and perform health check."""
         try:
             if self._regulation_repository:
-                initializer = VectorDBInitializer(self._regulation_repository)
-                status = initializer.get_initialization_status()
+                # Perform health check
+                health_result = check_vectordb_health(self._regulation_repository)
                 
-                if not status.get("initialized"):
+                if health_result.status == 'uninitialized':
                     logger.warning("Vector database is empty. Auto-initializing...")
+                    initializer = VectorDBInitializer(self._regulation_repository)
                     success = initializer.initialize_with_samples()
+                    
                     if success:
                         logger.info("✓ Vector database initialized successfully")
+                        # Update metadata
+                        checker = VectorDBHealthChecker(self._regulation_repository)
+                        checker.update_metadata()
                     else:
                         logger.error("✗ Failed to initialize vector database")
-                else:
-                    logger.info(f"Vector database ready: {status.get('total_regulations', 0)} regulations")
+                
+                elif health_result.status == 'critical':
+                    logger.error(f"❌ Vector database health: CRITICAL")
+                    for issue in health_result.issues:
+                        logger.error(f"   - {issue}")
+                    for rec in health_result.recommendations:
+                        logger.warning(f"   💡 {rec}")
+                
+                elif health_result.status == 'warning':
+                    logger.warning(f"⚠️ Vector database health: WARNING")
+                    logger.info(f"   Regulations: {health_result.stats.get('total_regulations', 0)}")
+                    if health_result.last_updated:
+                        age_days = (datetime.now() - health_result.last_updated).days
+                        logger.info(f"   Last updated: {age_days} days ago")
+                    for issue in health_result.issues:
+                        logger.warning(f"   - {issue}")
+                
+                else:  # healthy
+                    logger.info(f"✅ Vector database healthy: {health_result.stats.get('total_regulations', 0)} regulations")
+                    if health_result.last_updated:
+                        age_days = (datetime.now() - health_result.last_updated).days
+                        logger.info(f"   Last updated: {age_days} days ago")
+        
         except Exception as e:
-            logger.error(f"Error checking vector database initialization: {e}")
+            logger.error(f"Error checking vector database health: {e}")
     
     def get_vectordb_status(self) -> dict:
-        """Get vector database initialization status.
+        """Get comprehensive vector database health status.
         
         Returns:
-            Dictionary with status information
+            Dictionary with detailed health information
         """
         try:
             if not self._regulation_repository:
@@ -107,8 +142,20 @@ class ApplicationFactory:
                     "message": "Repository not yet instantiated"
                 }
             
-            initializer = VectorDBInitializer(self._regulation_repository)
-            return initializer.get_initialization_status()
+            # Perform health check
+            health_result = check_vectordb_health(self._regulation_repository)
+            
+            return {
+                "initialized": health_result.is_healthy or health_result.status == 'warning',
+                "status": health_result.status,
+                "total_regulations": health_result.stats.get('total_regulations', 0),
+                "last_updated": health_result.last_updated.isoformat() if health_result.last_updated else None,
+                "needs_refresh": health_result.needs_refresh,
+                "issues": health_result.issues,
+                "recommendations": health_result.recommendations,
+                "collection_name": health_result.stats.get('collection_name'),
+                "persist_directory": health_result.stats.get('persist_directory')
+            }
         except Exception as e:
             return {
                 "initialized": False,
@@ -119,10 +166,13 @@ class ApplicationFactory:
     def get_vision_service(self) -> Optional[GeminiVisionService]:
         """Get the vision service (Gemini AI for image analysis)."""
         if not self._vision_service and self.gemini_api_key:
-            self._vision_service = GeminiVisionService(
-                api_key=self.gemini_api_key
-            )
-            logger.info("Vision service created")
+            try:
+                self._vision_service = GeminiVisionService(
+                    api_key=self.gemini_api_key
+                )
+                logger.info("Vision service created")
+            except Exception as e:
+                logger.error(f"Failed to create vision service: {e}")
         
         return self._vision_service
     
@@ -164,9 +214,37 @@ class ApplicationFactory:
             self._building_rights_service = BuildingRightsService(
                 regulation_repository=self.get_regulation_repository()
             )
-            logger.info("Created building rights service")
+    
+    def get_document_fetcher(self) -> MavatDocumentFetcher:
+        """Get document fetcher service for Mavat."""
+        if not self._document_fetcher:
+            self._document_fetcher = MavatDocumentFetcher()
+            logger.info("Created document fetcher service")
         
-        return self._building_rights_service
+        return self._document_fetcher
+    
+    def get_document_processor(self) -> DocumentProcessor:
+        """Get document processor service."""
+        if not self._document_processor:
+            self._document_processor = DocumentProcessor()
+            logger.info("Created document processor service")
+        
+        return self._document_processor
+    
+    def get_plan_upload_service(self) -> PlanUploadService:
+        """Get plan upload service."""
+        if not self._plan_upload_service:
+            vision_service = self.get_vision_service()
+            if not vision_service:
+                logger.warning("Vision service not available - upload service will be limited")
+            
+            self._plan_upload_service = PlanUploadService(
+                vision_service=vision_service,
+                regulation_repo=self.get_regulation_repository()
+            )
+            logger.info("Created plan upload service")
+        
+        return self._plan_upload_service
     
     def cleanup(self):
         """Cleanup resources."""

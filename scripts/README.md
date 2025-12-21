@@ -6,10 +6,11 @@ Command-line utilities and data management tools.
 
 ```
 scripts/
-├── README.md                   # This file
-├── data_cli.py                 # Data management CLI (main tool)
-├── import_sample_data.py       # Import sample data utility
-└── utilities/                  # Utility scripts
+├── README.md                    # This file
+├── data_cli.py                  # Data management CLI
+├── build_vectordb_cli.py        # 🆕 Vector DB builder CLI (integrated)
+├── import_sample_data.py        # Import sample data utility
+└── utilities/                   # Utility scripts
     ├── README.md
     ├── reinitialize_vectordb.py
     ├── manage_data.py
@@ -20,9 +21,42 @@ scripts/
 
 ## Active Scripts
 
-### 1. data_cli.py - Main Data Management Tool
+### 🆕 1. build_vectordb_cli.py - Vector Database Builder (RECOMMENDED)
 
-Comprehensive CLI for data operations.
+**NEW**: Unified pipeline for building the vector database using Selenium.
+
+#### Check Prerequisites
+```bash
+python3 scripts/build_vectordb_cli.py check
+```
+
+#### Check Status
+```bash
+python3 scripts/build_vectordb_cli.py status
+python3 scripts/build_vectordb_cli.py status -v  # Verbose
+```
+
+#### Build Database
+```bash
+# Test build (10 plans)
+python3 scripts/build_vectordb_cli.py build --max-plans 10
+
+# Production build (100 plans)
+python3 scripts/build_vectordb_cli.py build --max-plans 100
+
+# Full rebuild (clear and rebuild)
+python3 scripts/build_vectordb_cli.py build --rebuild --max-plans 1000
+
+# Options
+python3 scripts/build_vectordb_cli.py build \
+  --max-plans 100 \
+  --no-documents \      # Skip document fetching
+  --no-vision \         # Skip vision processing
+  --no-headless \       # Show browser (debugging)
+  -v                    # Verbose logging
+```
+
+### 2. data_cli.py - Data Management Tool
 
 #### Status
 ```bash

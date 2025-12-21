@@ -2,19 +2,16 @@
 iPlan GIS data source implementation.
 
 Implements the generic DataSource interface for Israeli national planning database.
+Uses Selenium for reliable data access (bypasses WAF).
 """
 
 import logging
 from typing import Iterator, Dict, Any, Optional
 from datetime import datetime
-import requests
-import urllib3
 
+from src.data_management.selenium_fetcher import IPlanSeleniumSource
 from src.infrastructure.services.cache_service import FileCacheService
 from ...core.interfaces import DataSource, DataRecord
-
-# Disable SSL warnings for iPlan API
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 logger = logging.getLogger(__name__)
 
@@ -23,19 +20,21 @@ class IPlanDataSource(DataSource):
     """
     Data source implementation for iPlan GIS API.
     
-    Fetches planning regulations from Israeli national planning database.
+    Fetches planning regulations from Israeli national planning database
+    using Selenium-based fetcher to bypass WAF protection.
     """
     
-    BASE_URL = "https://ags.iplan.gov.il/arcgisiplan/rest/services/PlanningPublic/xplan_without_77_78/MapServer/1/query"
-    
-    def __init__(self, cache: Optional[FileCacheService] = None):
+    def __init__(self, cache: Optional[FileCacheService] = None, headless: bool = True):
         """
         Initialize iPlan data source.
         
         Args:
             cache: Optional cache service for caching responses
+            headless: Run browser in headless mode
         """
         self.cache = cache or FileCacheService()
+        self.selenium_source = IPlanSeleniumSource(headless=headless)
+    
     
     def get_name(self) -> str:
         """Return the name of this data source."""
@@ -51,34 +50,22 @@ class IPlanDataSource(DataSource):
         Yields:
             Raw record dictionaries from iPlan API
         """
-        offset = 0
-        page_size = 1000  # Max per request
-        total_fetched = 0
+        logger.info(f"Discovering plans from iPlan (limit: {limit or 'all'})")
         
-        while True:
-            # Check limit
-            if limit and total_fetched >= limit:
-                break
+        try:
+            # Use Selenium source to discover plans
+            plans = self.selenium_source.discover_plans(
+                service_name='xplan',
+                max_plans=limit
+            )
             
-            # Fetch one page
-            records = self._fetch_page(offset, page_size)
-            
-            if not records:
-                break
-            
-            # Yield each record
-            for record in records:
-                yield record
-                total_fetched += 1
+            # Yield each plan
+            for plan in plans:
+                yield plan
                 
-                if limit and total_fetched >= limit:
-                    break
-            
-            # If we got fewer than page_size, we've reached the end
-            if len(records) < page_size:
-                break
-            
-            offset += page_size
+        except Exception as e:
+            logger.error(f"Failed to discover plans: {e}")
+            raise
     
     def fetch_details(self, record_id: str) -> Optional[Dict[str, Any]]:
         """
@@ -92,7 +79,7 @@ class IPlanDataSource(DataSource):
         """
         try:
             # Extract OBJECTID from plan_id
-            objectid = int(record_id.replace('iplan_', ''))
+            objectid = record_id.replace('iplan_', '')
         except (ValueError, AttributeError):
             logger.error(f"Invalid plan_id format: {record_id}")
             return None
@@ -103,32 +90,19 @@ class IPlanDataSource(DataSource):
         if cached:
             return cached
         
-        # Fetch from API
+        # Fetch from Selenium source
         try:
-            params = {
-                'where': f'OBJECTID={objectid}',
-                'outFields': '*',
-                'returnGeometry': 'true',
-                'f': 'json',
-            }
-            
             logger.info(f"Fetching details for {record_id} (OBJECTID={objectid})")
-            response = requests.get(self.BASE_URL, params=params, timeout=30, verify=False)
-            response.raise_for_status()
+            result = self.selenium_source.fetch_plan_details(objectid, service_name='xplan')
             
-            data = response.json()
-            features = data.get('features', [])
-            
-            if not features:
+            if not result:
                 logger.warning(f"No data found for {record_id}")
                 return None
             
-            record = features[0]
-            
             # Cache the result
-            self.cache.set(cache_key, record, ttl=86400)
+            self.cache.set(cache_key, result, ttl=86400)
             
-            return record
+            return result
             
         except Exception as e:
             logger.error(f"Error fetching details for {record_id}: {e}")
@@ -250,3 +224,16 @@ class IPlanDataSource(DataSource):
         except Exception as e:
             logger.error(f"Error fetching page at offset {offset}: {e}")
             return []
+    
+    def close(self):
+        """Close Selenium resources."""
+        if hasattr(self, 'selenium_source'):
+            self.selenium_source.close()
+    
+    def __enter__(self):
+        """Context manager entry."""
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit."""
+        self.close()

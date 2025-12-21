@@ -10,7 +10,8 @@ class Settings(BaseSettings):
     # LLM Configuration
     openai_api_key: Optional[str] = None
     anthropic_api_key: Optional[str] = None
-    google_api_key: Optional[str] = None  # For Gemini models
+    google_api_key: Optional[str] = None  # For Gemini models via Langchain
+    gemini_api_key: Optional[str] = None  # For direct Gemini API (vision service)
     model_name: str = "gpt-4o-mini"  # Options: gpt-4o-mini, gemini-1.5-flash, gemini-1.5-pro
     llm_provider: str = "openai"  # Options: openai, google, anthropic
     temperature: float = 0.1
