@@ -137,23 +137,20 @@ def main():
     
     # Quick access buttons
     st.markdown("### 🚀 Quick Access")
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3 = st.columns(3)
     
     with col1:
-        if st.button("🔍 **Search Plans**", use_container_width=True, help="Search iPlan with Vision AI"):
-            st.switch_page("pages/4_🔍_Plan_Search.py")
-    
-    with col2:
-        if st.button("📍 **View Maps**", use_container_width=True, help="Interactive TAMA zones"):
+        if st.button("📍 **View Maps**", use_container_width=True, help="Interactive planning maps"):
             st.switch_page("pages/1_📍_Map_Viewer.py")
     
-    with col3:
-        if st.button("📐 **Building Rights**", use_container_width=True, help="Calculate building rights"):
+    with col2:
+        if st.button("� **Building Rights**", use_container_width=True, help="Calculate building rights"):
             st.switch_page("pages/2_📐_Plan_Analyzer.py")
     
-    with col4:
-        if st.button("🖼️ **Analyze Image**", use_container_width=True, help="Plan image analysis"):
-            st.switch_page("pages/3_🖼️_Plan_Image_Analyzer.py")
+    with col3:
+        if st.button("💬 **Ask Questions**", use_container_width=True, help="Query planning regulations"):
+            # Stay on main page, scroll to query section
+            pass
     
     st.markdown("---")
     
