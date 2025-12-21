@@ -48,6 +48,7 @@ Streamlit UI → Display and search
 **MavatDocumentFetcher**
 - Fetches documents from Mavat portal
 - Caches downloaded files in `data/vision_cache/`
+- **Note**: Currently implemented for future use with document processing pipeline
 - Tracks document metadata
 - Handles PDFs, images, and DWG files
 

@@ -81,7 +81,7 @@ Visual analysis tools for:
 - Building rights calculations
 - Plot coverage analysis
 - Compliance checking
-- 3D visualizations
+- Plan upload & AI-powered analysis
 
 **Test it manually:**
 1. Navigate to "Plan Analyzer" page
@@ -90,14 +90,14 @@ Visual analysis tools for:
 4. ✅ Adjust building parameters (floors, coverage)
 5. ✅ View analysis charts
 6. ✅ Check compliance indicators
-7. ✅ Generate PDF report
+7. ✅ Upload plan documents for AI analysis (in Upload & Analyze tab)
 
 **Features to test:**
 - Parameter inputs work
 - Charts render (Plotly graphs)
 - Compliance calculations correct
 - Floor area ratios accurate
-- Report generation works
+- Plan upload and vision analysis works
 
 ---
 

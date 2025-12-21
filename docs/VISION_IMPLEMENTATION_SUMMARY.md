@@ -9,6 +9,7 @@ Implemented **two comprehensive vision-powered features** for the GIS Architectu
   - `MavatDocumentFetcher`: Downloads PDFs/images/DWGs from Mavat portal
   - `DocumentProcessor`: Converts PDFs to images, handles format normalization
   - Caching system in `data/vision_cache/`
+  - **Status**: Components implemented, integrated with upload service
 
 ### Feature 2: Plan Upload & Analysis
 - **Upload Service** (`src/application/services/plan_upload_service.py`)

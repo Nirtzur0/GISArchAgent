@@ -90,14 +90,6 @@ All detailed documentation lives in the `docs/` folder. This file serves as your
 
 ### 3. **Data & Storage**
 
-#### [docs/VECTOR_DB_VALIDATION.md](docs/VECTOR_DB_VALIDATION.md)
-**What**: Vector database health check system, validation mechanisms
-**Update When**:
-- Changing health check thresholds
-- Adding new validation checks
-- Modifying metadata tracking
-- Updating auto-initialization logic
-
 #### [docs/VECTOR_DB_MANAGEMENT.md](docs/VECTOR_DB_MANAGEMENT.md)
 **What**: Vector database operations, maintenance, indexing strategies
 **Update When**:
@@ -105,6 +97,13 @@ All detailed documentation lives in the `docs/` folder. This file serves as your
 - Updating ChromaDB configuration
 - Modifying regulation schema
 - Adding new data sources
+
+#### [docs/BUILD_VECTORDB_GUIDE.md](docs/BUILD_VECTORDB_GUIDE.md)
+**What**: Complete guide for building vector DB with Selenium-based fetcher
+**Update When**:
+- Changing CLI commands
+- Updating pipeline workflow
+- Modifying Selenium implementation
 
 #### [docs/DATA_MANAGEMENT.md](docs/DATA_MANAGEMENT.md)
 **What**: Data pipeline, fetching, caching, storage strategies
@@ -119,16 +118,27 @@ All detailed documentation lives in the `docs/` folder. This file serves as your
 **Update When**:
 - Adding new documentation files
 - Reorganizing docs structure
-- Major documentation updates
+**What**: 5-minute quick start guide
+**Update When**:
+- Changing installation steps
+- Updating basic usage patterns
 
----
+#### [docs/RUN_GUIDE.md](docs/RUN_GUIDE.md)
+**What**: Complete guide to running and testing all components
+**Update When**:
+- Adding new pages or features
+- Changing test procedures
+- Updating component behavior
 
-### 4. **Setup & Usage**
-
-#### [docs/QUICK_START.md](docs/QUICK_START.md)
 ---
 
 ### 5. **Project Management**
+
+#### [docs/INTEGRATION_COMPLETE.md](docs/INTEGRATION_COMPLETE.md)
+**What**: Summary of Selenium integration and architecture unification
+**Update When**:
+- Major integration changes
+- Architecture refactoringement**
 
 These files are referenced but may not exist yet - create as needed:
 
@@ -187,7 +197,7 @@ These files are referenced but may not exist yet - create as needed:
 | `vision_service.py` | VISION_FEATURES.md, HOW_IT_WORKS.md |
 | `document_service.py` | VISION_FEATURES.md, VISION_IMPLEMENTATION_SUMMARY.md |
 | `plan_upload_service.py` | VISION_FEATURES.md, RUN_GUIDE.md |
-| `health_check.py` | VECTOR_DB_VALIDATION.md, ARCHITECTURE.md |
+| `health_check.py` | VECTOR_DB_MANAGEMENT.md, ARCHITECTURE.md |
 | `chroma_repository.py` | VECTOR_DB_MANAGEMENT.md, ARCHITECTURE.md |
 
 ### When Modifying Infrastructure
@@ -195,7 +205,7 @@ These files are referenced but may not exist yet - create as needed:
 | Component Changed | Update These Docs |
 |------------------|-------------------|
 | `factory.py` | ARCHITECTURE.md, HOW_IT_WORKS.md |
-| `config.py` | QUICK_START.md, INTEGRATION_SUMMARY.md |
+| `config.py` | QUICK_START.md, INTEGRATION_COMPLETE.md |
 | Pipeline architecture | DATA_MANAGEMENT.md, HOW_IT_WORKS.md |
 | Cache service | DATA_MANAGEMENT.md |
 
@@ -204,8 +214,7 @@ These files are referenced but may not exist yet - create as needed:
 | Feature Type | Update These Docs |
 |-------------|-------------------|
 | New AI capability | VISION_FEATURES.md, HOW_IT_WORKS.md |
-| New data source | DATA_MANAGEMENT.md, INTEGRATION_SUMMARY.md |
-| New validation check | VECTOR_DB_VALIDATION.md |
+| New data source | DATA_MANAGEMENT.md, INTEGRATION_COMPLETE.md |
 | New UI page | RUN_GUIDE.md, HOW_IT_WORKS.md |
 
 ---
@@ -215,7 +224,6 @@ These files are referenced but may not exist yet - create as needed:
 ### After Major Changes
 
 - [ ] Update relevant docs/ files
-- [ ] Update COMPLETION_REPORT.md with progress
 - [ ] Check all code examples still work
 - [ ] Verify screenshots/diagrams if any
 - [ ] Update API references
@@ -236,13 +244,13 @@ These files are referenced but may not exist yet - create as needed:
 → Update: `docs/VISION_FEATURES.md`
 
 ### Health Check Modified?
-→ Update: `docs/VECTOR_DB_VALIDATION.md`
+→ Update: `docs/VECTOR_DB_MANAGEMENT.md`
 
 ### Architecture Refactored?
 → Update: `docs/ARCHITECTURE.md`, `docs/HOW_IT_WORKS.md`
 
 ### New Feature Completed?
-→ Update: `docs/COMPLETION_REPORT.md`, relevant feature doc
+→ Update: `docs/INTEGRATION_COMPLETE.md`, relevant feature doc
 
 ### Setup Process Changed?
 → Update: `docs/QUICK_START.md`
@@ -271,10 +279,10 @@ These files are referenced but may not exist yet - create as needed:
 | How to get started | QUICK_START.md |
 | Vision capabilities | VISION_FEATURES.md |
 | Architecture details | ARCHITECTURE.md |
-| Database validation | VECTOR_DB_VALIDATION.md |
+| Vector DB building | BUILD_VECTORDB_GUIDE.md |
 | Data pipeline | DATA_MANAGEMENT.md |
 | Running/testing | RUN_GUIDE.md |
-| What's implemented | COMPLETION_REPORT.md |
+| Integration status | INTEGRATION_COMPLETE.md |
 
 ---
 
