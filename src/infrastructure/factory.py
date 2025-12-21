@@ -18,6 +18,7 @@ from src.infrastructure.services.cache_service import FileCacheService
 from src.application.services.plan_search_service import PlanSearchService
 from src.application.services.regulation_query_service import RegulationQueryService
 from src.application.services.building_rights_service import BuildingRightsService
+from src.vectorstore.initializer import VectorDBInitializer
 
 logger = logging.getLogger(__name__)
 
@@ -67,8 +68,53 @@ class ApplicationFactory:
                 persist_directory=self.chroma_persist_dir
             )
             logger.info("Regulation repository created")
+            
+            # Auto-initialize if empty
+            self._ensure_vectordb_initialized()
         
         return self._regulation_repository
+    
+    def _ensure_vectordb_initialized(self):
+        """Ensure vector database is initialized with data."""
+        try:
+            if self._regulation_repository:
+                initializer = VectorDBInitializer(self._regulation_repository)
+                status = initializer.get_initialization_status()
+                
+                if not status.get("initialized"):
+                    logger.warning("Vector database is empty. Auto-initializing...")
+                    success = initializer.initialize_with_samples()
+                    if success:
+                        logger.info("✓ Vector database initialized successfully")
+                    else:
+                        logger.error("✗ Failed to initialize vector database")
+                else:
+                    logger.info(f"Vector database ready: {status.get('total_regulations', 0)} regulations")
+        except Exception as e:
+            logger.error(f"Error checking vector database initialization: {e}")
+    
+    def get_vectordb_status(self) -> dict:
+        """Get vector database initialization status.
+        
+        Returns:
+            Dictionary with status information
+        """
+        try:
+            if not self._regulation_repository:
+                return {
+                    "initialized": False,
+                    "status": "not_created",
+                    "message": "Repository not yet instantiated"
+                }
+            
+            initializer = VectorDBInitializer(self._regulation_repository)
+            return initializer.get_initialization_status()
+        except Exception as e:
+            return {
+                "initialized": False,
+                "status": "error",
+                "error": str(e)
+            }
     
     def get_vision_service(self) -> Optional[GeminiVisionService]:
         """Get the vision service (Gemini AI for image analysis)."""

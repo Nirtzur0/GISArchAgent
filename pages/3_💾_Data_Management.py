@@ -10,6 +10,8 @@ from datetime import datetime
 
 # Import data management modules
 from src.data_management import DataStore, DataFetcherFactory, IPlanFetcher
+from src.infrastructure.factory import get_factory
+from src.vectorstore.management_service import VectorDBManagementService
 
 st.set_page_config(page_title="Data Management", page_icon="💾", layout="wide")
 
@@ -21,7 +23,14 @@ st.markdown("### Manage planning data sources, updates, and statistics")
 def get_data_store():
     return DataStore()
 
+@st.cache_resource
+def get_vectordb_service():
+    factory = get_factory()
+    repo = factory.get_regulation_repository()
+    return VectorDBManagementService(repo)
+
 data_store = get_data_store()
+vectordb_service = get_vectordb_service()
 
 # Sidebar - Actions
 with st.sidebar:
@@ -62,7 +71,6 @@ with st.sidebar:
             
             if st.button("Import Features", use_container_width=True):
                 added = data_store.add_features(features, avoid_duplicates=True)
-                data_store.save(backup=True)
                 st.success(f"Added {added} new features!")
                 st.rerun()
         except Exception as e:
@@ -261,7 +269,200 @@ with tab3:
     st.markdown("""
     You can also manually export data from iPlan:
     
-    1. Visit [iPlan Website](https://www.iplan.gov.il)
+    1. Visit [iPlan W�️ Vector Database Management")
+    
+    # Get status
+    try:
+        status = vectordb_service.get_status()
+        
+        # Status overview
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            if status.get("initialized"):
+                st.success("✓ Initialized")
+            else:
+                st.error("✗ Not Initialized")
+        
+        with col2:
+            st.metric("Total Regulations", status.get("total_regulations", 0))
+        
+        with col3:
+            health = status.get("health", "unknown")
+            if health == "healthy":
+                st.success(f"Health: {health}")
+            else:
+                st.warning(f"Health: {health}")
+        
+        st.markdown("---")
+        
+        # Details
+        st.markdown("### 📋 Database Details")
+        
+        details_col1, details_col2 = st.columns(2)
+        
+        with details_col1:
+            st.text(f"Collection: {status['statistics'].get('collection_name', 'N/A')}")
+            st.text(f"Status: {status.get('status', 'N/A')}")
+        
+        with details_col2:
+            st.text(f"Directory: {status['statistics'].get('persist_directory', 'N/A')}")
+            st.text(f"Last Checked: {status.get('last_checked', 'N/A')[:19]}")
+        
+        st.markdown("---")
+        
+        # Actions
+        st.markdown("### 🛠️ Management Actions")
+        
+        action_col1, action_col2, action_col3 = st.columns(3)
+        
+        with action_col1:
+            if st.button("🔄 Check & Initialize", use_container_width=True):
+                with st.spinner("Checking database..."):
+                    result = vectordb_service.initialize_if_needed()
+                    if result:
+                        st.success("✓ Database is ready!")
+                    else:
+                        st.error("Failed to initialize database")
+                    st.rerun()
+        
+        with action_col2:
+            if st.button("📊 Refresh Status", use_container_width=True):
+                st.cache_resource.clear()
+                st.rerun()
+        
+        with action_col3:
+            if st.button("🔨 Rebuild Database", use_container_width=True, type="secondary"):
+                if st.session_state.get("confirm_rebuild"):
+                    with st.spinner("Rebuilding database..."):
+                        success = vectordb_service.rebuild_database()
+                        if success:
+                            st.success("✓ Database rebuilt successfully!")
+                        else:
+                            st.error("Failed to rebuild database")
+                        st.session_state.confirm_rebuild = False
+                        st.rerun()
+                else:
+                    st.session_state.confirm_rebuild = True
+                    st.warning("⚠️ This will delete all data! Click again to confirm.")
+        
+        st.markdown("---")
+        
+        # Add regulation form
+        with st.expander("➕ Add New Regulation"):
+            st.markdown("#### Add a Regulation to Vector Database")
+            
+            reg_title = st.text_input("Title", placeholder="e.g., Building Height Regulations")
+            reg_type = st.selectbox("Type", ["local", "national", "district"])
+            reg_jurisdiction = st.text_input("Jurisdiction", value="national", placeholder="e.g., Tel Aviv, national")
+            reg_summary = st.text_area("Summary (Optional)", placeholder="Brief summary of the regulation")
+            reg_content = st.text_area("Content", height=200, placeholder="Full regulation text...")
+            
+            if st.button("Add Regulation", type="primary"):
+                if not reg_title or not reg_content:
+                    st.error("Title and content are required!")
+                else:
+                    from src.domain.entities.regulation import RegulationType
+                    success = vectordb_service.add_regulation(
+                        title=reg_title,
+                        content=reg_content,
+                        reg_type=RegulationType(reg_type),
+                        jurisdiction=reg_jurisdiction,
+                        summary=reg_summary if reg_summary else None
+                    )
+                    
+                    if success:
+                        st.success("✓ Regulation added successfully!")
+                        st.cache_resource.clear()
+                    else:
+                        st.error("Failed to add regulation")
+        
+        # Search regulations
+        with st.expander("🔍 Search Regulations"):
+            st.markdown("#### Search Vector Database")
+            
+            search_query = st.text_input("Search Query", placeholder="e.g., parking requirements")
+            search_limit = st.slider("Max Results", 1, 20, 5)
+            
+            if st.button("Search", type="primary"):
+                if search_query:
+                    results = vectordb_service.search_regulations(search_query, limit=search_limit)
+                    
+                    if results:
+                        st.success(f"Found {len(results)} results")
+                        for i, reg in enumerate(results):
+                            with st.container():
+                                st.markdown(f"**{i+1}. {reg.title}**")
+                                st.text(f"Type: {reg.type.value} | Jurisdiction: {reg.jurisdiction}")
+                                if reg.summary:
+                                    st.markdown(f"*{reg.summary}*")
+                                with st.expander("View Content"):
+                                    st.text(reg.content)
+                                st.markdown("---")
+                    else:
+                        st.info("No results found")
+                else:
+                    st.warning("Please enter a search query")
+        
+        # Import/Export
+        with st.expander("📥 Import/Export Regulations"):
+            st.markdown("#### Import from JSON File")
+            
+            uploaded_reg_file = st.file_uploader(
+                "Upload Regulations JSON",
+                type=["json"],
+                help="Upload a JSON file with regulations"
+            )
+            
+            if uploaded_reg_file:
+                try:
+                    import tempfile
+                    with tempfile.NamedTemporaryFile(mode='wb', delete=False, suffix='.json') as tmp:
+                        tmp.write(uploaded_reg_file.getvalue())
+                        tmp_path = tmp.name
+                    
+                    if st.button("Import Regulations", type="primary"):
+                        result = vectordb_service.import_from_file(tmp_path)
+                        if result.get("error"):
+                            st.error(f"Import failed: {result['error']}")
+                        else:
+                            st.success(f"✓ Imported {result['success']} regulations")
+                            if result.get("failed", 0) > 0:
+                                st.warning(f"Failed to import {result['failed']} regulations")
+                        st.cache_resource.clear()
+                except Exception as e:
+                    st.error(f"Error: {e}")
+            
+            st.markdown("---")
+            st.markdown("#### Export to JSON File")
+            
+            export_filename = st.text_input("Export Filename", value="regulations_export.json")
+            
+            if st.button("Export All Regulations"):
+                import tempfile
+                from pathlib import Path
+                
+                with tempfile.TemporaryDirectory() as tmpdir:
+                    export_path = Path(tmpdir) / export_filename
+                    success = vectordb_service.export_to_file(str(export_path))
+                    
+                    if success:
+                        with open(export_path, 'rb') as f:
+                            st.download_button(
+                                label="📥 Download Export",
+                                data=f.read(),
+                                file_name=export_filename,
+                                mime="application/json"
+                            )
+                    else:
+                        st.error("Export failed")
+    
+    except Exception as e:
+        st.error(f"Error accessing vector database: {e}")
+        st.info("The vector database may not be initialized yet. Try clicking 'Check & Initialize' above.")
+
+with tab5:
+    st.markdown("## �ebsite](https://www.iplan.gov.il)
     2. Use the map interface to select plans
     3. Export as GeoJSON or JSON
     4. Upload using the sidebar import function

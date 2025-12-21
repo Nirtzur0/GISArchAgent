@@ -1,8 +1,24 @@
-# Data Management Scripts
+# Scripts Directory
 
-CLI utilities for managing planning data outside of the Streamlit interface.
+Command-line utilities and data management tools.
 
-## Available Scripts
+## Directory Structure
+
+```
+scripts/
+├── README.md                   # This file
+├── data_cli.py                 # Data management CLI (main tool)
+├── import_sample_data.py       # Import sample data utility
+└── utilities/                  # Utility scripts
+    ├── README.md
+    ├── reinitialize_vectordb.py
+    ├── manage_data.py
+    ├── fetch_iplan_data.py
+    ├── update_iplan_data.py
+    └── parse_iplan_response.py
+```
+
+## Active Scripts
 
 ### 1. data_cli.py - Main Data Management Tool
 
@@ -82,22 +98,30 @@ python3 scripts/import_sample_data.py --verbose
 
 ## Architecture Integration
 
-These scripts use the new `src/data_management/` module:
-- `DataStore` - Central data management class
-- `DataFetcher` - Abstract base for data sources
-- `DataFetcherFactory` - Source registry
+These scripts integrate with:
+- **Data Management System** (`src/data_management/`)
+- **Generic Pipeline** (`src/data_pipeline/`)
+- **Vector Database** (`src/vectorstore/`)
 
-The same module powers the Streamlit UI, ensuring consistency.
+The same modules power the Streamlit UI, ensuring consistency.
 
-## Legacy Scripts
+## Python API
 
-The following scripts in the root directory are preserved for reference
-but are now superseded by the new architecture:
+Use the data management system programmatically:
 
-- `populate_real_data.py` - Contains hardcoded sample data (still used by import_sample_data.py)
-- `update_iplan_data.py` - CLI for merging data (replaced by data_cli.py)
-- `manage_data.py` - Simple status viewer (replaced by data_cli.py status)
-- `fetch_and_save_iplan_data.py` - Utility functions (replaced by DataStore methods)
+```python
+from src.data_management import DataStore
+
+# Load data
+data_store = DataStore()
+
+# Access features
+all_features = data_store.get_all_features()
+
+# Add new data
+data_store.add_features(new_data["features"])
+data_store.save(backup=True)
+```
 
 ## Adding New Data Sources
 
@@ -116,7 +140,6 @@ class MyNewFetcher(DataFetcher):
         return "My New Source"
     
     def is_available(self) -> bool:
-        # Check if source is accessible
         return True
 ```
 

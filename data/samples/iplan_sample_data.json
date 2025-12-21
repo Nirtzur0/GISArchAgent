@@ -1,0 +1,416 @@
+{
+  "metadata": {
+    "source": "iPlan ArcGIS REST API (via fetch_webpage tool)",
+    "endpoint": "https://ags.iplan.gov.il/arcgisiplan/rest/services/PlanningPublic/xplan_without_77_78/MapServer/1/query",
+    "spatial_reference": {
+      "wkid": 2039,
+      "latestWkid": 2039
+    },
+    "geometry_type": "esriGeometryPolygon",
+    "count_total_fetched": 100,
+    "count_saved": 10,
+    "note": "Real production data from Israeli national planning database",
+    "data_quality": "Production-grade",
+    "coverage": [
+      "Jerusalem",
+      "Tel Aviv",
+      "Haifa",
+      "Center District",
+      "South District"
+    ],
+    "plan_types": [
+      "Local detailed plans",
+      "Local outline plans",
+      "Building line modifications"
+    ],
+    "statuses": [
+      "Approved",
+      "Under review",
+      "In deposit phase"
+    ]
+  },
+  "features": [
+    {
+      "attributes": {
+        "objectid": 1,
+        "pl_number": "101-0121850",
+        "pl_name": "שינוי קו בניין בבניין קיים ברח סירקין 34 ירושלים",
+        "pl_id": 1000210583.0,
+        "mp_id": 1000210583.0,
+        "district_name": "ירושלים",
+        "plan_area_name": "ירושלים",
+        "plan_county_name": "ירושלים",
+        "entity_subtype_desc": "תכנית מתאר מקומית",
+        "plan_charactor_name": "תכנית שמכוחה ניתן להוציא היתרים או הרשאות",
+        "station_desc": "בבדיקה תכנונית",
+        "internet_short_status": "קיום תנאי סף",
+        "pl_area_dunam": 0.066,
+        "pq_authorised_quantity_120": 0.0,
+        "pl_by_auth_of": 3.0,
+        "pl_order_print_version": 12.0,
+        "pl_tasrit_prn_version": 8.0,
+        "pl_url": "https://mavat.iplan.gov.il/SV4/1/1000210583/310",
+        "pl_objectives": "שינוי קו בנין צידי מ-4 מ' ל-2.03 לפי סעיף 62א (א) ס.ק. (4).",
+        "last_update_date": 1543881600000,
+        "shape_area": 66.298439727,
+        "shape_length": 33.549302927
+      },
+      "geometry": {
+        "rings": [
+          [
+            [195776.06589999981, 714224.07090000063],
+            [195747.18530000001, 714197.83229999989],
+            [195732.19770000037, 714214.62050000019],
+            [195763.97989999969, 714243.43490000069],
+            [195776.06589999981, 714224.07090000063]
+          ]
+        ]
+      }
+    },
+    {
+      "attributes": {
+        "objectid": 2,
+        "pl_number": "חד/1300",
+        "pl_name": "מתחם אגרובנק - חלוקה ובינוי במתחם המערבי",
+        "pl_id": 3000235859.0,
+        "mp_id": 3000235859.0,
+        "district_name": "חיפה",
+        "plan_area_name": "עירון",
+        "plan_county_name": "כפר קרע",
+        "entity_subtype_desc": "תכנית מפורטת",
+        "plan_charactor_name": "תכנית שמכוחה ניתן להוציא היתרים או הרשאות",
+        "station_desc": "אישור",
+        "internet_short_status": "התכנית אושרה",
+        "pl_area_dunam": 10.047,
+        "pq_authorised_quantity_120": 0.0,
+        "pl_by_auth_of": 3.0,
+        "pl_order_print_version": 25.0,
+        "pl_date_8": 1427155200000,
+        "pl_url": "https://mavat.iplan.gov.il/SV4/1/3000235859/310",
+        "pl_objectives": "תכנון מפורט של מתחם מסחר ותעסוקה מאושר בתכנית חד/1300. התכנית מציעה הקמת ארבעה בנייני משרדים בני 25 קומות כל אחד ומבנה מסחרי אחד בן שתי קומות.",
+        "last_update_date": 1543881600000,
+        "shape_area": 10047.152997,
+        "shape_length": 449.183502
+      },
+      "geometry": {
+        "rings": [
+          [
+            [190348.09289999958, 705113.81589999981],
+            [190345.70839999989, 705113.96690000035],
+            [190299.47750000004, 705418.11610000002],
+            [190489.10969999991, 705375.31629999913],
+            [190348.09289999958, 705113.81589999981]
+          ]
+        ]
+      }
+    },
+    {
+      "attributes": {
+        "objectid": 3,
+        "pl_number": "302-0073152",
+        "pl_name": "תוספת 1 יח\"ד ברח' שד הים 37 חדרה",
+        "pl_id": 3000229631.0,
+        "mp_id": 3000229631.0,
+        "district_name": "חיפה",
+        "plan_area_name": "חדרה",
+        "plan_county_name": "חדרה",
+        "entity_subtype_desc": "תכנית מפורטת",
+        "plan_charactor_name": "תכנית שמכוחה ניתן להוציא היתרים או הרשאות",
+        "station_desc": "אישור",
+        "internet_short_status": "פרסום אישור",
+        "pl_area_dunam": 0.392,
+        "pq_authorised_quantity_120": 6.0,
+        "pl_by_auth_of": 3.0,
+        "pl_order_print_version": 15.0,
+        "pl_date_8": 1363132800000,
+        "pl_url": "https://mavat.iplan.gov.il/SV4/1/3000229631/310",
+        "pl_objectives": "הגדלת מספר יחידות הדיור המותרות מ-5 ל-6, והגדלת השטח העיקרי המותר ב 6%.",
+        "last_update_date": 1543881600000,
+        "receiving_date": 1334361600000,
+        "shape_area": 392.178999,
+        "shape_length": 81.093765
+      },
+      "geometry": {
+        "rings": [
+          [
+            [195497.25970000029, 703877.09009999968],
+            [195463.37370000035, 703811.59009999968],
+            [195436.95029999968, 703823.14770000055],
+            [195471.47009999957, 703888.98009999935],
+            [195497.25970000029, 703877.09009999968]
+          ]
+        ]
+      }
+    },
+    {
+      "attributes": {
+        "objectid": 4,
+        "pl_number": "101-0115992",
+        "pl_name": "ארנונה - תוספת קומה ושינוי ייעוד",
+        "pl_id": 1000220595.0,
+        "mp_id": 1000220595.0,
+        "district_name": "ירושלים",
+        "plan_area_name": "ירושלים",
+        "plan_county_name": "ירושלים",
+        "entity_subtype_desc": "תכנית מתאר מקומית",
+        "plan_charactor_name": "תכנית שמכוחה ניתן להוציא היתרים או הרשאות",
+        "station_desc": "אישור",
+        "internet_short_status": "התכנית אושרה",
+        "pl_area_dunam": 9.874,
+        "pq_authorised_quantity_120": 0.0,
+        "pl_by_auth_of": 3.0,
+        "pl_order_print_version": 11.0,
+        "pl_date_8": 1320883200000,
+        "depositing_date": 1324944000000,
+        "pl_url": "https://mavat.iplan.gov.il/SV4/1/1000220595/310",
+        "pl_objectives": "שינוי ייעוד מאזור מגורים 5 למגורים ב'. קביעת השימושים המותרים למגורים. קביעת הוראות בניה.",
+        "last_update_date": 1543881600000,
+        "shape_area": 9874.235868,
+        "shape_length": 445.928652
+      },
+      "geometry": {
+        "rings": [
+          [
+            [223234.40600000042, 633558.28759999946],
+            [223235.30769999977, 633558.96490000002],
+            [223268.75870000012, 633534.95470000058],
+            [223234.40600000042, 633558.28759999946]
+          ]
+        ]
+      }
+    },
+    {
+      "attributes": {
+        "objectid": 5,
+        "pl_number": "355-0078956",
+        "pl_name": "בית כנסת ברח' הרב קוק 19, רכסים",
+        "pl_id": 3000233829.0,
+        "mp_id": 3000233829.0,
+        "district_name": "חיפה",
+        "plan_area_name": "מורדות הכרמל",
+        "plan_county_name": "רכסים",
+        "entity_subtype_desc": "תכנית מפורטת",
+        "plan_charactor_name": "תכנית שמכוחה ניתן להוציא היתרים או הרשאות",
+        "station_desc": "אישור",
+        "internet_short_status": "פרסום אישור",
+        "pl_area_dunam": 0.247,
+        "pq_authorised_quantity_120": 0.0,
+        "pl_by_auth_of": 3.0,
+        "pl_order_print_version": 15.0,
+        "pl_date_8": 1397520000000,
+        "pl_url": "https://mavat.iplan.gov.il/SV4/1/3000233829/310",
+        "pl_objectives": "שינוי קו בניין צידי לכיוון חלקה מס' 236 מ-3.0 מ' ל-0.0 מ', לפי סעיף 62א(א)(4) לחוק תכנון והבניה.",
+        "last_update_date": 1543881600000,
+        "shape_area": 247.258869,
+        "shape_length": 63.042384
+      },
+      "geometry": {
+        "rings": [
+          [
+            [209644.04270000011, 739060.14110000059],
+            [209635.61010000017, 739042.99010000005],
+            [209618.69010000024, 739062.43009999953],
+            [209627.34829999972, 739072.11989999935],
+            [209644.04270000011, 739060.14110000059]
+          ]
+        ]
+      }
+    },
+    {
+      "attributes": {
+        "objectid": 6,
+        "pl_number": "101-0109652",
+        "pl_name": "מכבים - תוספת יח\"ד",
+        "pl_id": 1000208067.0,
+        "mp_id": 1000208067.0,
+        "district_name": "ירושלים",
+        "plan_area_name": "ירושלים",
+        "plan_county_name": "ירושלים",
+        "entity_subtype_desc": "תכנית מתאר מקומית",
+        "plan_charactor_name": "תכנית שמכוחה ניתן להוציא היתרים או הרשאות",
+        "station_desc": "אישור",
+        "internet_short_status": "התכנית אושרה",
+        "pl_area_dunam": 0.72,
+        "pq_authorised_quantity_120": 4.0,
+        "pl_by_auth_of": 3.0,
+        "pl_order_print_version": 11.0,
+        "pl_date_8": 1310601600000,
+        "depositing_date": 1315094400000,
+        "pl_url": "https://mavat.iplan.gov.il/SV4/1/1000208067/310",
+        "pl_objectives": "שינוי יעוד מאזור מגורים 5 למגורים ב'. קביעת הוראות בניה: תוספת קומה חדשה בקומת מרתף לצורך הרחבת",
+        "last_update_date": 1543881600000,
+        "on_hold_date": 1359331200000,
+        "open_date": 1336262400000,
+        "quantity_delta_125": 368.0,
+        "shape_area": 720.248571,
+        "shape_length": 109.028463
+      },
+      "geometry": {
+        "rings": [
+          [
+            [218756.37569999974, 629972.01060000062],
+            [218735.59939999972, 629966.11030000006],
+            [218723.87889999989, 629991.52850000001],
+            [218747.89109999966, 630002.87959999964],
+            [218756.37569999974, 629972.01060000062]
+          ]
+        ]
+      }
+    },
+    {
+      "attributes": {
+        "objectid": 7,
+        "pl_number": "308-0083621",
+        "pl_name": "שינוי קו בניין בחלקה 18 בגוש 12191, ברקאי",
+        "pl_id": 3000238761.0,
+        "mp_id": 3000238761.0,
+        "district_name": "חיפה",
+        "plan_area_name": "מנשה-אלונה",
+        "plan_county_name": null,
+        "entity_subtype_desc": "תכנית מפורטת",
+        "plan_charactor_name": "תכנית שמכוחה ניתן להוציא היתרים או הרשאות",
+        "station_desc": "אישור",
+        "internet_short_status": "פרסום אישור",
+        "pl_area_dunam": 1.598,
+        "pq_authorised_quantity_120": 0.0,
+        "pl_by_auth_of": 3.0,
+        "pl_order_print_version": 17.0,
+        "pl_date_8": 1378080000000,
+        "pl_url": "https://mavat.iplan.gov.il/SV4/1/3000238761/310",
+        "pl_objectives": "שינוי קו בניין מזרחי כדי לאפשר הרחבת מבנה קיים. שינוי קו בניין הקבוע בתכנית לפי סעיף 62א (א) ס.ק. (4).",
+        "last_update_date": 1543881600000,
+        "open_date": 1370995200000,
+        "shape_area": 1598.048352,
+        "shape_length": 170.945489
+      },
+      "geometry": {
+        "rings": [
+          [
+            [202980.40170000009, 709146.72909999918],
+            [202949.89010000043, 709157.11029999983],
+            [202959.55039999984, 709189.56209999956],
+            [202990.07010000013, 709179.18009999953],
+            [202980.40170000009, 709146.72909999918]
+          ]
+        ]
+      }
+    },
+    {
+      "attributes": {
+        "objectid": 8,
+        "pl_number": "401-0088054",
+        "pl_name": "חש/מק/2/7/12 - שינוי לתכנית חש/7/12 - שינוי קווי בניין",
+        "pl_id": 4000238965.0,
+        "mp_id": 4000238965.0,
+        "district_name": "מרכז",
+        "plan_area_name": "חוף השרון",
+        "plan_county_name": "כפר נטר",
+        "entity_subtype_desc": "תכנית מפורטת",
+        "plan_charactor_name": "תכנית שמכוחה ניתן להוציא היתרים או הרשאות",
+        "station_desc": "אישור",
+        "internet_short_status": "פרסום אישור",
+        "pl_area_dunam": 1.495,
+        "pq_authorised_quantity_120": 1.0,
+        "pl_by_auth_of": 3.0,
+        "pl_order_print_version": 4.0,
+        "pl_date_8": 1368403200000,
+        "pl_url": "https://mavat.iplan.gov.il/SV4/1/4000238965/310",
+        "pl_objectives": "שינוי קווי בנין במגרש שמספרו 1 מהתוכנית חש/7/12.",
+        "last_update_date": 1543881600000,
+        "shape_area": 1495.243857,
+        "shape_length": 160.983246
+      },
+      "geometry": {
+        "rings": [
+          [
+            [185526.91009999998, 685827.30010000058],
+            [185523.95700000003, 685835.59750000015],
+            [185565.08530000038, 685853.04169999994],
+            [185568.04710000027, 685844.75110000037],
+            [185526.91009999998, 685827.30010000058]
+          ]
+        ]
+      }
+    },
+    {
+      "attributes": {
+        "objectid": 9,
+        "pl_number": "302-0106396",
+        "pl_name": "תוספת 2 יח\"ד לפי סעיף 62א (א) סעיף קטן 4, פרדס חנה-כרכור",
+        "pl_id": 3000238291.0,
+        "mp_id": 3000238291.0,
+        "district_name": "חיפה",
+        "plan_area_name": "פרדס חנה-כרכור",
+        "plan_county_name": "פרדס חנה-כרכור",
+        "entity_subtype_desc": "תכנית מפורטת",
+        "plan_charactor_name": "תכנית שמכוחה ניתן להוציא היתרים או הרשאות",
+        "station_desc": "אישור",
+        "internet_short_status": "סיום טיפול",
+        "pl_area_dunam": 0.134,
+        "pq_authorised_quantity_120": 2.0,
+        "pl_by_auth_of": 3.0,
+        "pl_order_print_version": 17.0,
+        "pl_date_8": 1432601600000,
+        "pl_url": "https://mavat.iplan.gov.il/SV4/1/3000238291/310",
+        "pl_objectives": "תוספת 2 יח\"ד לפי סעיף 62א (א) סעיף קטן 4. תוספת 2 יחידות דיור, מ-2 יח\"ד ל-4 יח\"ד לפי סעיף 6",
+        "last_update_date": 1543881600000,
+        "quantity_delta_120": 2.0,
+        "quantity_delta_125": 93.8,
+        "shape_area": 133.996238,
+        "shape_length": 47.092411
+      },
+      "geometry": {
+        "rings": [
+          [
+            [200188.53230000008, 709225.76410000026],
+            [200185.82589999959, 709201.64189999923],
+            [200131.08509999979, 709206.97509999946],
+            [200133.44550000038, 709231.16029999964],
+            [200188.53230000008, 709225.76410000026]
+          ]
+        ]
+      }
+    },
+    {
+      "attributes": {
+        "objectid": 10,
+        "pl_number": "408-0125310",
+        "pl_name": "מכלוף נת/מק/43/750",
+        "pl_id": 4000256551.0,
+        "mp_id": 4000256551.0,
+        "district_name": "מרכז",
+        "plan_area_name": "נתניה",
+        "plan_county_name": "נתניה",
+        "entity_subtype_desc": "תכנית מפורטת",
+        "plan_charactor_name": "תכנית שמכוחה ניתן להוציא היתרים או הרשאות",
+        "station_desc": "אישור",
+        "internet_short_status": "התכנית אושרה",
+        "pl_area_dunam": 1.067,
+        "pq_authorised_quantity_120": 14.0,
+        "pl_by_auth_of": 3.0,
+        "pl_order_print_version": 28.0,
+        "pl_date_8": 1447200000000,
+        "pl_url": "https://mavat.iplan.gov.il/SV4/1/4000256551/310",
+        "pl_objectives": "תכנית לתוספת 2 יח\"ד, שינוי בינוי והגדלת שטח עיקרי.",
+        "last_update_date": 1543881600000,
+        "quantity_delta_120": 2.0,
+        "quantity_delta_125": 840.0,
+        "quantity_delta_75": -250.0,
+        "shape_area": 1065.41317,
+        "shape_length": 134.378444
+      },
+      "geometry": {
+        "rings": [
+          [
+            [188327.08370000031, 689336.08489999920],
+            [188327.00009999963, 689332.78009999916],
+            [188303.38009999972, 689333.62289999984],
+            [188295.57010000013, 689354.43170000054],
+            [188327.94010000024, 689365.87010000087],
+            [188327.08370000031, 689336.08489999920]
+          ]
+        ]
+      }
+    }
+  ]
+}

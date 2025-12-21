@@ -186,6 +186,51 @@ class ChromaRegulationRepository(IRegulationRepository):
                 'error': str(e)
             }
     
+    def is_initialized(self) -> bool:
+        """Check if the vector database is properly initialized.
+        
+        Returns:
+            True if the database exists and has data, False otherwise
+        """
+        try:
+            count = self._collection.count()
+            return count > 0
+        except Exception as e:
+            logger.error(f"Failed to check initialization status: {e}")
+            return False
+    
+    def add_regulations_batch(self, regulations: List[Regulation]) -> int:
+        """Add multiple regulations to repository.
+        
+        Args:
+            regulations: List of regulations to add
+            
+        Returns:
+            Number of successfully added regulations
+        """
+        try:
+            documents = []
+            metadatas = []
+            ids = []
+            
+            for regulation in regulations:
+                documents.append(self._prepare_document(regulation))
+                metadatas.append(self._prepare_metadata(regulation))
+                ids.append(regulation.id)
+            
+            self._collection.add(
+                documents=documents,
+                metadatas=metadatas,
+                ids=ids
+            )
+            
+            logger.info(f"Added {len(regulations)} regulations in batch")
+            return len(regulations)
+        
+        except Exception as e:
+            logger.error(f"Failed to add regulations batch: {e}")
+            return 0
+    
     def _build_where_clause(self, filters: Dict[str, Any]) -> Dict[str, Any]:
         """Build ChromaDB where clause from filters."""
         where = {}
@@ -211,13 +256,30 @@ class ChromaRegulationRepository(IRegulationRepository):
         return "\n\n".join(parts)
     
     def _prepare_metadata(self, regulation: Regulation) -> Dict[str, Any]:
-        """Prepare regulation metadata for storage."""
-        return {
-            'type': regulation.type.value,
-            'jurisdiction': regulation.jurisdiction,
-            'title': regulation.title,
-            'effective_date': regulation.effective_date.isoformat() if regulation.effective_date else None,
+        """Prepare regulation metadata for storage.
+        Note: ChromaDB only accepts string, int, float, or bool values - no None.
+        """
+        metadata = {
+            'type': str(regulation.type.value),
+            'jurisdiction': str(regulation.jurisdiction),
+            'title': str(regulation.title),
         }
+        
+        # Only add optional fields if they have values (ChromaDB doesn't accept None)
+        if regulation.effective_date:
+            metadata['effective_date'] = regulation.effective_date.isoformat()
+        
+        if regulation.source_document:
+            metadata['source'] = str(regulation.source_document)
+        
+        # Add any additional metadata from regulation.metadata dict
+        if regulation.metadata:
+            for key, value in regulation.metadata.items():
+                if value is not None and value != '':
+                    # Convert all values to strings to ensure ChromaDB compatibility
+                    metadata[key] = str(value)
+        
+        return metadata
     
     def _map_to_entity(self, document: str, metadata: Dict[str, Any]) -> Optional[Regulation]:
         """Map stored document to Regulation entity."""

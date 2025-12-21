@@ -79,6 +79,28 @@ mkdir -p data/local_projects
 echo "✓ Data directories created"
 echo ""
 
+# Initialize vector database
+echo "Initializing vector database..."
+echo "(This will create the regulation database with sample data)"
+python3 -c "
+from src.infrastructure.factory import get_factory
+from src.vectorstore.initializer import VectorDBInitializer
+
+try:
+    factory = get_factory()
+    repo = factory.get_regulation_repository()
+    initializer = VectorDBInitializer(repo)
+    
+    if initializer.check_and_initialize():
+        print('✓ Vector database initialized successfully')
+    else:
+        print('⚠ Vector database initialization had issues')
+except Exception as e:
+    print(f'⚠ Could not initialize vector database: {e}')
+    print('  You can initialize it later from the Data Management page')
+" 2>/dev/null
+echo ""
+
 echo "=========================================="
 echo "Setup Complete!"
 echo "=========================================="

@@ -3,13 +3,15 @@
 Import sample iPlan data into the data store.
 
 This script provides a CLI interface to import the curated sample data
-from populate_real_data.py into the data management system.
+into the data management system. The sample data is loaded from JSON files
+for easier maintenance and extensibility.
 
 Usage:
-    python scripts/import_sample_data.py [--force]
+    python scripts/import_sample_data.py [--force] [--source default]
     
 Options:
     --force     Overwrite existing data (default: merge with duplicates avoided)
+    --source    Data source to load from (default: "default")
 """
 
 import sys
@@ -23,18 +25,20 @@ import click
 from datetime import datetime
 from src.data_management import DataStore
 
-# Import the hardcoded sample data
-from populate_real_data import REAL_IPLAN_DATA
+# Import the data loader
+from populate_real_data import load_iplan_sample_data
 
 
 @click.command()
 @click.option('--force', is_flag=True, help='Overwrite existing data')
 @click.option('--verbose', '-v', is_flag=True, help='Show detailed output')
-def main(force, verbose):
+@click.option('--source', default='default', help='Data source to load (default: "default")')
+def main(force, verbose, source):
     """Import sample iPlan data into the data store."""
     
     print("🏗️  iPlan Sample Data Importer")
     print("=" * 60)
+    print(f"📦 Loading data from source: {source}")
     
     # Initialize data store
     data_store = DataStore()
@@ -53,9 +57,16 @@ def main(force, verbose):
             print("Cancelled.")
             return
     
+    # Load sample data from JSON file
+    try:
+        sample_data = load_iplan_sample_data(source)
+    except (FileNotFoundError, ValueError) as e:
+        print(f"❌ Error loading sample data: {e}")
+        return
+    
     # Extract features
-    features = REAL_IPLAN_DATA.get("features", [])
-    metadata = REAL_IPLAN_DATA.get("metadata", {})
+    features = sample_data.get("features", [])
+    metadata = sample_data.get("metadata", {})
     
     print(f"\n📥 Importing {len(features)} sample plans...")
     
@@ -63,6 +74,7 @@ def main(force, verbose):
         print(f"\nMetadata:")
         for key, value in metadata.items():
             print(f"  {key}: {value}")
+
     
     # Import data
     if force:

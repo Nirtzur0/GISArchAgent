@@ -197,16 +197,41 @@ GISArchAgent/
 - 🏛️ [Architecture Guide](docs/ARCHITECTURE.md) - How it all works
 - 📊 [Implementation Summary](docs/IMPLEMENTATION_SUMMARY.md) - What we built
 
+## Documentation
+
+📚 **[Complete documentation available in docs/](docs/README.md)**
+
+Key documents:
+- [Architecture Overview](docs/ARCHITECTURE.md)
+- [Generic Pipeline Guide](docs/GENERIC_PIPELINE_ARCHITECTURE.md)
+- [Data Management](docs/DATA_MANAGEMENT.md)
+- [Quick Start Guide](docs/QUICK_START.md)
+
 ## Development
 
 ### Running Tests
 ```bash
-# TODO: Add tests!
-pytest
+# Run integration tests
+python3 tests/test_vectordb_integration.py
+python3 tests/test_iplan_integration.py
+```
+
+### Project Structure
+```
+GISArchAgent/
+├── app.py                    # Main Streamlit application
+├── src/                      # Source code (clean architecture)
+│   ├── domain/              # Business logic
+│   ├── application/         # Use cases
+│   ├── infrastructure/      # External integrations
+│   └── data_pipeline/       # Generic data pipeline
+├── scripts/                  # CLI tools and utilities
+├── tests/                    # Integration tests
+└── docs/                     # Documentation
 ```
 
 ### Code Style
-We use type hints everywhere and try to keep things readable. Comments explain *why*, not *what*.
+We use type hints everywhere and follow clean architecture principles. Comments explain *why*, not *what*.
 
 ### Contributing
 Feel free to improve things! Just keep the architecture clean and write readable code.
