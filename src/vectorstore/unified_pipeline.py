@@ -160,8 +160,28 @@ class UnifiedDataPipeline:
         self.iplan_source = iplan_source or IPlanDataSource(headless=self.config.headless)
         self.document_fetcher = document_fetcher or MavatDocumentFetcher()
         self.document_processor = document_processor or DocumentProcessor()
-        self.vision_service = vision_service or GeminiVisionService()
-        self.vectordb_service = vectordb_service or VectorDBManagementService()
+        
+        # Vision service needs API key from environment
+        if vision_service:
+            self.vision_service = vision_service
+        else:
+            # Try to get API key from environment
+            import os
+            from src.config import settings
+            api_key = settings.gemini_api_key or settings.google_api_key or os.getenv('GEMINI_API_KEY')
+            if api_key:
+                self.vision_service = GeminiVisionService(api_key=api_key)
+            else:
+                logger.warning("No Gemini API key found - vision processing will be disabled")
+                self.vision_service = None
+        
+        # VectorDB service needs repository
+        if vectordb_service:
+            self.vectordb_service = vectordb_service
+        else:
+            from src.infrastructure.repositories.chroma_repository import ChromaRegulationRepository
+            repo = ChromaRegulationRepository(persist_directory="./data/vectorstore")
+            self.vectordb_service = VectorDBManagementService(repository=repo)
         
         # Create directories
         self.config.cache_dir.mkdir(parents=True, exist_ok=True)

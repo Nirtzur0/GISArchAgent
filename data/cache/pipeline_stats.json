@@ -1,0 +1,18 @@
+{
+  "start_time": "2025-12-22T01:25:15.533956",
+  "end_time": "2025-12-22T01:25:20.649382",
+  "duration_seconds": 5.115426,
+  "plans_discovered": 50,
+  "plans_processed": 50,
+  "plans_failed": 0,
+  "documents_found": 0,
+  "documents_downloaded": 0,
+  "documents_processed": 0,
+  "documents_failed": 0,
+  "regulations_extracted": 0,
+  "building_rights_extracted": 0,
+  "regulations_indexed": 0,
+  "indexing_failed": 0,
+  "cache_hits": 0,
+  "cache_misses": 0
+}

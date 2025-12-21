@@ -15,14 +15,13 @@ from src.domain.repositories import IPlanRepository, IRegulationRepository
 from src.infrastructure.repositories.iplan_repository import IPlanGISRepository
 from src.infrastructure.repositories.chroma_repository import ChromaRegulationRepository
 from src.infrastructure.services.vision_service import GeminiVisionService
+from src.infrastructure.services.llm_service import GeminiLLMService
 from src.infrastructure.services.cache_service import FileCacheService
 from src.infrastructure.services.document_service import MavatDocumentFetcher, DocumentProcessor
 from src.application.services.plan_search_service import PlanSearchService
 from src.application.services.regulation_query_service import RegulationQueryService
 from src.application.services.building_rights_service import BuildingRightsService
 from src.application.services.plan_upload_service import PlanUploadService
-from src.vectorstore.initializer import VectorDBInitializer
-from src.vectorstore.health_check import VectorDBHealthChecker, check_vectordb_health
 from src.config import settings
 
 logger = logging.getLogger(__name__)
@@ -50,6 +49,7 @@ class ApplicationFactory:
         self._plan_repository: Optional[IPlanRepository] = None
         self._regulation_repository: Optional[IRegulationRepository] = None
         self._vision_service: Optional[GeminiVisionService] = None
+        self._llm_service: Optional[GeminiLLMService] = None
         self._cache_service: Optional[FileCacheService] = None
         self._document_fetcher: Optional[MavatDocumentFetcher] = None
         self._document_processor: Optional[DocumentProcessor] = None
@@ -85,6 +85,10 @@ class ApplicationFactory:
     
     def _ensure_vectordb_initialized(self):
         """Ensure vector database is initialized with data and perform health check."""
+        # Lazy import to avoid circular dependency
+        from src.vectorstore.initializer import VectorDBInitializer
+        from src.vectorstore.health_check import VectorDBHealthChecker, check_vectordb_health
+        
         try:
             if self._regulation_repository:
                 # Perform health check
@@ -134,6 +138,9 @@ class ApplicationFactory:
         Returns:
             Dictionary with detailed health information
         """
+        # Lazy import to avoid circular dependency
+        from src.vectorstore.health_check import check_vectordb_health
+        
         try:
             if not self._regulation_repository:
                 return {
@@ -176,6 +183,20 @@ class ApplicationFactory:
         
         return self._vision_service
     
+    def get_llm_service(self) -> Optional[GeminiLLMService]:
+        """Get LLM service for answer synthesis."""
+        if not self._llm_service and self.gemini_api_key:
+            try:
+                self._llm_service = GeminiLLMService(
+                    api_key=self.gemini_api_key,
+                    model="gemini-2.5-flash"
+                )
+                logger.info("LLM service created")
+            except Exception as e:
+                logger.error(f"Failed to create LLM service: {e}")
+        
+        return self._llm_service
+    
     def get_cache_service(self) -> FileCacheService:
         """Get cache service instance."""
         if not self._cache_service:
@@ -202,7 +223,8 @@ class ApplicationFactory:
         """Get regulation query service."""
         if not self._regulation_query_service:
             self._regulation_query_service = RegulationQueryService(
-                regulation_repository=self.get_regulation_repository()
+                regulation_repository=self.get_regulation_repository(),
+                llm_service=self.get_llm_service()
             )
             logger.info("Created regulation query service")
         
