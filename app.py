@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 # Page setup
 st.set_page_config(
     page_title="GIS Architecture Agent",
-    page_icon="🏭️",
+    page_icon="🏗️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -86,6 +86,24 @@ st.markdown("""
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         margin: 1rem 0;
         border-left: 5px solid var(--primary-color);
+        color: #2C3E50;
+    }
+    
+    /* Dark mode support */
+    @media (prefers-color-scheme: dark) {
+        .answer-box {
+            background: #1E1E1E;
+            color: #E0E0E0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+    }
+    
+    /* Streamlit dark mode override */
+    [data-testid="stAppViewContainer"][data-theme="dark"] .answer-box,
+    .stApp[data-theme="dark"] .answer-box {
+        background: #1E1E1E !important;
+        color: #E0E0E0 !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -114,12 +132,12 @@ def initialize_factory():
         return None
 
 
-def save_query_to_history(query: str, answer: str):
+def save_query_to_history(query: str, answer: str | None):
     """Save query and answer to history."""
     st.session_state.query_history.insert(0, {
         'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         'query': query,
-        'answer': answer
+        'answer': answer or ""
     })
     # Keep only last 20 queries
     st.session_state.query_history = st.session_state.query_history[:20]
@@ -277,7 +295,10 @@ def show_query_page():
         result = st.session_state.current_answer
         
         st.markdown("## 📋 Answer")
-        st.markdown(f'<div class="answer-box">{result.answer}</div>', unsafe_allow_html=True)
+        if result.answer:
+            st.markdown(f'<div class="answer-box">{result.answer}</div>', unsafe_allow_html=True)
+        else:
+            st.info("No synthesized answer available. See sources below.")
         
         # Show sources
         if result.regulations:

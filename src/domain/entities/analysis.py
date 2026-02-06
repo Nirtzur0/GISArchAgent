@@ -69,6 +69,16 @@ class VisionAnalysis:
             findings.append(f"{word_count} words extracted via OCR")
         
         return findings
+
+    @property
+    def text_content(self) -> Optional[str]:
+        """Backwards-compatible alias for extracted OCR text."""
+        return self.ocr_text
+
+    @property
+    def zones(self) -> List[str]:
+        """Backwards-compatible alias for identified zones."""
+        return self.zones_identified
     
     def was_cached(self) -> bool:
         """Check if result came from cache."""
@@ -93,6 +103,47 @@ class VisionAnalysis:
             'analyzed_at': self.analyzed_at.isoformat(),
             'confidence_scores': self.confidence_scores,
         }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "VisionAnalysis":
+        """Rehydrate VisionAnalysis from a dict (for caching)."""
+        cost = data.get("cost_usd", "0")
+        try:
+            cost_dec = Decimal(str(cost))
+        except Exception:
+            cost_dec = Decimal("0")
+
+        cached_at = None
+        if data.get("cached_at"):
+            try:
+                cached_at = datetime.fromisoformat(data["cached_at"])
+            except Exception:
+                cached_at = None
+
+        analyzed_at = datetime.now()
+        if data.get("analyzed_at"):
+            try:
+                analyzed_at = datetime.fromisoformat(data["analyzed_at"])
+            except Exception:
+                analyzed_at = datetime.now()
+
+        return cls(
+            plan_id=data["plan_id"],
+            image_hash=data["image_hash"],
+            description=data.get("description", ""),
+            zones_identified=list(data.get("zones_identified") or []),
+            measurements=dict(data.get("measurements") or {}),
+            ocr_text=data.get("ocr_text"),
+            extracted_data=dict(data.get("extracted_data") or {}),
+            provider=data.get("provider", "gemini"),
+            model=data.get("model", "gemini-1.5-flash"),
+            tokens_used=int(data.get("tokens_used") or 0),
+            cost_usd=cost_dec,
+            from_cache=bool(data.get("from_cache") or False),
+            cached_at=cached_at,
+            analyzed_at=analyzed_at,
+            confidence_scores=dict(data.get("confidence_scores") or {}),
+        )
     
     def __str__(self) -> str:
         """String representation."""

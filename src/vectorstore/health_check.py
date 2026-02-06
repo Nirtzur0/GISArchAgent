@@ -54,7 +54,7 @@ class VectorDBHealthChecker:
     def __init__(
         self,
         repository: ChromaRegulationRepository,
-        metadata_file: str = "data/vectorstore/metadata.json"
+        metadata_file: Optional[str] = None
     ):
         """
         Initialize health checker.
@@ -64,7 +64,12 @@ class VectorDBHealthChecker:
             metadata_file: Path to metadata tracking file
         """
         self.repository = repository
-        self.metadata_file = Path(metadata_file)
+        if metadata_file:
+            self.metadata_file = Path(metadata_file)
+        else:
+            # Keep metadata co-located with the vectorstore persistence directory
+            # so tests and alternate persist dirs don't stomp on each other.
+            self.metadata_file = Path(self.repository.persist_directory) / "metadata.json"
         self.initializer = VectorDBInitializer(repository)
     
     def perform_health_check(self) -> HealthCheckResult:

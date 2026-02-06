@@ -152,7 +152,14 @@ class PlanUploadService:
             
             # Run vision analysis
             logger.info(f"Running vision analysis on {analysis_path}")
-            vision_analysis = self.vision_service.analyze_plan(analysis_path)
+            plan_id = f"upload:{start_time.strftime('%Y%m%d_%H%M%S')}:{Path(filename).name}"
+            with open(analysis_path, "rb") as f:
+                image_bytes = f.read()
+            vision_analysis = self.vision_service.analyze_plan(
+                plan_id=plan_id,
+                image_bytes=image_bytes,
+                include_ocr=True,
+            )
             
             if not vision_analysis:
                 logger.error("Vision analysis failed")
@@ -163,10 +170,7 @@ class PlanUploadService:
             
             # Semantic search for matching regulations
             logger.info(f"Searching for regulations matching: {search_text[:100]}...")
-            matches = self.regulation_repo.search_by_text(
-                query=search_text,
-                limit=max_results
-            )
+            matches = self.regulation_repo.search_by_text(query=search_text, limit=max_results)
             
             # Extract regulations and scores
             matching_regulations = [m['regulation'] for m in matches]
@@ -185,8 +189,8 @@ class PlanUploadService:
                 similarity_scores=similarity_scores,
                 estimated_zone_type=estimated_zone,
                 estimated_location=estimated_location,
-                extracted_text=vision_analysis.text_content,
-                identified_zones=vision_analysis.zones,
+                extracted_text=vision_analysis.ocr_text,
+                identified_zones=vision_analysis.zones_identified,
                 upload_timestamp=start_time,
                 processing_time_ms=processing_time
             )

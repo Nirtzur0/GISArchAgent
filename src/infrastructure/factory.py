@@ -234,8 +234,11 @@ class ApplicationFactory:
         """Get building rights service."""
         if not self._building_rights_service:
             self._building_rights_service = BuildingRightsService(
-                regulation_repository=self.get_regulation_repository()
+                regulation_repo_provider=self.get_regulation_repository
             )
+            logger.info("Created building rights service")
+        
+        return self._building_rights_service
     
     def get_document_fetcher(self) -> MavatDocumentFetcher:
         """Get document fetcher service for Mavat."""
@@ -253,12 +256,13 @@ class ApplicationFactory:
         
         return self._document_processor
     
-    def get_plan_upload_service(self) -> PlanUploadService:
+    def get_plan_upload_service(self) -> Optional[PlanUploadService]:
         """Get plan upload service."""
         if not self._plan_upload_service:
             vision_service = self.get_vision_service()
             if not vision_service:
-                logger.warning("Vision service not available - upload service will be limited")
+                logger.warning("Vision service not available - upload service disabled")
+                return None
             
             self._plan_upload_service = PlanUploadService(
                 vision_service=vision_service,

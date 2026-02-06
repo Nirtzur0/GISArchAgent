@@ -47,6 +47,9 @@ Think of it as having a planning expert who knows all the regulations and can re
 # Install everything
 pip install -r requirements.txt
 
+# (Optional) install dev/test tools
+pip install -r requirements-dev.txt
+
 # Set up your API key (for vision analysis)
 echo "GEMINI_API_KEY=your_key_here" > .env
 

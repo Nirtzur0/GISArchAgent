@@ -8,6 +8,7 @@ from streamlit_folium import folium_static
 import pandas as pd
 from datetime import datetime
 from pyproj import Transformer
+from folium.plugins import MarkerCluster
 
 # Import data management
 from src.data_management import DataStore
@@ -28,8 +29,6 @@ def get_data_store():
 
 data_store = get_data_store()
 
-# Get all features and stats
-all_features = data_store.get_all_features()
 stats = data_store.get_statistics()
 
 # Setup coordinate transformer (ITM to WGS84)
@@ -64,6 +63,11 @@ with st.sidebar:
         ["OpenStreetMap", "CartoDB Positron", "CartoDB Dark Matter"],
         label_visibility="collapsed"
     )
+    tile_provider = {
+        "OpenStreetMap": "OpenStreetMap",
+        "CartoDB Positron": "CartoDB positron",
+        "CartoDB Dark Matter": "CartoDB dark_matter",
+    }[map_style]
 
 # Main content
 col1, col2 = st.columns([3, 1])
@@ -129,8 +133,10 @@ with col1:
     m = folium.Map(
         location=[31.7683, 35.2137],  # Jerusalem coordinates
         zoom_start=8,
-        tiles=map_style.replace(" ", "")
+        tiles=tile_provider
     )
+
+    marker_cluster = MarkerCluster(name="Plans").add_to(m)
     
     # Add planning features
     for feature in filtered_features:
@@ -184,7 +190,7 @@ with col1:
                     fill=True,
                     fillColor=color,
                     fillOpacity=0.8
-                ).add_to(m)
+                ).add_to(marker_cluster)
     
     # Display map
     folium_static(m, width=1000, height=600)
