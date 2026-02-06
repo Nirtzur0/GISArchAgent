@@ -6,14 +6,13 @@ Concrete implementation for analyzing plan images with Gemini AI.
 
 import logging
 import hashlib
-import base64
-from typing import Optional, Tuple
+from decimal import Decimal
+from typing import Optional
 from io import BytesIO
 from PIL import Image
 from google import genai
 from google.genai import types
 
-from src.domain.entities.plan import Plan
 from src.domain.entities.analysis import VisionAnalysis
 
 logger = logging.getLogger(__name__)
@@ -48,16 +47,16 @@ class GeminiVisionService:
         logger.info(f"Gemini vision service initialized: {model}")
     
     def analyze_plan(
-        self, 
-        plan: Plan, 
+        self,
+        plan_id: str,
         image_bytes: bytes,
-        include_ocr: bool = True
+        include_ocr: bool = True,
     ) -> Optional[VisionAnalysis]:
         """
-        Analyze a plan image.
+        Analyze a plan image (bytes).
         
         Args:
-            plan: Plan entity
+            plan_id: Identifier for the analyzed plan (or upload id)
             image_bytes: Image data
             include_ocr: Whether to extract text
             
@@ -84,18 +83,32 @@ class GeminiVisionService:
             
             # Create analysis entity
             return VisionAnalysis(
-                plan_id=plan.id,
+                plan_id=plan_id,
                 image_hash=image_hash,
                 description=description,
-                zones=zones,
-                extracted_text=extracted_text,
-                tokens_used=0,  # Placeholder
-                analysis_cost=0.0  # Placeholder
+                zones_identified=zones,
+                ocr_text=extracted_text,
+                provider="gemini",
+                model=self.model_name,
+                tokens_used=0,
+                cost_usd=Decimal("0"),
             )
         
         except Exception as e:
             logger.error(f"Plan analysis failed: {e}")
             return None
+
+    def analyze_pil_image(
+        self,
+        plan_id: str,
+        image: Image.Image,
+        include_ocr: bool = True,
+    ) -> Optional[VisionAnalysis]:
+        """Convenience wrapper for PIL images."""
+        buf = BytesIO()
+        img = image.convert("RGB") if image.mode != "RGB" else image
+        img.save(buf, format="JPEG", quality=self.JPEG_QUALITY, optimize=True)
+        return self.analyze_plan(plan_id=plan_id, image_bytes=buf.getvalue(), include_ocr=include_ocr)
     
     def _preprocess_image(self, image_bytes: bytes) -> bytes:
         """

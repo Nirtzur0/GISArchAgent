@@ -1,0 +1,6 @@
+# Development / test dependencies
+pytest>=9,<10
+pytest-asyncio>=0.23,<1
+black>=24,<26
+ruff>=0.2,<1
+

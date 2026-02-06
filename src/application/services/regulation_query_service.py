@@ -56,9 +56,12 @@ class RegulationQueryService:
             regulations = self._search_regulations(query)
             
             # Generate answer using LLM if available
-            answer = None
-            if self._llm and regulations:
-                answer = self._synthesize_answer(query, regulations)
+            answer: Optional[str] = None
+            if regulations:
+                if self._llm:
+                    answer = self._synthesize_answer(query, regulations)
+                else:
+                    answer = self._fallback_answer(query, regulations)
             
             return RegulationResult(
                 regulations=regulations,
@@ -74,6 +77,21 @@ class RegulationQueryService:
                 query=query,
                 total_found=0
             )
+
+    def _fallback_answer(self, query: RegulationQuery, regulations: List[Regulation]) -> str:
+        """Generate a minimal, deterministic answer when no LLM is configured."""
+        top = regulations[: min(3, len(regulations))]
+        lines = [
+            "LLM synthesis is not configured. Showing the most relevant regulations found:",
+            "",
+        ]
+        for i, reg in enumerate(top, 1):
+            snippet = (reg.summary or reg.content or "").strip().replace("\n", " ")
+            snippet = snippet[:220] + ("..." if len(snippet) > 220 else "")
+            lines.append(f"{i}. {reg.title} ({reg.type.value}, {reg.jurisdiction})")
+            if snippet:
+                lines.append(f"   {snippet}")
+        return "\n".join(lines)
     
     def _search_regulations(self, query: RegulationQuery) -> List[Regulation]:
         """
@@ -85,28 +103,24 @@ class RegulationQueryService:
         Returns:
             List of relevant regulations
         """
-        # Build filters
-        filters = {}
-        
+        # Build filters. Avoid turning "location" into a hard DB filter: we want
+        # semantic recall first, and then do an application-level applicability
+        # check (especially when user passes "national"/"Israel").
+        filters: dict[str, Any] = {}
         if query.regulation_type:
-            filters['type'] = query.regulation_type
+            filters["type"] = query.regulation_type
         
-        if query.location:
-            filters['location'] = query.location
-        
-        # Execute search
         regulations = self._regulation_repo.search(
             query=query.query_text,
             filters=filters if filters else None,
-            limit=query.max_results
+            limit=query.max_results,
         )
         
-        # Additional filtering for location if specified
+        # Optional post-filter for location applicability (skip for "national").
         if query.location and regulations:
-            regulations = [
-                r for r in regulations
-                if r.applies_to_location(query.location)
-            ]
+            loc = query.location.strip().lower()
+            if loc and loc not in {"national", "israel", "ישראל", "ארצי", "ארצית"}:
+                regulations = [r for r in regulations if r.applies_to_location(query.location)]
         
         return regulations
     

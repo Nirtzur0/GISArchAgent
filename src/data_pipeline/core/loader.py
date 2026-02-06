@@ -108,19 +108,18 @@ class VectorDBLoader(DataLoader):
         Returns:
             RegulationType enum value
         """
-        # Check entity subtype if present
-        entity_subtype = metadata.get('entity_subtype', '').lower()
-        
-        if any(keyword in entity_subtype for keyword in ['מגורים', 'דיור', 'משכנות']):
-            return RegulationType.RESIDENTIAL
-        elif any(keyword in entity_subtype for keyword in ['תעשיה', 'מסחר', 'משרדים', 'תעסוקה']):
-            return RegulationType.COMMERCIAL
-        elif any(keyword in entity_subtype for keyword in ['תחבורה', 'תנועה', 'דרך', 'כביש']):
-            return RegulationType.TRANSPORTATION
-        elif any(keyword in entity_subtype for keyword in ['שימור', 'מורשת', 'היסטורי']):
-            return RegulationType.PRESERVATION
-        else:
-            return RegulationType.GENERAL
+        # The domain enum is coarse-grained (TAMA/DISTRICT/LOCAL/...), while
+        # iPlan metadata can include fine-grained descriptions. Keep the mapping
+        # conservative to avoid inventing enum members.
+        entity_subtype = str(metadata.get("entity_subtype") or "").lower()
+
+        if "תמא" in entity_subtype or "tama" in entity_subtype:
+            return RegulationType.TAMA
+        if "מחוז" in entity_subtype or "district" in entity_subtype:
+            return RegulationType.DISTRICT
+
+        # Default: iPlan plan features are typically local plans/regulations.
+        return RegulationType.LOCAL
     
     def _parse_date(self, date_value) -> datetime | None:
         """Parse date from various formats."""

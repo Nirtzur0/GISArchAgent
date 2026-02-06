@@ -11,8 +11,6 @@ This service orchestrates the entire plan search workflow:
 import logging
 from typing import Optional
 from datetime import datetime
-from io import BytesIO
-from PIL import Image
 
 from src.domain.repositories import IPlanRepository
 from src.domain.entities.plan import Plan
@@ -196,18 +194,21 @@ class PlanSearchService:
             cached = self._cache.get(cache_key)
             if cached:
                 logger.info(f"Using cached vision analysis for plan {plan.id}")
-                return cached
+                try:
+                    return VisionAnalysis.from_dict(cached)
+                except Exception:
+                    # Cache might contain an older schema; ignore and recompute.
+                    return None
         
         # Perform new analysis
         try:
-            image = Image.open(BytesIO(image_bytes))
-            analysis = self._vision_service.analyze_plan(plan, image)
+            analysis = self._vision_service.analyze_plan(plan_id=plan.id, image_bytes=image_bytes)
             
             # Cache the result
             if self._cache and analysis:
                 self._cache.set(
                     key=f"vision:{plan.id}",
-                    value=analysis,
+                    value=analysis.to_dict(),
                     ttl=86400  # 24 hours
                 )
             

@@ -1,464 +1,327 @@
 """
-Plan Analyzer - Visual analysis of building plans and regulations
+Plan Analyzer - Building rights, compliance, and optional upload analysis.
 """
 
-import streamlit as st
+from __future__ import annotations
+
+from datetime import datetime
+
+import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
-import pandas as pd
-from datetime import datetime
-import sys
-from pathlib import Path
+import streamlit as st
 
-# Add project root to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
+from src.application.dtos import BuildingRightsQuery
 from src.infrastructure.factory import get_factory
+
 
 st.set_page_config(page_title="Plan Analyzer", page_icon="📐", layout="wide")
 
-st.markdown("# 📐 Plan Analyzer")
-st.markdown("### Analyze building rights, coverage, and compliance")
 
-# Initialize factory
-factory = get_factory()
-upload_service = factory.get_plan_upload_service()
-
-# Sidebar inputs
-with st.sidebar:
-    st.markdown("## 📝 Project Details")
-    
-    project_name = st.text_input("Project Name", "My Building Project")
-    location = st.text_input("Location", "Tel Aviv")
-    
-    st.markdown("### 📏 Plot Dimensions")
-    plot_size = st.number_input("Plot Size (sqm)", 100, 10000, 500)
-    
-    st.markdown("### 🏢 Zoning")
-    zone_type = st.selectbox(
-        "Zone Type",
-        ["R1 - General Residential", "R2 - High Density Residential", 
-         "C1 - Commercial", "M1 - Mixed Use"]
-    )
-    
-    st.markdown("### 🎯 Building Parameters")
-    floors = st.slider("Proposed Floors", 1, 10, 4)
-    coverage = st.slider("Building Coverage (%)", 10, 100, 40)
-
-# Main content
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Analysis", "📈 Comparison", "✅ Compliance", "📄 Report", "📤 Upload & Analyze"])
-
-with tab1:
-    st.markdown("## 📊 Building Rights Analysis")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.markdown("### 📏 Current Parameters")
-        
-        # Calculate building rights
-        max_coverage = {"R1": 40, "R2": 50, "C1": 60, "M1": 55}
-        max_floors = {"R1": 4, "R2": 8, "C1": 6, "M1": 7}
-        
-        zone_key = zone_type.split(" - ")[0]
-        allowed_coverage = max_coverage.get(zone_key, 40)
-        allowed_floors = max_floors.get(zone_key, 4)
-        
-        # Display metrics
-        st.metric("Plot Size", f"{plot_size} sqm")
-        st.metric("Proposed Floors", f"{floors}", 
-                 delta=f"{floors - allowed_floors} vs. max" if floors > allowed_floors else "✓ Compliant")
-        st.metric("Building Coverage", f"{coverage}%",
-                 delta=f"{coverage - allowed_coverage}% vs. max" if coverage > allowed_coverage else "✓ Compliant")
-        
-        # Calculate floor area
-        floor_area = plot_size * (coverage / 100) * floors
-        st.metric("Total Floor Area", f"{floor_area:.0f} sqm")
-        
-        # Building rights visualization
-        st.markdown("### 📊 Coverage Visualization")
-        
-        fig = go.Figure()
-        
-        # Plot boundaries
-        fig.add_trace(go.Scatter(
-            x=[0, plot_size**0.5, plot_size**0.5, 0, 0],
-            y=[0, 0, plot_size**0.5, plot_size**0.5, 0],
-            fill="toself",
-            fillcolor="lightgray",
-            line=dict(color="black", width=2),
-            name="Plot Boundary"
-        ))
-        
-        # Building footprint
-        building_width = (plot_size * coverage / 100) ** 0.5
-        fig.add_trace(go.Scatter(
-            x=[5, 5 + building_width, 5 + building_width, 5, 5],
-            y=[5, 5, 5 + building_width, 5 + building_width, 5],
-            fill="toself",
-            fillcolor="rgba(46, 134, 171, 0.6)",
-            line=dict(color="#2E86AB", width=2),
-            name="Building Footprint"
-        ))
-        
-        fig.update_layout(
-            height=400,
-            showlegend=True,
-            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-            title="Plot Layout (Top View)"
-        )
-        
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        st.markdown("### 📈 Compliance Status")
-        
-        # Compliance checks
-        compliance_data = {
-            'Regulation': [
-                'Maximum Floors',
-                'Building Coverage',
-                'Floor Area Ratio',
-                'Setback Requirements',
-                'Parking Spaces'
-            ],
-            'Required': [
-                f"≤ {allowed_floors}",
-                f"≤ {allowed_coverage}%",
-                "≤ 2.5",
-                "≥ 3m",
-                "1 per 50sqm"
-            ],
-            'Your Plan': [
-                f"{floors}",
-                f"{coverage}%",
-                f"{floor_area / plot_size:.1f}",
-                "3m",
-                f"{int(floor_area / 50)}"
-            ],
-            'Status': [
-                '✅' if floors <= allowed_floors else '❌',
-                '✅' if coverage <= allowed_coverage else '❌',
-                '✅' if floor_area / plot_size <= 2.5 else '❌',
-                '✅',
-                '✅'
-            ]
-        }
-        
-        df = pd.DataFrame(compliance_data)
-        st.dataframe(df, use_container_width=True, hide_index=True)
-        
-        # Overall compliance score
-        compliant_count = df['Status'].value_counts().get('✅', 0)
-        total_count = len(df)
-        compliance_score = (compliant_count / total_count) * 100
-        
-        st.markdown("### 🎯 Overall Compliance")
-        
-        fig = go.Figure(go.Indicator(
-            mode="gauge+number+delta",
-            value=compliance_score,
-            title={'text': "Compliance Score"},
-            delta={'reference': 100},
-            gauge={
-                'axis': {'range': [None, 100]},
-                'bar': {'color': "#2E86AB"},
-                'steps': [
-                    {'range': [0, 50], 'color': "lightgray"},
-                    {'range': [50, 75], 'color': "lightyellow"},
-                    {'range': [75, 100], 'color': "lightgreen"}
-                ],
-                'threshold': {
-                    'line': {'color': "red", 'width': 4},
-                    'thickness': 0.75,
-                    'value': 80
-                }
-            }
-        ))
-        
-        fig.update_layout(height=300)
-        st.plotly_chart(fig, use_container_width=True)
-
-with tab2:
-    st.markdown("## 📈 Scenario Comparison")
-    
-    st.info("Compare different building scenarios to optimize your project")
-    
-    # Create comparison scenarios
-    scenarios = pd.DataFrame({
-        'Scenario': ['Current Plan', 'Max Allowed', 'TAMA 35 Option', 'Optimized'],
-        'Floors': [floors, allowed_floors, floors + 2, allowed_floors],
-        'Coverage (%)': [coverage, allowed_coverage, coverage - 5, allowed_coverage - 5],
-        'Floor Area (sqm)': [
-            floor_area,
-            plot_size * (allowed_coverage / 100) * allowed_floors,
-            plot_size * ((coverage - 5) / 100) * (floors + 2),
-            plot_size * ((allowed_coverage - 5) / 100) * allowed_floors
-        ]
-    })
-    
-    # Bar chart comparison
-    fig = px.bar(
-        scenarios,
-        x='Scenario',
-        y='Floor Area (sqm)',
-        color='Floors',
-        title="Floor Area Comparison by Scenario",
-        color_continuous_scale='Blues'
-    )
-    
-    st.plotly_chart(fig, use_container_width=True)
-    
-    # Detailed comparison table
-    st.dataframe(scenarios, use_container_width=True, hide_index=True)
-    
-    # ROI estimation
-    st.markdown("### 💰 Estimated ROI")
-    
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("Construction Cost", f"₪{floor_area * 6000:,.0f}")
-    with col2:
-        st.metric("Market Value", f"₪{floor_area * 15000:,.0f}")
-    with col3:
-        st.metric("Potential Profit", f"₪{floor_area * 9000:,.0f}")
-
-with tab3:
-    st.markdown("## ✅ Detailed Compliance Check")
-    
-    st.markdown("### 📋 Building Code Requirements")
-    
-    # Detailed compliance checklist
-    compliance_categories = {
-        '🏗️ Structural': [
-            ('Foundation depth minimum 1.5m', True),
-            ('Earthquake resistance standard', True),
-            ('Fire safety compliance', True)
-        ],
-        '🚗 Parking & Access': [
-            ('Parking spaces: 1 per 50sqm', True),
-            ('Accessible parking: 5% of total', True),
-            ('Access road width ≥ 6m', True)
-        ],
-        '🌳 Environmental': [
-            ('Green area: 20% minimum', coverage < 80),
-            ('Solar panels installation', False),
-            ('Rainwater collection', False)
-        ],
-        '🔌 Utilities': [
-            ('Electricity connection', True),
-            ('Water supply', True),
-            ('Sewage system', True)
-        ]
+@st.cache_resource
+def get_services():
+    factory = get_factory()
+    return {
+        "factory": factory,
+        "rights": factory.get_building_rights_service(),
+        "upload": factory.get_plan_upload_service(),  # may be None if no vision key
     }
-    
-    for category, items in compliance_categories.items():
-        with st.expander(category, expanded=True):
-            for item, status in items:
-                col1, col2 = st.columns([4, 1])
-                with col1:
-                    st.write(item)
-                with col2:
-                    if status:
-                        st.success("✅")
-                    else:
-                        st.warning("⏳")
 
-with tab4:
-    st.markdown("## 📄 Generate Report")
-    
-    st.markdown("### 📊 Project Summary")
-    
-    # Report preview
-    report_content = f"""
-    # Building Analysis Report
-    
-    **Project:** {project_name}
-    **Location:** {location}
-    **Date:** {datetime.now().strftime("%Y-%m-%d")}
-    
-    ## Site Information
-    - Plot Size: {plot_size} sqm
-    - Zoning: {zone_type}
-    
-    ## Building Proposal
-    - Floors: {floors}
-    - Building Coverage: {coverage}%
-    - Total Floor Area: {floor_area:.0f} sqm
-    
-    ## Compliance Status
-    - Overall Compliance: {compliance_score:.0f}%
-    - Maximum Floors: {'✅ Compliant' if floors <= allowed_floors else '❌ Non-compliant'}
-    - Coverage: {'✅ Compliant' if coverage <= allowed_coverage else '❌ Non-compliant'}
-    
-    ## Recommendations
-    1. Review setback requirements with local planning authority
-    2. Consider TAMA 35 benefits for additional floors
-    3. Ensure proper parking space allocation
-    4. Plan for green building standards
-    """
-    
-    st.markdown(report_content)
-    
-    st.markdown("---")
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("📥 Download PDF Report", use_container_width=True, type="primary"):
-            st.toast("PDF generation coming soon!", icon="ℹ️")
-    with col2:
-        if st.button("📧 Email Report", use_container_width=True):
-            st.toast("Email feature coming soon!", icon="ℹ️")
 
-with tab5:
-    st.markdown("## 📤 Upload & Analyze Plan")
-    st.markdown("Upload your planning document (PDF, image) and get AI-powered analysis with semantic search results")
-    
-    col1, col2 = st.columns([1, 1])
-    
-    with col1:
-        st.markdown("### 📁 Upload Your Plan")
-        
-        uploaded_file = st.file_uploader(
-            "Choose a planning document",
-            type=['pdf', 'jpg', 'jpeg', 'png', 'tiff'],
-            help="Upload a PDF or image file of your planning document. Max size: 50MB"
+def _zone_options() -> list[tuple[str, str]]:
+    # (label, zone_code) - zone_code feeds BuildingRightsCalculator.
+    return [
+        ("R1 - Low Density Residential", "R1"),
+        ("R2 - Medium Density Residential", "R2"),
+        ("R3 - High Density Residential", "R3"),
+        ("C1 - Commercial", "C1"),
+        ("M1 - Mixed Use", "MIXED"),
+        ("TAMA 35 - Urban Renewal", "TAMA35"),
+    ]
+
+
+def _coverage_figure(plot_size_sqm: float, coverage_percent: float) -> go.Figure:
+    side = max(plot_size_sqm, 1.0) ** 0.5
+    building_area = max(plot_size_sqm, 1.0) * (coverage_percent / 100.0)
+    building_side = max(building_area, 1.0) ** 0.5
+
+    fig = go.Figure()
+    fig.add_trace(
+        go.Scatter(
+            x=[0, side, side, 0, 0],
+            y=[0, 0, side, side, 0],
+            fill="toself",
+            fillcolor="rgba(200,200,200,0.6)",
+            line=dict(color="black", width=2),
+            name="Plot",
         )
-        
-        if uploaded_file:
-            st.success(f"✅ File uploaded: {uploaded_file.name}")
-            st.info(f"📦 Size: {uploaded_file.size / 1024:.1f} KB")
-            
-            # Show image preview if it's an image
-            if uploaded_file.type.startswith('image/'):
-                st.image(uploaded_file, caption="Uploaded Plan", use_container_width=True)
-            
-            # Analysis button
-            if st.button("🔍 Analyze Plan", use_container_width=True, type="primary"):
-                if not upload_service or not upload_service.vision_service:
-                    st.error("❌ Vision service not available. Check API key configuration.")
-                else:
-                    with st.spinner("🤖 Analyzing your plan... This may take a moment."):
-                        try:
-                            # Reset file pointer
-                            uploaded_file.seek(0)
-                            
-                            # Analyze
-                            analysis = upload_service.analyze_uploaded_plan(
-                                file_data=uploaded_file,
-                                filename=uploaded_file.name,
-                                max_results=5
-                            )
-                            
-                            if analysis:
-                                # Store in session state
-                                st.session_state['upload_analysis'] = analysis
-                                st.success("✅ Analysis complete!")
-                                st.rerun()
-                            else:
-                                st.error("❌ Analysis failed. Check logs for details.")
-                        
-                        except Exception as e:
-                            st.error(f"❌ Error during analysis: {e}")
-        
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=[0, building_side, building_side, 0, 0],
+            y=[0, 0, building_side, building_side, 0],
+            fill="toself",
+            fillcolor="rgba(46, 134, 171, 0.55)",
+            line=dict(color="#2E86AB", width=2),
+            name="Building footprint",
+        )
+    )
+    fig.update_layout(
+        height=360,
+        showlegend=True,
+        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+        yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+        margin=dict(l=10, r=10, t=40, b=10),
+        title="Coverage (Top View, Not To Scale)",
+    )
+    return fig
+
+
+def main() -> None:
+    st.markdown("# 📐 Plan Analyzer")
+    st.markdown("### Building rights, compliance checks, and optional upload analysis")
+
+    services = get_services()
+    rights_service = services["rights"]
+    upload_service = services["upload"]
+
+    with st.sidebar:
+        st.markdown("## Project Inputs")
+        project_name = st.text_input("Project name", "My Building Project")
+        location = st.text_input("Location", "Tel Aviv")
+
+        st.markdown("### Plot")
+        plot_size = st.number_input("Plot size (sqm)", min_value=50, max_value=200_000, value=500, step=50)
+
+        st.markdown("### Zoning")
+        zone_label_to_code = dict(_zone_options())
+        zone_label = st.selectbox("Zone type", list(zone_label_to_code.keys()), index=1)
+        zone_code = zone_label_to_code[zone_label]
+
+        st.markdown("### Proposed Building")
+        proposed_floors = st.slider("Floors", 1, 60, 4)
+        proposed_coverage_pct = st.slider("Coverage (%)", 5, 95, 40)
+
+    query = BuildingRightsQuery(plot_size_sqm=float(plot_size), zone_type=zone_code, location=location)
+    rights_result = rights_service.calculate_building_rights(query, include_regulations=False)
+    rights = rights_result.building_rights
+    regs_key = "plan_analyzer_applicable_regs"
+    regs_state = st.session_state.get(regs_key)
+
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(
+        ["📊 Analysis", "📈 Comparison", "✅ Compliance", "📄 Report", "📤 Upload & Analyze"]
+    )
+
+    with tab1:
+        st.markdown("## Building Rights")
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("### Allowed (Calculated)")
+            st.metric("Max floors", rights.max_floors)
+            st.metric("Max height (m)", f"{rights.max_height_meters}")
+            st.metric("Max coverage (%)", f"{rights.max_coverage_percent}")
+            st.metric("Max coverage (sqm)", f"{rights.max_coverage_sqm:.0f}")
+            st.metric("FAR", f"{rights.floor_area_ratio}")
+            st.metric("Max building area (sqm)", f"{rights.max_building_area_sqm:.0f}")
+            st.metric("Parking (typical)", rights.parking_spaces_required)
+
+        with col2:
+            st.markdown("### Proposed vs Allowed")
+            proposed_floor_area = plot_size * (proposed_coverage_pct / 100.0) * proposed_floors
+
+            floors_ok = proposed_floors <= rights.max_floors
+            cov_ok = (plot_size * (proposed_coverage_pct / 100.0)) <= float(rights.max_coverage_sqm)
+            area_ok = proposed_floor_area <= float(rights.max_building_area_sqm)
+
+            st.metric("Proposed floors", proposed_floors, delta="OK" if floors_ok else "Over limit")
+            st.metric("Proposed coverage (%)", proposed_coverage_pct, delta="OK" if cov_ok else "Over limit")
+            st.metric("Proposed floor area (sqm)", f"{proposed_floor_area:,.0f}", delta="OK" if area_ok else "Over limit")
+
+            st.plotly_chart(_coverage_figure(float(plot_size), float(proposed_coverage_pct)), use_container_width=True)
+
+        st.markdown("---")
+        st.markdown("### Applicable Regulations (from Vector DB)")
+        col_a, col_b = st.columns([1, 2])
+        with col_a:
+            if st.button("Fetch Applicable Regulations", use_container_width=True):
+                with st.spinner("Searching vector DB..."):
+                    full = rights_service.calculate_building_rights(query, include_regulations=True)
+                st.session_state[regs_key] = full.applicable_regulations
+                st.rerun()
+        with col_b:
+            st.caption("This is optional because it can be slower than the pure calculation step.")
+
+        regs = regs_state or []
+        if regs:
+            for reg in regs:
+                with st.expander(reg.title):
+                    st.caption(f"type={reg.type.value} jurisdiction={reg.jurisdiction}")
+                    st.write((reg.summary or reg.content)[:800] + ("..." if len((reg.summary or reg.content)) > 800 else ""))
         else:
-            st.info("👆 Upload a planning document to begin analysis")
-            
-            st.markdown("#### 📋 Supported Features:")
-            st.markdown("""
-            - **AI Vision Analysis**: Automated plan description
-            - **OCR Text Extraction**: Extract Hebrew & English text
-            - **Zone Identification**: Detect planning zones
-            - **Semantic Search**: Find matching regulations
-            - **Building Rights**: Extract development parameters
-            """)
-    
-    with col2:
-        st.markdown("### 📊 Analysis Results")
-        
-        if 'upload_analysis' in st.session_state:
-            analysis = st.session_state['upload_analysis']
-            
-            # Vision Analysis
-            st.markdown("#### 🤖 AI Analysis")
-            with st.expander("📝 Plan Description", expanded=True):
-                st.write(analysis.vision_analysis.description or "No description generated")
-            
-            # Extracted text
+            st.info("Not fetched yet.")
+
+    with tab2:
+        st.markdown("## Scenario Comparison")
+        proposed_floor_area = plot_size * (proposed_coverage_pct / 100.0) * proposed_floors
+        max_floor_area = float(rights.max_building_area_sqm)
+
+        scenarios = pd.DataFrame(
+            [
+                {"Scenario": "Proposed", "Floors": proposed_floors, "Coverage (%)": proposed_coverage_pct, "Floor Area (sqm)": proposed_floor_area},
+                {"Scenario": "Max Allowed", "Floors": rights.max_floors, "Coverage (%)": float(rights.max_coverage_percent), "Floor Area (sqm)": max_floor_area},
+            ]
+        )
+
+        fig = px.bar(
+            scenarios,
+            x="Scenario",
+            y="Floor Area (sqm)",
+            color="Floors",
+            title="Floor Area by Scenario",
+            color_continuous_scale="Blues",
+        )
+        st.plotly_chart(fig, use_container_width=True)
+        st.dataframe(scenarios, use_container_width=True, hide_index=True)
+
+    with tab3:
+        st.markdown("## Compliance Checks")
+        proposed_floor_area = plot_size * (proposed_coverage_pct / 100.0) * proposed_floors
+        proposed_coverage_sqm = plot_size * (proposed_coverage_pct / 100.0)
+
+        rows = [
+            {
+                "Check": "Floors",
+                "Required": f"<= {rights.max_floors}",
+                "Proposed": str(proposed_floors),
+                "Status": "✅" if proposed_floors <= rights.max_floors else "❌",
+            },
+            {
+                "Check": "Coverage (sqm)",
+                "Required": f"<= {float(rights.max_coverage_sqm):.0f}",
+                "Proposed": f"{proposed_coverage_sqm:.0f}",
+                "Status": "✅" if proposed_coverage_sqm <= float(rights.max_coverage_sqm) else "❌",
+            },
+            {
+                "Check": "Total building area (sqm)",
+                "Required": f"<= {float(rights.max_building_area_sqm):.0f}",
+                "Proposed": f"{proposed_floor_area:.0f}",
+                "Status": "✅" if proposed_floor_area <= float(rights.max_building_area_sqm) else "❌",
+            },
+            {
+                "Check": "Setbacks (front/side/rear, m)",
+                "Required": f"{rights.front_setback_meters}/{rights.side_setback_meters}/{rights.rear_setback_meters}",
+                "Proposed": "TBD",
+                "Status": "⏳",
+            },
+            {
+                "Check": "Parking (typical)",
+                "Required": str(rights.parking_spaces_required),
+                "Proposed": "TBD",
+                "Status": "⏳",
+            },
+        ]
+        df = pd.DataFrame(rows)
+        st.dataframe(df, use_container_width=True, hide_index=True)
+
+        compliant = sum(1 for r in rows if r["Status"] == "✅")
+        total = sum(1 for r in rows if r["Status"] in {"✅", "❌"})
+        score = (compliant / total) * 100 if total else 0.0
+
+        st.markdown("### Overall Score (based on computed checks)")
+        st.progress(int(score))
+        st.caption(f"{score:.0f}% compliant (computed checks only)")
+
+    with tab4:
+        st.markdown("## Report")
+        proposed_floor_area = plot_size * (proposed_coverage_pct / 100.0) * proposed_floors
+
+        report = f"""
+# Building Analysis Report
+
+**Project:** {project_name}
+**Location:** {location}
+**Date:** {datetime.now().strftime("%Y-%m-%d")}
+
+## Inputs
+- Plot size: {plot_size} sqm
+- Zone: {zone_label} ({zone_code})
+- Proposed floors: {proposed_floors}
+- Proposed coverage: {proposed_coverage_pct}%
+
+## Calculated Rights (Typical)
+- Max floors: {rights.max_floors}
+- Max height: {rights.max_height_meters} m
+- Max coverage: {rights.max_coverage_percent}% ({rights.max_coverage_sqm:.0f} sqm)
+- FAR: {rights.floor_area_ratio}
+- Max building area: {rights.max_building_area_sqm:.0f} sqm
+- Parking (typical): {rights.parking_spaces_required}
+
+## Proposed Totals
+- Proposed floor area: {proposed_floor_area:.0f} sqm
+        """.strip()
+
+        st.markdown(report)
+
+        st.download_button(
+            "Download report (Markdown)",
+            data=report.encode("utf-8"),
+            file_name=f"building_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
+            mime="text/markdown",
+            use_container_width=True,
+        )
+
+    with tab5:
+        st.markdown("## Upload & Analyze Plan (Vision)")
+        if upload_service is None:
+            st.warning("Vision analysis is disabled. Configure `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) and restart.")
+            return
+
+        uploaded = st.file_uploader("Upload PDF/Image", type=["pdf", "jpg", "jpeg", "png", "tiff"])
+        if uploaded is None:
+            st.info("Upload a document to run vision analysis and semantic search.")
+            return
+
+        st.success(f"Uploaded: {uploaded.name} ({uploaded.size / 1024:.1f} KB)")
+
+        if uploaded.type.startswith("image/"):
+            st.image(uploaded, caption="Preview", use_container_width=True)
+
+        if st.button("Analyze", type="primary"):
+            with st.spinner("Analyzing..."):
+                uploaded.seek(0)
+                analysis = upload_service.analyze_uploaded_plan(uploaded, uploaded.name, max_results=5)
+            if not analysis:
+                st.error("Analysis failed. Check logs and API key configuration.")
+                return
+            st.session_state["upload_analysis"] = analysis
+            st.rerun()
+
+        if "upload_analysis" in st.session_state:
+            analysis = st.session_state["upload_analysis"]
+            st.markdown("### Results")
+            with st.expander("Plan Description", expanded=True):
+                st.write(analysis.vision_analysis.description or "No description")
+
             if analysis.extracted_text:
-                with st.expander("📄 Extracted Text (Preview)"):
-                    # Show first 500 characters
-                    preview = analysis.extracted_text[:500]
-                    if len(analysis.extracted_text) > 500:
-                        preview += "..."
-                    st.text(preview)
-                    st.caption(f"Total characters: {len(analysis.extracted_text)}")
-            
-            # Identified zones
+                with st.expander("Extracted Text (preview)"):
+                    st.text(analysis.extracted_text[:800] + ("..." if len(analysis.extracted_text) > 800 else ""))
+
             if analysis.identified_zones:
-                with st.expander("📍 Identified Zones"):
-                    for zone in analysis.identified_zones:
-                        st.write(f"- {zone}")
-            
-            # Classification
-            st.markdown("#### 🏷️ Classification")
-            col_a, col_b = st.columns(2)
-            with col_a:
-                st.metric("Zone Type", analysis.estimated_zone_type or "Unknown")
-            with col_b:
-                st.metric("Location", analysis.estimated_location or "Unknown")
-            
-            # Matching regulations
-            st.markdown("#### 📚 Matching Regulations")
-            
+                st.write("**Zones:** " + ", ".join(analysis.identified_zones))
+
+            st.markdown("### Matching Regulations")
             if analysis.matching_regulations:
-                for i, (reg, score) in enumerate(zip(analysis.matching_regulations, analysis.similarity_scores)):
-                    with st.expander(f"🔹 {reg.title} (Similarity: {score:.2%})", expanded=(i == 0)):
-                        st.markdown(f"**ID:** {reg.id}")
-                        st.markdown(f"**Zone:** {reg.zone_type}")
-                        
-                        if reg.description:
-                            st.markdown(f"**Description:**")
-                            st.write(reg.description)
-                        
-                        if reg.building_rights:
-                            st.markdown("**Building Rights:**")
-                            rights = reg.building_rights
-                            
-                            rights_col1, rights_col2 = st.columns(2)
-                            with rights_col1:
-                                if rights.max_floors:
-                                    st.metric("Max Floors", rights.max_floors)
-                                if rights.min_apartment_size:
-                                    st.metric("Min Apartment", f"{rights.min_apartment_size} sqm")
-                            with rights_col2:
-                                if rights.max_building_coverage:
-                                    st.metric("Max Coverage", f"{rights.max_building_coverage}%")
-                                if rights.far:
-                                    st.metric("FAR", rights.far)
+                for reg, score in zip(analysis.matching_regulations, analysis.similarity_scores):
+                    with st.expander(f"{reg.title} (similarity {score:.2%})"):
+                        st.caption(f"type={reg.type.value} jurisdiction={reg.jurisdiction}")
+                        st.write((reg.summary or reg.content)[:900] + ("..." if len((reg.summary or reg.content)) > 900 else ""))
             else:
                 st.info("No matching regulations found")
-            
-            # Processing info
-            st.markdown("---")
-            st.caption(f"⏱️ Processing time: {analysis.processing_time_ms:.0f}ms")
-            st.caption(f"🕐 Analyzed at: {analysis.upload_timestamp.strftime('%Y-%m-%d %H:%M:%S')}")
-        
-        else:
-            st.info("📊 Analysis results will appear here after upload")
-            st.markdown("#### 💡 How it works:")
-            st.markdown("""
-            1. **Upload** your planning document
-            2. **AI analyzes** the document with Gemini Vision
-            3. **Text is extracted** using OCR
-            4. **Semantic search** finds relevant regulations
-            5. **Results** show matching rules and building rights
-            """)
-    
-    # Clear results button
-    if 'upload_analysis' in st.session_state:
-        st.markdown("---")
-        if st.button("🗑️ Clear Results"):
-            del st.session_state['upload_analysis']
-            st.rerun()
+
+            if st.button("Clear results"):
+                del st.session_state["upload_analysis"]
+                st.rerun()
+
+
+main()

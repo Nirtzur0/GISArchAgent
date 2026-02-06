@@ -6,7 +6,7 @@ other requirements based on plot size, zone type, and location.
 """
 
 import logging
-from typing import List
+from typing import List, Optional, Callable
 from decimal import Decimal
 
 from src.domain.repositories import IRegulationRepository
@@ -25,7 +25,11 @@ class BuildingRightsService:
     This is a core feature for architecture firms planning projects.
     """
     
-    def __init__(self, regulation_repository: IRegulationRepository):
+    def __init__(
+        self,
+        regulation_repository: Optional[IRegulationRepository] = None,
+        regulation_repo_provider: Optional[Callable[[], IRegulationRepository]] = None,
+    ):
         """
         Initialize service.
         
@@ -33,10 +37,12 @@ class BuildingRightsService:
             regulation_repository: Repository for regulation data
         """
         self._regulation_repo = regulation_repository
+        self._regulation_repo_provider = regulation_repo_provider
     
     def calculate_building_rights(
         self, 
-        query: BuildingRightsQuery
+        query: BuildingRightsQuery,
+        include_regulations: bool = True,
     ) -> BuildingRightsResult:
         """
         Calculate building rights for a plot.
@@ -57,8 +63,11 @@ class BuildingRightsService:
                 location=query.location
             )
             
-            # Find applicable regulations
-            regulations = self._find_applicable_regulations(query)
+            regulations = []
+            if include_regulations:
+                if self._regulation_repo is None and self._regulation_repo_provider is not None:
+                    self._regulation_repo = self._regulation_repo_provider()
+                regulations = self._find_applicable_regulations(query)
             
             return BuildingRightsResult(
                 building_rights=building_rights,
@@ -85,6 +94,9 @@ class BuildingRightsService:
         """
         regulations = []
         
+        if self._regulation_repo is None:
+            return []
+
         try:
             # Get location-specific regulations
             location_regs = self._regulation_repo.get_applicable_to_location(

@@ -1,66 +1,60 @@
-# Core LLM and Agent Framework
-langchain==0.1.0
-langchain-openai==0.0.5
-langchain-anthropic==0.1.1
-langchain-google-genai==0.0.6
-langgraph==0.0.20
-langsmith==0.0.77
+# Runtime dependencies for GISArchAgent
+#
+# Keep versions as ranges to avoid dependency resolution failures across
+# platforms, while still preventing major-version breaking changes.
 
-# Vision support
-Pillow>=10.0.0
-pytesseract>=0.3.10
-google-generativeai>=0.3.0
-anthropic>=0.18.0
+# Web UI
+streamlit>=1.52,<2
+streamlit-folium>=0.25,<1
+folium>=0.20,<1
+plotly>=6,<7
 
-# Vector Database
-chromadb==0.4.22
-sentence-transformers==2.3.1
+# Core data + utils
+pandas>=2.2,<3
+python-dotenv>=1,<2
+tenacity>=8,<9
+tqdm>=4.66,<5
+click>=8.1,<9
 
-# Web Scraping and Data Extraction
-beautifulsoup4==4.12.3
-selenium==4.17.2
-webdriver-manager==4.0.1
-requests==2.31.0
-lxml==5.1.0
+# Vector DB
+chromadb>=1.3,<2
 
-# GIS and Spatial Data (arcgis temporarily removed - Python 3.12 incompatibility)
-# arcgis==2.2.0
-geopandas==0.14.2
-shapely==2.0.2
-pyproj==3.6.1
+# LLM / Vision
+google-genai>=1,<2
+Pillow>=10,<13
 
-# Document Processing
-pypdf==4.0.1
-PyMuPDF>=1.23.0  # For PDF to image conversion
-python-docx==1.1.0
-openpyxl==3.1.2
-pandas==2.2.0
+# Document processing
+pypdf>=4,<6
+PyMuPDF>=1.23,<2
+python-docx>=1.1,<2
+openpyxl>=3.1,<4
 
-# API and Web Framework
-fastapi==0.109.0
-uvicorn==0.27.0
-pydantic==2.6.0
-pydantic-settings==2.1.0
+# Web scraping / fetching
+requests>=2.31,<3
+beautifulsoup4>=4.12,<5
+lxml>=5,<6
+selenium>=4.17,<5
+webdriver-manager>=4,<5
 
-# Streamlit Web App
-streamlit>=1.29.0
-streamlit-folium>=0.15.0
-plotly>=5.18.0
-folium>=0.15.0
+# GIS
+geopandas>=0.14,<1
+shapely>=2,<3
+pyproj>=3.6,<4
 
-# Utilities
-python-dotenv==1.0.1
-tenacity==8.2.3
-aiohttp==3.9.3
-tqdm==4.66.1
-certifi>=2023.7.22
-urllib3>=2.0.0
+# API (optional, used by some scripts)
+fastapi>=0.126,<1
+uvicorn>=0.27,<1
 
-# CLI
-click==8.1.7
+# Settings
+pydantic>=2.6,<3
+pydantic-settings>=2.1,<3
 
-# Development
-pytest>=7.0.0,<9.0.0
-pytest-asyncio==0.23.4
-black==24.1.1
-ruff==0.2.0
+# LangChain integrations (optional; used by src/vectorstore/manager.py)
+langchain>=1.2,<2
+langchain-core>=1.2,<2
+langchain-openai>=1.1,<2
+langchain-chroma>=1.1,<2
+langchain-text-splitters>=1.1,<2
+langgraph>=0.0.20
+langsmith>=0.5,<1
+

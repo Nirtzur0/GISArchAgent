@@ -8,9 +8,11 @@ import logging
 from typing import List, Optional, Dict, Any
 import chromadb
 from chromadb.config import Settings
+from pathlib import Path
 
 from src.domain.repositories import IRegulationRepository
 from src.domain.entities.regulation import Regulation, RegulationType
+from src.infrastructure.repositories.embedding_functions import DeterministicHashEmbeddingFunction
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +40,15 @@ class ChromaRegulationRepository(IRegulationRepository):
         """
         self.persist_directory = persist_directory
         self.collection_name = collection_name
+
+        # Avoid implicit embedding-model downloads for fresh installs/tests by
+        # using a deterministic local embedding unless the caller provides one.
+        # For existing persisted DBs, keep default behavior to avoid dimension
+        # mismatch with already-stored vectors.
+        if embedding_function is None:
+            db_file = Path(persist_directory) / "chroma.sqlite3"
+            if not db_file.exists():
+                embedding_function = DeterministicHashEmbeddingFunction(dim=128)
         
         # Initialize ChromaDB client
         self._client = chromadb.PersistentClient(
@@ -85,6 +96,52 @@ class ChromaRegulationRepository(IRegulationRepository):
         except Exception as e:
             logger.error(f"Search failed: {e}")
             return []
+
+    def search_with_scores(
+        self,
+        query: str,
+        filters: Optional[Dict[str, Any]] = None,
+        limit: int = 10,
+    ) -> List[Dict[str, Any]]:
+        """Semantic search that also returns similarity scores.
+        
+        Returns a list of dicts: {"regulation": Regulation, "similarity": float}.
+        Similarity is derived from Chroma's distance metric (smaller is better).
+        """
+        try:
+            where_clause = self._build_where_clause(filters) if filters else None
+
+            results = self._collection.query(
+                query_texts=[query],
+                n_results=limit,
+                where=where_clause,
+                include=["documents", "metadatas", "distances"],
+            )
+
+            docs = (results.get("documents") or [[]])[0]
+            metas = (results.get("metadatas") or [[]])[0]
+            dists = (results.get("distances") or [[]])[0]
+
+            out: List[Dict[str, Any]] = []
+            for doc, meta, dist in zip(docs, metas, dists):
+                reg = self._map_to_entity(doc, meta or {})
+                if not reg:
+                    continue
+                # Convert distance -> similarity in (0, 1]; distance can be 0.
+                try:
+                    similarity = 1.0 / (1.0 + float(dist))
+                except Exception:
+                    similarity = 0.0
+                out.append({"regulation": reg, "similarity": similarity})
+
+            return out
+        except Exception as e:
+            logger.error(f"Search with scores failed: {e}")
+            return []
+
+    def search_by_text(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
+        """Backwards-compatible helper for UI/services that expect scored matches."""
+        return self.search_with_scores(query=query, limit=limit)
     
     def get_by_id(self, regulation_id: str) -> Optional[Regulation]:
         """Get regulation by ID."""
@@ -260,6 +317,7 @@ class ChromaRegulationRepository(IRegulationRepository):
         Note: ChromaDB only accepts string, int, float, or bool values - no None.
         """
         metadata = {
+            'id': str(regulation.id),
             'type': str(regulation.type.value),
             'jurisdiction': str(regulation.jurisdiction),
             'title': str(regulation.title),

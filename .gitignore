@@ -10,9 +10,11 @@ __pycache__/
 data/raw/*
 data/processed/*
 data/vectorstore/*
+data/cache/*
 !data/raw/.gitkeep
 !data/processed/.gitkeep
 !data/vectorstore/.gitkeep
+!data/cache/.gitkeep
 
 # IDE
 .vscode/
