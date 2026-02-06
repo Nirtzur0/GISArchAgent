@@ -182,37 +182,39 @@ class BuildingRightsCalculator:
         max_floors = 4
         
         # Adjust based on zone type
-        zone_upper = zone_type.upper()
-        
-        if 'R1' in zone_upper or 'A' in zone_upper:
-            # Low-density residential
-            coverage_percent = Decimal('30')
-            far = Decimal('0.9')
-            max_height = Decimal('12')
-            max_floors = 3
-        
-        elif 'R2' in zone_upper or 'B' in zone_upper:
-            # Medium-density residential
-            coverage_percent = Decimal('40')
-            far = Decimal('1.2')
-            max_height = Decimal('15')
-            max_floors = 4
-        
-        elif 'R3' in zone_upper or 'C' in zone_upper:
-            # High-density residential
-            coverage_percent = Decimal('50')
-            far = Decimal('2.0')
-            max_height = Decimal('25')
-            max_floors = 7
-        
-        elif 'TAMA35' in zone_upper or 'TAMA 35' in zone_upper:
+        zone_upper = (zone_type or "").upper()
+        zone_norm = zone_upper.replace(" ", "").replace("-", "")
+
+        # Prefer explicit codes used by the app UI (R1/R2/R3/C1/MIXED/TAMA35).
+        if zone_norm.startswith("TAMA35"):
             # TAMA 35 - Urban renewal
             coverage_percent = Decimal('50')
             far = Decimal('2.5')
             max_height = Decimal('30')
             max_floors = 8
-        
-        elif 'C' in zone_upper and 'COMMERCIAL' not in zone_upper:
+
+        elif zone_norm.startswith("R1") or zone_norm in {"A", "ZONEA"}:
+            # Low-density residential
+            coverage_percent = Decimal('30')
+            far = Decimal('0.9')
+            max_height = Decimal('12')
+            max_floors = 3
+
+        elif zone_norm.startswith("R2") or zone_norm in {"B", "ZONEB"}:
+            # Medium-density residential
+            coverage_percent = Decimal('40')
+            far = Decimal('1.2')
+            max_height = Decimal('15')
+            max_floors = 4
+
+        elif zone_norm.startswith("R3") or zone_norm in {"C", "ZONEC"}:
+            # High-density residential
+            coverage_percent = Decimal('50')
+            far = Decimal('2.0')
+            max_height = Decimal('25')
+            max_floors = 7
+
+        elif zone_norm.startswith("C1"):
             # Commercial
             coverage_percent = Decimal('70')
             far = Decimal('3.0')
