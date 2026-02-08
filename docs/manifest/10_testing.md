@@ -8,7 +8,7 @@
 ## Marker Taxonomy
 
 Pyramid level:
-- `unit`: pure logic only (no real DB/network/Selenium).
+- `unit`: pure logic only (no real DB/network/browser automation).
 - `integration`: real boundary contracts (Chroma persistence, repository wiring).
 - `e2e`: critical flow smoke checks (Streamlit scripts + end-to-end output sanity).
 
@@ -52,4 +52,3 @@ Integration tests:
 E2E tests:
 - Uses Streamlit’s `AppTest` to execute scripts in-process.
 - Requires Streamlit + UI dependencies importable (folium/pyproj/pandas/etc).
-

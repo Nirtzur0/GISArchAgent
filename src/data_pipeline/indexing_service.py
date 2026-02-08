@@ -100,20 +100,20 @@ class IndexingService:
         return regulation
     
     def _parse_regulation_type(self, entity_subtype: str) -> RegulationType:
-        """Map Hebrew entity subtype to RegulationType enum."""
-        entity_subtype_lower = entity_subtype.lower() if entity_subtype else ''
-        
-        # Mapping based on Hebrew keywords
-        if any(keyword in entity_subtype_lower for keyword in ['מגורים', 'דיור', 'משכנות']):
-            return RegulationType.RESIDENTIAL
-        elif any(keyword in entity_subtype_lower for keyword in ['תעשיה', 'מסחר', 'משרדים', 'תעסוקה']):
-            return RegulationType.COMMERCIAL
-        elif any(keyword in entity_subtype_lower for keyword in ['תחבורה', 'תנועה', 'דרך', 'כביש']):
-            return RegulationType.TRANSPORTATION
-        elif any(keyword in entity_subtype_lower for keyword in ['שימור', 'מורשת', 'היסטורי']):
-            return RegulationType.PRESERVATION
-        else:
-            return RegulationType.GENERAL
+        """Map Hebrew entity subtype to RegulationType enum.
+
+        The domain enum is coarse-grained (TAMA/DISTRICT/LOCAL/...). Keep this
+        mapping conservative to avoid referencing non-existent enum members.
+        """
+        entity_subtype_lower = entity_subtype.lower() if entity_subtype else ""
+
+        if "תמא" in entity_subtype_lower or "tama" in entity_subtype_lower:
+            return RegulationType.TAMA
+        if "מחוז" in entity_subtype_lower or "district" in entity_subtype_lower:
+            return RegulationType.DISTRICT
+
+        # Default: iPlan plan features are typically local plans/regulations.
+        return RegulationType.LOCAL
     
     def _parse_date(self, date_str: str) -> Optional[datetime]:
         """Parse date string from iPlan format."""

@@ -55,7 +55,7 @@ tests/
 
 ### `tests/unit/`
 - **Belongs:** pure logic (domain + application), parsers/mappers, deterministic utilities.
-- **Must never:** touch real Chroma persistence, Selenium, or real network.
+- **Must never:** touch real Chroma persistence, browser automation (Pydoll), or real network.
 - **Markers:** `@pytest.mark.unit` (default), optionally `@pytest.mark.data_contracts`.
 
 ### `tests/integration/`
@@ -85,7 +85,7 @@ tests/
 
 - Mock only **external boundaries**:
   - LLM: fake object with deterministic `generate_answer`.
-  - Vision/Selenium/network: unit tests never touch; integration tests avoid by using sample data.
+  - Vision/browser automation/network: unit tests never touch; integration tests avoid by using sample data.
 - Prefer fakes over mocks for LLM.
 - Time:
   - For parser contracts that stamp `datetime.now()`, patch the module-local `datetime` reference.
@@ -110,4 +110,3 @@ tests/
 | `tests/test_vectordb_integration.py` | `tests/integration/vectordb/*` + `tests/integration/data_contracts/*` | Split by responsibility; add explicit contract checks |
 | `tests/test_iplan_integration.py` | `tests/integration/iplan/*` + `tests/unit/data_pipeline/*` + `tests/*/data_contracts/*` | Separate parser/loader unit behavior from DB integration and data contracts |
 | `tests/test_webui_smoke.py` | `tests/e2e/webui/test_streamlit_smoke.py` | Clarify as E2E smoke; rename tests to convention |
-

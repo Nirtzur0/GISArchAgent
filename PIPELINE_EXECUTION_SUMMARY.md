@@ -32,7 +32,7 @@ Based on the pipeline stats (`data/cache/pipeline_stats.json`):
 
 ### What Worked ✅
 - **Discovery Phase:** Successfully fetched metadata for 1,000 plans from iPlan
-- **Cache System:** Created 7 cache files in `data/cache/selenium/`
+- **Cache System:** Created 7 cache files in `data/cache/pydoll/`
 - **No Failures:** All 1,000 plans processed without errors
 
 ### What Didn't Work ⚠️
@@ -50,7 +50,7 @@ The error indicates that the data source object (`IPlanSeleniumSource`) doesn't 
 ## 📦 Current Data State
 
 ### Cached Discovery Data
-- Location: `data/cache/selenium/`
+- Location: `data/cache/pydoll/`
 - Files: 7 cache files
 - Contains: Raw plan metadata from 1,000 iPlan records
 
@@ -92,7 +92,7 @@ To complete the data loading:
 
 - `app.py` - Added dark mode CSS support
 - `data/cache/pipeline_stats.json` - Pipeline execution statistics
-- `data/cache/selenium/*.json` - 7 cache files with plan metadata
+- `data/cache/pydoll/*.json` - 7 cache files with plan metadata
 - `check_db_status.py` - Status checking script (created)
 - `PIPELINE_EXECUTION_SUMMARY.md` - This summary document
 

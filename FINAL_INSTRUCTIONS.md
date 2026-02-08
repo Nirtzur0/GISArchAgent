@@ -14,13 +14,13 @@
 **Results:**
 - ✅ **1,000 plans discovered** from iPlan GIS API
 - ✅ **All 1,000 plans processed** successfully (0 failures)
-- ✅ **7 cache files created** in `data/cache/selenium/`
+- ✅ **7 cache files created** in `data/cache/pydoll/`
 - ✅ **Pipeline completed in ~6.5 seconds**
 - ⚠️ Document fetching failed (missing method in data source)
 - ⚠️ Regulations not indexed (due to document fetching failure)
 
 **Data Location:**
-- Discovery cache: `data/cache/selenium/*.json` (7 files)
+- Discovery cache: `data/cache/pydoll/*.json` (7 files)
 - Pipeline stats: `data/cache/pipeline_stats.json`
 - Sample data: `data/samples/iplan_sample_data.json`
 
@@ -142,7 +142,7 @@ Try these example questions in the main app:
 
 ### Data Files:
 - `data/samples/iplan_sample_data.json` - 20 real plans (ready to use)
-- `data/cache/selenium/*.json` - 7 cache files with 1000 discovered plans
+- `data/cache/pydoll/*.json` - 7 cache files with 1000 discovered plans
 - `data/cache/pipeline_stats.json` - Execution statistics
 
 ## 🚨 If Nothing Works

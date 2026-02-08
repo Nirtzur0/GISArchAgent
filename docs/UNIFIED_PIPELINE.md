@@ -4,9 +4,9 @@
 
 The **Unified Data Pipeline** is a complete solution for building and maintaining the vector database from iPlan/Mavat data. It replaces the previous fragmented approach with a single, maintainable system.
 
-### Key Innovation: Selenium-Based WAF Bypass
+### Key Innovation: Pydoll-Based WAF Bypass (CDP Chrome)
 
-Instead of relying on LLM tools (like `fetch_webpage`), we use **Selenium with headless Chrome** to access iPlan/Mavat data. This approach:
+Instead of relying on LLM tools (like `fetch_webpage`), we use **Pydoll (CDP-controlled Chrome)** to access iPlan/Mavat data. This approach:
 
 - ✅ **Bypasses WAF protection** - Acts like a real browser
 - ✅ **Handles JavaScript challenges** - Can execute client-side code
@@ -29,7 +29,7 @@ Instead of relying on LLM tools (like `fetch_webpage`), we use **Selenium with h
         │                     │                     │
         ▼                     ▼                     ▼
 ┌──────────────┐      ┌──────────────┐     ┌──────────────┐
-│   Selenium   │      │   Document   │     │   Vision     │
+│   Pydoll     │      │   Document   │     │   Vision     │
 │   Fetcher    │──────│   Service    │─────│   Service    │
 └──────────────┘      └──────────────┘     └──────────────┘
         │                     │                     │
@@ -44,12 +44,12 @@ Instead of relying on LLM tools (like `fetch_webpage`), we use **Selenium with h
 ### Data Flow
 
 ```
-1. Discovery (Selenium)
+1. Discovery (Pydoll)
    ├─ iPlan ArcGIS API → Plans metadata
    ├─ Cache responses (7 days)
    └─ Return plan features
 
-2. Document Fetching (Selenium)
+2. Document Fetching (Pydoll)
    ├─ Navigate to Mavat portal
    ├─ Extract document links
    ├─ Download PDFs/DWGs
@@ -79,13 +79,9 @@ Instead of relying on LLM tools (like `fetch_webpage`), we use **Selenium with h
 # 1. Install Python dependencies
 pip install -r requirements.txt
 
-# 2. Install ChromeDriver (macOS)
-brew install --cask chromedriver
+# 2. Ensure Google Chrome is installed (Pydoll drives Chrome via CDP)
 
-# 3. Or download manually
-# https://chromedriver.chromium.org/
-
-# 4. Set environment variables
+# 3. Set environment variables
 export GEMINI_API_KEY="your_api_key_here"
 ```
 
@@ -93,38 +89,32 @@ export GEMINI_API_KEY="your_api_key_here"
 
 ```bash
 # Check prerequisites
-python build_vectordb.py --check
+python3 scripts/build_vectordb_cli.py check
 
 # Check current status
-python build_vectordb.py --status
+python3 scripts/build_vectordb_cli.py status
 
 # Build with first 10 plans (testing)
-python build_vectordb.py --max-plans 10
+python3 scripts/build_vectordb_cli.py build --max-plans 10 --no-vision
 
 # Build with 100 plans
-python build_vectordb.py --max-plans 100
+python3 scripts/build_vectordb_cli.py build --max-plans 100 --no-vision
 
 # Clear and rebuild entire database
-python build_vectordb.py --rebuild --max-plans 1000
+python3 scripts/build_vectordb_cli.py build --rebuild --max-plans 1000 --no-vision
 ```
 
 ### Advanced Usage
 
 ```bash
-# Build from TAMA 35 service
-python build_vectordb.py --service tama35 --max-plans 50
-
-# Build from specific location (SQL WHERE clause)
-python build_vectordb.py --where "municipality_name='ירושלים'" --max-plans 100
-
 # Skip document fetching (metadata only, faster)
-python build_vectordb.py --no-documents --max-plans 500
+python3 scripts/build_vectordb_cli.py build --no-documents --max-plans 500 --no-vision
 
-# Show browser window (debugging)
-python build_vectordb.py --no-headless --max-plans 5
+# Run headless (may reduce MAVAT reliability)
+python3 scripts/build_vectordb_cli.py build --headless --max-plans 5 --no-vision
 
 # Verbose logging
-python build_vectordb.py --max-plans 10 -v
+python3 scripts/build_vectordb_cli.py build --max-plans 10 --no-vision -v
 ```
 
 ---
@@ -136,7 +126,7 @@ GISArchAgent/
 ├── build_vectordb.py                   # CLI entry point
 ├── src/
 │   ├── data_management/
-│   │   └── selenium_fetcher.py         # Selenium-based fetcher
+│   │   └── pydoll_fetcher.py           # Pydoll-based fetcher
 │   ├── vectorstore/
 │   │   ├── unified_pipeline.py         # Main pipeline orchestration
 │   │   ├── health_check.py             # Vector DB validation
@@ -147,7 +137,7 @@ GISArchAgent/
 │           └── vision_service.py       # Gemini vision analysis
 ├── data/
 │   ├── cache/
-│   │   └── selenium/                   # API response cache
+│   │   └── pydoll/                     # API response cache
 │   ├── vision_cache/                   # Document cache
 │   └── vectorstore/
 │       ├── chroma.sqlite3              # ChromaDB database
@@ -207,39 +197,32 @@ config = PipelineConfig(
 
 ## 💡 How It Works
 
-### 1. Selenium Fetcher (`selenium_fetcher.py`)
+### 1. Pydoll Fetcher (`pydoll_fetcher.py`)
 
 The core innovation that bypasses WAF protection:
 
 ```python
-from src.data_management.selenium_fetcher import IPlanSeleniumSource
+from src.data_management.pydoll_fetcher import IPlanPydollSource
 
-# Use as context manager
-with IPlanSeleniumSource(headless=True) as source:
-    # Discover plans
-    plans = source.discover_plans(max_plans=10)
-    
-    # Fetch plan details
-    plan = source.fetch_plan_details(plan_id='12345')
-    
-    # Get documents from Mavat
-    docs = source.fetch_plan_documents(mavat_plan_id='67890')
+import asyncio
+
+async def run():
+    async with IPlanPydollSource(headless=False) as source:
+        plans = await source.discover_plans(max_plans=10)
+        plan = await source.fetch_plan_details(objectid='12345')
+        docs = await source.fetch_plan_documents(mavat_plan_id='67890')
+        return plans, plan, docs
+
+plans, plan, docs = asyncio.run(run())
 ```
 
-#### Anti-Detection Features
+#### Anti-Detection / Stability Features
 
 ```python
-# Browser fingerprinting
-options.add_argument('--disable-blink-features=AutomationControlled')
-options.add_experimental_option('excludeSwitches', ['enable-automation'])
-
-# Hide webdriver property
-driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-
-# Custom user agent
-driver.execute_cdp_cmd('Network.setUserAgentOverride', {
-    "userAgent": 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)...'
-})
+# Pydoll uses ChromiumOptions arguments like:
+# - disable-blink-features=AutomationControlled
+# - custom window size / language / user-agent
+# - persistent user-data-dir profile to keep WAF/session cookies across restarts
 ```
 
 ### 2. Unified Pipeline (`unified_pipeline.py`)
@@ -299,7 +282,7 @@ Three-tier caching for optimal performance:
 # Tier 1: API Response Cache (7 days)
 # - Raw ArcGIS responses
 # - Fast re-indexing without API calls
-cache_file = f"data/cache/selenium/{hash(url)}.json"
+cache_file = f"data/cache/pydoll/{hash(url)}.json"
 
 # Tier 2: Document Cache (30 days)
 # - Downloaded PDFs/DWGs
@@ -389,11 +372,11 @@ python build_vectordb.py --where "last_update_date > 1704067200000" --max-plans 
 ### 3. Testing & Development
 
 ```bash
-# Quick test with 5 plans, visible browser
-python build_vectordb.py --max-plans 5 --no-headless -v
+# Quick test with 5 plans (headed browser by default)
+python3 scripts/build_vectordb_cli.py build --max-plans 5 --no-vision -v
 
 # Skip vision processing for faster testing
-python build_vectordb.py --max-plans 20 --no-vision
+python3 scripts/build_vectordb_cli.py build --max-plans 20 --no-vision
 ```
 
 ### 4. Specialized Datasets
@@ -419,20 +402,12 @@ python build_vectordb.py --rebuild
 
 ## 🐛 Troubleshooting
 
-### Issue: ChromeDriver not found
+### Issue: Chrome cannot be launched
 
-**Error:**
-```
-WebDriverException: Message: 'chromedriver' executable needs to be in PATH
-```
+If prerequisite checks fail, run:
 
-**Solution:**
 ```bash
-# macOS
-brew install --cask chromedriver
-
-# Verify
-chromedriver --version
+python3 scripts/build_vectordb_cli.py check
 ```
 
 ### Issue: WAF still blocking
@@ -443,10 +418,10 @@ HTTP 302 redirect to /error.htm
 ```
 
 **Solution:**
-1. Check if you're using `SeleniumFetcher` (not direct `requests`)
-2. Try with visible browser: `--no-headless`
-3. Add delays: Increase `time.sleep()` values
-4. Update user agent string
+1. Use a headed browser (avoid `--headless`)
+2. Reduce concurrency (lower `max_workers`)
+3. Persist the Chrome profile (user-data-dir) to keep session cookies stable
+4. Add jitter/delays between page loads
 
 ### Issue: Vision service fails
 
@@ -482,7 +457,7 @@ python build_vectordb.py --no-documents --max-plans 500
 python build_vectordb.py --max-plans 50  # run multiple times
 
 # 4. Clear old cache
-rm -rf data/cache/selenium/*
+rm -rf data/cache/pydoll/*
 ```
 
 ### Issue: ChromaDB errors
@@ -520,7 +495,7 @@ python build_vectordb.py --status
 
 ```bash
 # Clear API response cache (7 days retention)
-find data/cache/selenium -mtime +7 -delete
+find data/cache/pydoll -mtime +7 -delete
 
 # Clear old documents (30 days)
 find data/vision_cache -mtime +30 -delete
@@ -639,7 +614,7 @@ See [VECTOR_DB_VALIDATION.md](VECTOR_DB_VALIDATION.md) for details.
 
 When extending the pipeline:
 
-1. **Add new services**: Update `SERVICES` dict in `IPlanSeleniumSource`
+1. **Add new services**: Update `SERVICES` dict in `IPlanPydollSource`
 2. **Custom extractors**: Extend `_extract_regulation_from_document()`
 3. **New document types**: Update `DocumentProcessor`
 4. **Performance optimization**: Add more caching layers

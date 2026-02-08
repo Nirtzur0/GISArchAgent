@@ -122,7 +122,8 @@ if 'current_answer' not in st.session_state:
 def initialize_factory():
     """Set up the factory once and cache it."""
     try:
-        with st.spinner("\ud83d\ude80 Getting everything ready..."):
+        # Avoid surrogate-escaped emoji sequences which can crash on UTF-8 encode.
+        with st.spinner("Getting everything ready..."):
             factory = get_factory()
             logger.info("Factory is good to go!")
             return factory

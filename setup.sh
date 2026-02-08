@@ -60,10 +60,14 @@ echo ""
 # Create .env file if it doesn't exist
 if [ ! -f ".env" ]; then
     echo "Creating .env file..."
-    cp .env.example .env
+    cat > .env <<'EOF'
+# API key used for the Vision Analyzer + answer synthesis (optional but recommended).
+# Get a key from Google AI Studio and set it here:
+GEMINI_API_KEY=
+EOF
     echo "✓ .env file created"
     echo ""
-    echo "⚠ IMPORTANT: Edit .env and add your OpenAI API key"
+    echo "⚠ IMPORTANT: Edit .env and add your GEMINI_API_KEY (optional, used for vision + answer synthesis)"
     echo ""
 else
     echo "✓ .env file already exists"
@@ -107,17 +111,19 @@ echo "=========================================="
 echo ""
 echo "Next steps:"
 echo ""
-echo "1. Edit .env and add your OpenAI API key:"
+echo "1. (Optional) Edit .env and add your GEMINI_API_KEY:"
 echo "   nano .env"
 echo ""
 echo "2. Activate the virtual environment:"
 echo "   source venv/bin/activate"
 echo ""
-echo "3. Initialize the system:"
-echo "   python -m src.cli init"
+echo "3. Run the web app:"
+echo "   streamlit run app.py"
+echo "   # or: ./run_webapp.sh"
 echo ""
-echo "4. Start querying:"
-echo "   python -m src.cli query --interactive"
+echo "4. (Optional) Check data + vector DB status:"
+echo "   python3 scripts/data_cli.py status -v"
+echo "   python3 scripts/quick_status.py"
 echo ""
 echo "For more information, see:"
 echo "  - README.md"

@@ -13,7 +13,7 @@ You were **100% correct** - I created redundant files! Your project already has 
 
 2. **Ran Data Discovery Pipeline** ✅
    - Discovered 1,000 plans from iPlan
-   - Cached in `data/cache/selenium/`
+   - Cached in `data/cache/pydoll/`
    - Created `data/cache/pipeline_stats.json`
    - No redundancy - this populated cache for future use
 

@@ -23,7 +23,7 @@ scripts/
 
 ### 🆕 1. build_vectordb_cli.py - Vector Database Builder (RECOMMENDED)
 
-**NEW**: Unified pipeline for building the vector database using Selenium.
+**NEW**: Unified pipeline for building the vector database using Pydoll (CDP-controlled Chrome).
 
 #### Check Prerequisites
 ```bash
@@ -52,7 +52,7 @@ python3 scripts/build_vectordb_cli.py build \
   --max-plans 100 \
   --no-documents \      # Skip document fetching
   --no-vision \         # Skip vision processing
-  --no-headless \       # Show browser (debugging)
+  --headless \          # Run browser headless (may reduce MAVAT reliability)
   -v                    # Verbose logging
 ```
 

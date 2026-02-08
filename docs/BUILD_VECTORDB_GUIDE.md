@@ -2,7 +2,7 @@
 
 ## Overview
 
-This guide explains how to build and maintain the vector database using the new **Selenium-based unified pipeline**. This approach replaces the previous LLM-dependent method with a reliable, maintainable solution.
+This guide explains how to build and maintain the vector database using the new **Pydoll-based unified pipeline** (CDP-controlled Chrome). This approach replaces the previous LLM-dependent method with a reliable, maintainable solution.
 
 ## 🚀 Quick Start
 
@@ -14,7 +14,7 @@ python3 test_setup.py
 
 This will check:
 - ✅ Python packages installed
-- ✅ Selenium and ChromeDriver working  
+- ✅ Pydoll + local Chrome working  
 - ✅ iPlan API accessible
 
 ### 2. Set API Key
@@ -26,11 +26,11 @@ export GEMINI_API_KEY="your_gemini_api_key_here"
 ### 3. Run Test Build
 
 ```bash
-# Build with first 10 plans (takes ~5-10 minutes)
-python3 -m src.data_management.selenium_fetcher
+# Check prerequisites (Chrome launch, deps)
+python3 scripts/build_vectordb_cli.py check
 
-# Or use the full pipeline (once imports are fixed)
-# python3 build_vectordb.py --max-plans 10
+# Build with first 10 plans (headed browser; more reliable for MAVAT)
+python3 scripts/build_vectordb_cli.py build --max-plans 10 --no-vision
 ```
 
 ---
@@ -41,7 +41,7 @@ python3 -m src.data_management.selenium_fetcher
 
 | Feature | Old Approach | New Approach |
 |---------|-------------|--------------|
-| **Data Access** | LLM `fetch_webpage` tool | Selenium browser automation |
+| **Data Access** | LLM `fetch_webpage` tool | Pydoll (CDP) browser automation |
 | **Reliability** | ❌ Inconsistent | ✅ Reliable |
 | **WAF Bypass** | ⚠️ Sometimes works | ✅ Consistent |
 | **Maintainability** | ❌ Black box | ✅ Clear, debuggable code |
@@ -50,7 +50,7 @@ python3 -m src.data_management.selenium_fetcher
 
 ### 🎯 What You Get
 
-1. **Selenium-Based Fetcher** (`src/data_management/selenium_fetcher.py`)
+1. **Pydoll-Based Fetcher** (`src/data_management/pydoll_fetcher.py`)
    - Bypasses WAF protection using real browser
    - Handles JavaScript challenges
    - Smart 3-tier caching system
@@ -76,7 +76,7 @@ python3 -m src.data_management.selenium_fetcher
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│          1. Discovery Phase (Selenium)                   │
+│           1. Discovery Phase (Pydoll)                    │
 ├─────────────────────────────────────────────────────────┤
 │  iPlan ArcGIS API (with WAF bypass)                     │
 │  ↓                                                       │
@@ -86,7 +86,7 @@ python3 -m src.data_management.selenium_fetcher
 └─────────────────────────────────────────────────────────┘
                         ↓
 ┌─────────────────────────────────────────────────────────┐
-│       2. Document Fetching Phase (Selenium)              │
+│       2. Document Fetching Phase (Pydoll)                │
 ├─────────────────────────────────────────────────────────┤
 │  Navigate to Mavat portal                               │
 │  ↓                                                       │
@@ -126,7 +126,7 @@ python3 -m src.data_management.selenium_fetcher
 
 ```
 Tier 1: API Response Cache (7 days)
-└─ data/cache/selenium/*.json
+└─ data/cache/pydoll/*.json
    ├─ Fast re-indexing without API calls
    └─ Invalidated when data changes
 
@@ -160,13 +160,13 @@ Tier 3: Analysis Cache (90 days)
 
 ```bash
 # Test build - 10 plans (~5-10 minutes)
-python3 -m src.data_management.selenium_fetcher
+python3 scripts/build_vectordb_cli.py build --max-plans 10 --no-vision
 
 # Small build - 100 plans (~1-2 hours)
-python3 build_vectordb.py --max-plans 100
+python3 scripts/build_vectordb_cli.py build --max-plans 100 --no-vision
 
 # Medium build - 1000 plans (~10-20 hours)
-python3 build_vectordb.py --max-plans 1000
+python3 scripts/build_vectordb_cli.py build --max-plans 1000 --no-vision
 ```
 
 ### Filtered Builds
@@ -204,17 +204,17 @@ python3 build_vectordb.py --service xplan_full --max-plans 1000
 ### Development & Debugging
 
 ```bash
-# Visible browser (see what's happening)
-python3 build_vectordb.py --no-headless --max-plans 5
+# Prefer headed browser by default (omit --headless)
+python3 scripts/build_vectordb_cli.py build --max-plans 5 --no-vision
+
+# Run headless (may reduce MAVAT reliability)
+python3 scripts/build_vectordb_cli.py build --headless --max-plans 5 --no-vision
 
 # Skip document fetching (faster, metadata only)
-python3 build_vectordb.py --no-documents --max-plans 500
-
-# Skip vision processing (even faster)
-python3 build_vectordb.py --no-vision --max-plans 1000
+python3 scripts/build_vectordb_cli.py build --no-documents --max-plans 500 --no-vision
 
 # Verbose logging
-python3 build_vectordb.py --max-plans 10 -v
+python3 scripts/build_vectordb_cli.py build --max-plans 10 --no-vision -v
 ```
 
 ### Maintenance
@@ -238,7 +238,7 @@ Based on testing with first 100 plans:
 
 | Phase | Time per Item | Notes |
 |-------|---------------|-------|
-| **Discovery** | ~0.3s per plan | Selenium + pagination |
+| **Discovery** | ~0.3s per plan | Pydoll + pagination |
 | **Document Fetch** | ~5s per plan | Navigate Mavat, extract links |
 | **Vision Processing** | ~10s per document | PDF→image→analysis |
 | **Indexing** | ~1s per regulation | Embeddings + ChromaDB |
@@ -258,20 +258,12 @@ Based on testing with first 100 plans:
 
 ## 🛠️ Troubleshooting
 
-### ChromeDriver Issues
+### Chrome Launch Issues
 
-**Problem:** `WebDriverException: 'chromedriver' executable needs to be in PATH`
+If the browser can't be launched or MAVAT is unreliable, run:
 
-**Solution:**
 ```bash
-# macOS
-brew install --cask chromedriver
-
-# Verify
-chromedriver --version
-
-# If blocked by security
-xattr -d com.apple.quarantine /usr/local/bin/chromedriver
+python3 scripts/build_vectordb_cli.py check
 ```
 
 ### WAF Blocking
@@ -279,8 +271,8 @@ xattr -d com.apple.quarantine /usr/local/bin/chromedriver
 **Problem:** Still getting 302 redirects
 
 **Solution:**
-1. Check you're using `selenium_fetcher.py` (not direct `requests`)
-2. Try visible browser: `--no-headless`
+1. Check you're using `pydoll_fetcher.py` (not direct `requests`)
+2. Prefer a headed browser (omit `--headless`)
 3. Increase delays in code
 4. Update user agent string
 
@@ -290,10 +282,7 @@ xattr -d com.apple.quarantine /usr/local/bin/chromedriver
 
 **Solution:**
 ```bash
-# Use standalone test script
-python3 -m src.data_management.selenium_fetcher
-
-# Or run tests
+# Run tests / setup verification
 python3 test_setup.py
 ```
 
@@ -313,7 +302,7 @@ python3 build_vectordb.py --no-documents --max-plans 500
 python3 build_vectordb.py --max-plans 50  # run multiple times
 
 # 4. Clear old cache
-rm -rf data/cache/selenium/*
+rm -rf data/cache/pydoll/*
 ```
 
 ### Memory Issues
@@ -337,7 +326,7 @@ GISArchAgent/
 │
 ├── src/
 │   ├── data_management/
-│   │   └── selenium_fetcher.py    # ✨ NEW: Selenium-based fetcher
+│   │   └── pydoll_fetcher.py      # ✨ NEW: Pydoll-based fetcher
 │   │
 │   ├── vectorstore/
 │   │   ├── unified_pipeline.py    # ✨ NEW: Main orchestration
@@ -351,7 +340,7 @@ GISArchAgent/
 │
 ├── data/
 │   ├── cache/
-│   │   └── selenium/              # ✨ NEW: API response cache
+│   │   └── pydoll/                # ✨ NEW: API response cache
 │   ├── vision_cache/              # Document + analysis cache
 │   └── vectorstore/
 │       ├── chroma.sqlite3         # ChromaDB database
@@ -378,10 +367,10 @@ python3 test_setup.py
 export GEMINI_API_KEY="your_key_here"
 
 # 3. Test with 10 plans
-python3 -m src.data_management.selenium_fetcher
+python3 scripts/build_vectordb_cli.py build --max-plans 10 --no-vision
 
 # 4. Review results
-ls -lh data/cache/selenium/
+ls -lh data/cache/pydoll/
 ```
 
 ### First Real Build
@@ -401,18 +390,17 @@ python3 build_vectordb.py --status
 
 ```bash
 # Weekly: Check health
-python3 build_vectordb.py --status
+python3 scripts/build_vectordb_cli.py status
 
 # Weekly: Add new plans
-python3 build_vectordb.py \
-  --where "last_update_date > $(date -v-7d +%s)000"
+python3 scripts/build_vectordb_cli.py build --max-plans 200 --no-vision
 
 # Monthly: Clear old cache
-find data/cache/selenium -mtime +7 -delete
+find data/cache/pydoll -mtime +7 -delete
 find data/vision_cache -mtime +30 -delete
 
 # Quarterly: Full refresh if needed
-python3 build_vectordb.py --rebuild --max-plans 1000
+python3 scripts/build_vectordb_cli.py build --rebuild --max-plans 1000 --no-vision
 ```
 
 ---
@@ -429,7 +417,7 @@ python3 build_vectordb.py --rebuild --max-plans 1000
 
 ## ✅ Current Status
 
-- ✅ Selenium fetcher implemented and tested
+- ✅ Pydoll fetcher implemented and tested
 - ✅ iPlan API access working (bypasses WAF)
 - ✅ Unified pipeline designed
 - ✅ Documentation complete

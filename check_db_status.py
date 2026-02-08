@@ -10,6 +10,9 @@ print("📊 GIS Architecture Agent - Database Status Report")
 print("=" * 70)
 print()
 
+# Default if the stats file doesn't exist.
+stats = {}
+
 # Check pipeline stats
 stats_file = Path("data/cache/pipeline_stats.json")
 if stats_file.exists():
@@ -26,7 +29,7 @@ if stats_file.exists():
     print()
 
 # Check cache directory
-cache_dir = Path("data/cache/selenium")
+cache_dir = Path("data/cache/pydoll")
 if cache_dir.exists():
     cache_files = list(cache_dir.glob("*.json"))
     print(f"📦 CACHE STATUS:")
@@ -84,8 +87,8 @@ if stats.get('plans_discovered', 0) > 0:
         print("⚠️  WARNING: Plans were discovered but not indexed in vector database")
         print()
         print("💡 NEXT STEPS:")
-        print("  The pipeline discovered plan metadata but couldn't fetch documents")
-        print("  because of a missing method in the data source.")
+        print("  The pipeline discovered plan metadata but did not index regulations.")
+        print("  Common causes: document fetching disabled/blocked, or vision extraction skipped.")
         print()
         print("  To properly index the data, you can:")
         print("  1. Use the Data Management page in the web app to import data")
@@ -94,8 +97,10 @@ if stats.get('plans_discovered', 0) > 0:
     else:
         print(f"✅ Successfully indexed {stats['regulations_indexed']} regulations")
 else:
-    print("❌ No plans were discovered")
+    if stats_file.exists():
+        print("❌ No plans were discovered (pipeline stats present but zero-discovery)")
+    else:
+        print("ℹ️  No pipeline stats found at data/cache/pipeline_stats.json")
 
 print()
 print("=" * 70)
-

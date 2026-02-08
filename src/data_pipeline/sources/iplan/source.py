@@ -2,14 +2,14 @@
 iPlan GIS data source implementation.
 
 Implements the generic DataSource interface for Israeli national planning database.
-Uses Selenium for reliable data access (bypasses WAF).
+Uses a real Chrome session via Pydoll (CDP) for reliable data access (bypasses WAF).
 """
 
 import logging
 from typing import Iterator, Dict, Any, Optional
 from datetime import datetime
 
-from src.data_management.selenium_fetcher import IPlanSeleniumSource
+from src.data_management.pydoll_fetcher import SyncIPlanPydollSource
 from src.infrastructure.services.cache_service import FileCacheService
 from ...core.interfaces import DataSource, DataRecord
 
@@ -21,7 +21,7 @@ class IPlanDataSource(DataSource):
     Data source implementation for iPlan GIS API.
     
     Fetches planning regulations from Israeli national planning database
-    using Selenium-based fetcher to bypass WAF protection.
+    using a browser-backed fetcher (Pydoll/CDP) to bypass WAF protection.
     """
     
     def __init__(self, cache: Optional[FileCacheService] = None, headless: bool = True):
@@ -33,7 +33,8 @@ class IPlanDataSource(DataSource):
             headless: Run browser in headless mode
         """
         self.cache = cache or FileCacheService()
-        self.selenium_source = IPlanSeleniumSource(headless=headless)
+        # Sync facade over an async CDP browser (Pydoll).
+        self.browser_source = SyncIPlanPydollSource(headless=headless)
     
     
     def get_name(self) -> str:
@@ -53,8 +54,8 @@ class IPlanDataSource(DataSource):
         logger.info(f"Discovering plans from iPlan (limit: {limit or 'all'})")
         
         try:
-            # Use Selenium source to discover plans
-            plans = self.selenium_source.discover_plans(
+            # Use browser-backed source to discover plans
+            plans = self.browser_source.discover_plans(
                 service_name='xplan',
                 max_plans=limit
             )
@@ -90,10 +91,10 @@ class IPlanDataSource(DataSource):
         if cached:
             return cached
         
-        # Fetch from Selenium source
+        # Fetch from browser-backed source
         try:
             logger.info(f"Fetching details for {record_id} (OBJECTID={objectid})")
-            result = self.selenium_source.fetch_plan_details(objectid, service_name='xplan')
+            result = self.browser_source.fetch_plan_details(objectid, service_name='xplan')
             
             if not result:
                 logger.warning(f"No data found for {record_id}")
@@ -118,14 +119,26 @@ class IPlanDataSource(DataSource):
         Returns:
             Standardized DataRecord object
         """
-        attrs = raw_data.get('attributes', {})
-        
-        # Extract core fields
-        objectid = attrs.get('OBJECTID', '')
-        plan_number = attrs.get('PL_NUMBER', '')
-        plan_name = attrs.get('PL_NAME', '')
-        entity_subtype = attrs.get('ENTITY_SUBTYPE_DESC', '')
-        municipality = attrs.get('MUNICIPALITY_NAME', '')
+        attrs = raw_data.get("attributes", {}) or {}
+
+        def _get(*keys: str, default: str = ""):
+            for k in keys:
+                if k in attrs and attrs.get(k) not in (None, ""):
+                    return attrs.get(k)
+                lk = k.lower()
+                if lk in attrs and attrs.get(lk) not in (None, ""):
+                    return attrs.get(lk)
+                uk = k.upper()
+                if uk in attrs and attrs.get(uk) not in (None, ""):
+                    return attrs.get(uk)
+            return default
+
+        # Extract core fields (real ArcGIS payloads often use lowercase keys).
+        objectid = _get("OBJECTID", "objectid", default="")
+        plan_number = _get("PL_NUMBER", "pl_number", default="")
+        plan_name = _get("PL_NAME", "pl_name", default="")
+        entity_subtype = _get("ENTITY_SUBTYPE_DESC", "entity_subtype_desc", default="")
+        municipality = _get("MUNICIPALITY_NAME", "municipality_name", "plan_county_name", default="")
         
         # Build searchable content (Hebrew)
         content = f"{plan_name}\nתוכנית מספר: {plan_number}"
@@ -135,21 +148,21 @@ class IPlanDataSource(DataSource):
             content += f"\nסוג: {entity_subtype}"
         
         # Additional details if available
-        targets = attrs.get('PLAN_TARGETS', '')
+        targets = _get("PLAN_TARGETS", "plan_targets", default="")
         if targets:
             content += f"\n\nיעדים: {targets}"
         
-        main_details = attrs.get('MAIN_DETAILS', '')
+        main_details = _get("MAIN_DETAILS", "main_details", default="")
         if main_details:
             content += f"\n\nפרטים: {main_details}"
         
         # Build metadata
         metadata = {
-            'plan_number': plan_number,
-            'entity_subtype': entity_subtype,
-            'municipality_name': municipality,
-            'objectid': str(objectid),
-            'source_system': 'iPlan GIS',
+            "plan_number": str(plan_number),
+            "entity_subtype": str(entity_subtype),
+            "municipality_name": str(municipality),
+            "objectid": str(objectid),
+            "source_system": "iPlan GIS",
         }
         
         # Add optional fields
@@ -162,14 +175,14 @@ class IPlanDataSource(DataSource):
         }
         
         for key, field in optional_fields.items():
-            value = attrs.get(field)
+            value = _get(field, field.lower(), default=None)  # type: ignore[arg-type]
             if value:
                 metadata[key] = str(value)
         
         # Create DataRecord
         record = DataRecord(
             id=f"iplan_{objectid}",
-            title=plan_name,
+            title=str(plan_name),
             content=content,
             source="iPlan GIS",
             metadata=metadata,
@@ -226,9 +239,9 @@ class IPlanDataSource(DataSource):
             return []
     
     def close(self):
-        """Close Selenium resources."""
-        if hasattr(self, 'selenium_source'):
-            self.selenium_source.close()
+        """Close browser resources."""
+        if hasattr(self, "browser_source"):
+            self.browser_source.close()
     
     def __enter__(self):
         """Context manager entry."""

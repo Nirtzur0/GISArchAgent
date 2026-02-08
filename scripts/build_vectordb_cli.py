@@ -54,11 +54,11 @@ def status(verbose):
 @cli.command()
 @click.option('--max-plans', type=int, default=None, help='Maximum plans to process')
 @click.option('--rebuild', is_flag=True, help='Clear and rebuild database')
-@click.option('--no-headless', is_flag=True, help='Show browser (debugging)')
+@click.option('--headless', is_flag=True, help='Run browser headless (may reduce MAVAT reliability)')
 @click.option('--no-documents', is_flag=True, help='Skip document fetching')
 @click.option('--no-vision', is_flag=True, help='Skip vision processing')
 @click.option('--verbose', '-v', is_flag=True, help='Verbose logging')
-def build(max_plans, rebuild, no_headless, no_documents, no_vision, verbose):
+def build(max_plans, rebuild, headless, no_documents, no_vision, verbose):
     """Build or update the vector database."""
     setup_logging(verbose)
     
@@ -76,7 +76,7 @@ def build(max_plans, rebuild, no_headless, no_documents, no_vision, verbose):
         rebuild_vectordb=rebuild,
         fetch_documents=not no_documents,
         process_documents=not no_vision,
-        headless=not no_headless,
+        headless=headless,
     )
     
     print("📋 Configuration:")
@@ -84,7 +84,7 @@ def build(max_plans, rebuild, no_headless, no_documents, no_vision, verbose):
     print(f"  Rebuild: {rebuild}")
     print(f"  Fetch documents: {not no_documents}")
     print(f"  Vision processing: {not no_vision}")
-    print(f"  Headless: {not no_headless}")
+    print(f"  Headless: {headless}")
     print()
     
     # Confirm if rebuild
@@ -151,20 +151,22 @@ def check():
     
     all_ok = True
     
-    # Check Selenium
-    print("🧪 Checking Selenium...")
+    # Check browser automation
+    print("🧪 Checking Pydoll (CDP browser)...")
     try:
-        from selenium import webdriver
-        from selenium.webdriver.chrome.options import Options
-        
-        options = Options()
-        options.add_argument('--headless=new')
-        driver = webdriver.Chrome(options=options)
-        driver.quit()
-        print("  ✅ Selenium and ChromeDriver OK")
+        import asyncio
+        from pydoll.browser.chromium import Chrome
+
+        async def _run():
+            browser = Chrome()
+            tab = await browser.start(headless=True)
+            await tab.go_to("https://www.google.com", timeout=60)
+            await browser.stop()
+
+        asyncio.run(_run())
+        print("  ✅ Pydoll OK (Chrome launched)")
     except Exception as e:
-        print(f"  ❌ Selenium error: {e}")
-        print(f"  Install with: brew install --cask chromedriver")
+        print(f"  ❌ Pydoll error: {e}")
         all_ok = False
     
     # Check dependencies

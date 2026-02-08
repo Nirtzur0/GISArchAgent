@@ -39,6 +39,7 @@ class DataStore:
             if self.data_file.exists():
                 with open(self.data_file, 'r', encoding='utf-8') as f:
                     self._data = json.load(f)
+                self._normalize_loaded_data()
                 logger.info(f"Loaded {len(self.get_all_features())} plans from {self.data_file}")
             else:
                 self._data = {"metadata": {}, "features": []}
@@ -46,6 +47,52 @@ class DataStore:
         except Exception as e:
             logger.error(f"Error loading data: {e}")
             self._data = {"metadata": {}, "features": []}
+
+    def _normalize_loaded_data(self) -> None:
+        """Best-effort normalization for loaded JSON.
+
+        The repository includes sample datasets that may have stale metadata
+        counters (for example, count_saved not matching the feature list). That
+        inconsistency surfaces in the UI/CLI and confuses users, so we align
+        counters to the actual loaded payload.
+        """
+        if not isinstance(self._data, dict):
+            self._data = {"metadata": {}, "features": []}
+            return
+
+        features = self._data.get("features")
+        if not isinstance(features, list):
+            features = []
+            self._data["features"] = features
+
+        metadata = self._data.get("metadata")
+        if not isinstance(metadata, dict):
+            metadata = {}
+            self._data["metadata"] = metadata
+
+        n = len(features)
+
+        # Keep both keys since different parts of the app/docs use different names.
+        prior_saved = metadata.get("count_saved")
+        metadata["count_saved"] = n
+        metadata["count_total"] = n
+
+        # If total fetched is absent or obviously wrong, set a sane lower bound.
+        # We do not reduce it if it is higher than what's saved (common when you
+        # fetched more but chose to persist only a subset).
+        fetched = metadata.get("count_total_fetched")
+        if fetched is None or (isinstance(fetched, (int, float)) and fetched < n):
+            metadata["count_total_fetched"] = n
+
+        if prior_saved is not None and prior_saved != n:
+            # Avoid noisy stderr output in CLIs (Python's lastResort handler emits warnings
+            # even when apps don't configure logging). Keep it at INFO.
+            logger.info(
+                "DataStore metadata mismatch: count_saved=%s but features=%s in %s; normalizing",
+                prior_saved,
+                n,
+                self.data_file,
+            )
     
     def get_all_features(self) -> List[Dict]:
         """Get all planning features."""

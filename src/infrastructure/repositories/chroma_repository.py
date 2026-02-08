@@ -287,6 +287,45 @@ class ChromaRegulationRepository(IRegulationRepository):
         except Exception as e:
             logger.error(f"Failed to add regulations batch: {e}")
             return 0
+
+    def upsert_regulation(self, regulation: Regulation) -> bool:
+        """Insert or update a regulation (idempotent)."""
+        return self.upsert_regulations_batch([regulation]) == 1
+
+    def upsert_regulations_batch(self, regulations: List[Regulation]) -> int:
+        """Insert or update regulations in batch (idempotent).
+
+        This is preferred for continuous scraping where reruns should not fail
+        on duplicate IDs.
+        """
+        if not regulations:
+            return 0
+
+        try:
+            documents: List[str] = []
+            metadatas: List[Dict[str, Any]] = []
+            ids: List[str] = []
+
+            for regulation in regulations:
+                documents.append(self._prepare_document(regulation))
+                metadatas.append(self._prepare_metadata(regulation))
+                ids.append(regulation.id)
+
+            if hasattr(self._collection, "upsert"):
+                self._collection.upsert(documents=documents, metadatas=metadatas, ids=ids)
+            else:  # pragma: no cover
+                # Older Chroma: emulate upsert via delete+add.
+                try:
+                    self._collection.delete(ids=ids)
+                except Exception:
+                    pass
+                self._collection.add(documents=documents, metadatas=metadatas, ids=ids)
+
+            logger.info(f"Upserted {len(regulations)} regulations in batch")
+            return len(regulations)
+        except Exception as e:
+            logger.error(f"Failed to upsert regulations batch: {e}")
+            return 0
     
     def _build_where_clause(self, filters: Dict[str, Any]) -> Dict[str, Any]:
         """Build ChromaDB where clause from filters."""

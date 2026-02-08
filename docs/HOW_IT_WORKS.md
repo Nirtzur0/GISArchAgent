@@ -10,7 +10,7 @@
 ✅ **Semantic search in English & Hebrew**  
 ✅ **Web interface with 3 interactive pages**  
 ✅ **Data management system**  
-✅ **Selenium-based data fetching (WAF bypass)**  
+✅ **Pydoll-based data fetching (WAF bypass)**  
 ✅ **Vision-powered plan upload & analysis**
 
 ---

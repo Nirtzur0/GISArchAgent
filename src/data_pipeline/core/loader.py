@@ -50,9 +50,12 @@ class VectorDBLoader(DataLoader):
         if not regulations:
             return 0
         
-        # Batch load into repository
+        # Batch load into repository. Prefer upsert for idempotent continuous runs.
         try:
-            count = self.repository.add_regulations_batch(regulations)
+            if hasattr(self.repository, "upsert_regulations_batch"):
+                count = self.repository.upsert_regulations_batch(regulations)  # type: ignore[attr-defined]
+            else:  # pragma: no cover
+                count = self.repository.add_regulations_batch(regulations)
             return count
         except Exception as e:
             logger.error(f"Failed to load batch: {e}")

@@ -160,7 +160,7 @@ def _render_browse_tab(store: DataStore) -> None:
 
 def _render_fetch_tab(store: DataStore) -> None:
     st.markdown("## Fetch Fresh Data")
-    st.caption("Fetching via Selenium can be slow and may require a working local Chrome/WebDriver.")
+    st.caption("Fetching via Pydoll uses a local Chrome browser (CDP). Headless mode may be blocked by MAVAT.")
 
     sources = DataFetcherFactory.list_sources()
     if not sources:
@@ -173,7 +173,7 @@ def _render_fetch_tab(store: DataStore) -> None:
     st.write(f"**Selected:** {fetcher.get_source_name()}")
     st.write(f"**Availability:** {'✅ Available' if fetcher.is_available() else '⚠️ Not available in this environment'}")
 
-    if source_name in {"iplan", "iplan_selenium"}:
+    if source_name in {"iplan", "iplan_pydoll"}:
         col1, col2 = st.columns(2)
         with col1:
             service_name = st.selectbox("Service", ["xplan", "xplan_full", "tama35", "tama"], index=0)
@@ -184,7 +184,7 @@ def _render_fetch_tab(store: DataStore) -> None:
 
         if st.button("Fetch Now", type="primary"):
             if not fetcher.is_available():
-                st.error("Fetcher is not available. Check Selenium/ChromeDriver setup.")
+                st.error("Fetcher is not available. Check that Chrome can be launched by Pydoll.")
                 return
 
             with st.spinner("Fetching..."):
@@ -406,4 +406,3 @@ def main() -> None:
 
 
 main()
-

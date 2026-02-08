@@ -2,7 +2,7 @@
 Data Fetchers - Abstract interfaces and implementations for fetching data.
 
 Provides a pluggable architecture for fetching planning data from various sources:
-- iPlan API (via Selenium - bypasses WAF)
+- iPlan API (via Pydoll/CDP browser - bypasses WAF)
 - Manual file import
 - Future: MAVAT, municipal APIs, open data portals
 """
@@ -49,7 +49,7 @@ class IPlanFetcher(DataFetcher):
     iPlan data fetcher (Legacy - deprecated).
     
     Note: Direct API access is blocked by WAF. 
-    Use IPlanSeleniumFetcher instead for actual data fetching.
+    Use IPlanPydollFetcher instead for actual data fetching.
     This class is kept for backwards compatibility and documentation.
     """
     
@@ -85,17 +85,17 @@ class IPlanFetcher(DataFetcher):
         """
         logger.warning(
             "Direct iPlan API access is blocked by WAF. "
-            "Use IPlanSeleniumFetcher instead."
+            "Use IPlanPydollFetcher instead."
         )
         
         return {
             "metadata": {
-                "source": "iPlan API (deprecated - use IPlanSeleniumFetcher)",
+                "source": "iPlan API (deprecated - use IPlanPydollFetcher)",
                 "endpoint": self.endpoint,
                 "fetched_at": datetime.now().isoformat(),
                 "status": "deprecated",
                 "instructions": (
-                    "Use IPlanSeleniumFetcher for automated data fetching "
+                    "Use IPlanPydollFetcher for automated data fetching "
                     "or export manually from https://www.iplan.gov.il"
                 )
             },
@@ -117,12 +117,10 @@ class IPlanFetcher(DataFetcher):
         return """
         iPlan Data Fetch Instructions:
         
-        Method 1 (Recommended): AI Assistant
-        -------------------------------------
-        Ask: "Please fetch fresh iPlan data from the API"
-        
-        The AI assistant will use its fetch_webpage tool to bypass WAF
-        and retrieve real planning data.
+        Method 1 (Recommended): Pydoll/CDP Browser Fetcher
+        --------------------------------------------------
+        Use the built-in `iplan` fetcher (registered as `IPlanPydollFetcher`)
+        to fetch data through a real Chrome session.
         
         Method 2: Manual Export
         -----------------------
@@ -267,23 +265,24 @@ class DataFetcherFactory:
         logger.info(f"Registered new fetcher: {name}")
 
 
-class IPlanSeleniumFetcher(DataFetcher):
+class IPlanPydollFetcher(DataFetcher):
     """
-    iPlan data fetcher using Selenium (WAF bypass).
+    iPlan data fetcher using Pydoll (WAF bypass).
     
-    This is the recommended way to fetch iPlan data. Uses browser automation
-    to bypass WAF protection and access the iPlan API reliably.
+    This is the recommended way to fetch iPlan data. Uses a real browser via
+    CDP (Chrome DevTools Protocol) to bypass WAF protection and access the
+    iPlan API reliably.
     """
     
     def __init__(self, headless: bool = True):
         """
-        Initialize Selenium-based iPlan fetcher.
+        Initialize Pydoll-based iPlan fetcher.
         
         Args:
             headless: Run browser in headless mode
         """
-        from .selenium_fetcher import IPlanSeleniumSource
-        self.source = IPlanSeleniumSource(headless=headless)
+        from .pydoll_fetcher import SyncIPlanPydollSource
+        self.source = SyncIPlanPydollSource(headless=headless)
     
     def fetch(
         self,
@@ -292,7 +291,7 @@ class IPlanSeleniumFetcher(DataFetcher):
         where: str = "1=1"
     ) -> Dict[str, Any]:
         """
-        Fetch data from iPlan using Selenium.
+        Fetch data from iPlan using a browser (Pydoll).
         
         Args:
             service_name: Service to query (xplan, xplan_full, tama35, tama)
@@ -315,7 +314,7 @@ class IPlanSeleniumFetcher(DataFetcher):
                     "fetched_at": datetime.now().isoformat(),
                     "status": "success",
                     "count": len(plans),
-                    "method": "selenium"
+                    "method": "pydoll"
                 },
                 "features": plans
             }
@@ -333,22 +332,22 @@ class IPlanSeleniumFetcher(DataFetcher):
     
     def get_source_name(self) -> str:
         """Get human-readable source name."""
-        return "iPlan GIS (Selenium)"
+        return "iPlan GIS (Pydoll)"
     
     def is_available(self) -> bool:
-        """Check if Selenium fetcher is available."""
+        """Check if Pydoll fetcher is available."""
         try:
-            from selenium import webdriver
+            import pydoll  # noqa: F401
             return True
         except ImportError:
             return False
     
     def close(self):
-        """Close Selenium resources."""
+        """Close browser resources."""
         if hasattr(self, 'source'):
             self.source.close()
 
 
-# Register the Selenium fetcher as the default iPlan fetcher
-DataFetcherFactory.register_fetcher('iplan_selenium', IPlanSeleniumFetcher)
-DataFetcherFactory.register_fetcher('iplan', IPlanSeleniumFetcher)  # Make it default
+# Register the Pydoll fetcher as the default iPlan fetcher
+DataFetcherFactory.register_fetcher('iplan_pydoll', IPlanPydollFetcher)
+DataFetcherFactory.register_fetcher('iplan', IPlanPydollFetcher)  # Make it default

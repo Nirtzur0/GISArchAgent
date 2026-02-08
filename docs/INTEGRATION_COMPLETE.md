@@ -1,8 +1,10 @@
 # Integration Complete - Vector DB Build System
 
+> NOTE (2026-02-06): This document is largely historical. The Selenium-based fetcher was removed and replaced by a Pydoll (CDP-controlled Chrome) implementation. For current instructions, see `docs/UNIFIED_PIPELINE.md` and `docs/BUILD_VECTORDB_GUIDE.md`.
+
 ## ✅ What Was Done
 
-Successfully integrated the new Selenium-based vector DB build system with the existing codebase, eliminating redundancies and creating a unified architecture.
+Successfully integrated the vector DB build system with the existing codebase, eliminating redundancies and creating a unified architecture.
 
 ## 🔄 Integration Changes
 
@@ -43,9 +45,10 @@ import requests
 response = requests.get(url, verify=False)  # Still blocked!
 
 # New (works!)
-from src.data_management.selenium_fetcher import IPlanSeleniumSource
-self.selenium_source = IPlanSeleniumSource(headless=True)
-plans = list(self.selenium_source.discover_plans(max_plans=100))
+from src.data_management.pydoll_fetcher import IPlanPydollSource
+# Pydoll source is async; example usage:
+# async with IPlanPydollSource(headless=False) as src:
+#     plans = await src.discover_plans(max_plans=100)
 ```
 
 ### 3. **Unified Pipeline** (`src/vectorstore/unified_pipeline.py`)
@@ -88,7 +91,7 @@ scripts/build_vectordb_cli.py (NEW, integrated)
 src/vectorstore/unified_pipeline.py (orchestrator)
     ├─→ src/data_pipeline/IPlanDataSource (uses Selenium)
     │       ↓
-    │   src/data_management/selenium_fetcher.py (WAF bypass)
+    │   src/data_management/pydoll_fetcher.py (WAF bypass; CDP Chrome)
     │
     ├─→ src/infrastructure/services/document_service.py
     │   src/infrastructure/services/vision_service.py
@@ -129,7 +132,7 @@ src/
 ```
 src/
   data_management/
-    selenium_fetcher.py     # NEW - Core Selenium implementation
+    pydoll_fetcher.py       # Core Pydoll implementation
     fetchers.py            # UPDATED - Added IPlanSeleniumFetcher
     __init__.py            # UPDATED - Added exports
   

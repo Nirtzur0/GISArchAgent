@@ -1,257 +1,189 @@
-# 🏗️ GIS Architecture Agent
+# GISArchAgent
 
-Your AI-powered assistant for Israeli planning regulations and architecture projects.
+Streamlit web app + CLI tools for exploring Israeli planning data (iPlan) and querying planning regulations with a local vector database.
 
-## What Is This?
+Built for architecture workflows: map-based browsing, plan analysis, and reproducible data management.
 
-This is a tool for architecture firms working in Israel. It helps you:
-- 🔍 Search through planning documents (תוכניות) from the iPlan system
-- 📋 Query planning regulations and get clear answers
-- 📐 Calculate building rights based on zoning
-- �️ Visualize plans on interactive maps
-- 💾 Manage planning data from multiple sources
-- 🖼️ Analyze plan images with AI vision
-- ✅ Check compliance with regulations
+**Quick links:** [Run guide](./docs/RUN_GUIDE.md) · [Vector DB build](./docs/BUILD_VECTORDB_GUIDE.md) · [Scripts/CLI](./scripts/README.md) · [Docs index](./docs/README.md) · [Tests](./tests/README.md)
 
-Think of it as having a planning expert who knows all the regulations and can read Hebrew planning documents.
+## What It Does
 
-## Features
+- **Web UI (Streamlit)** with three pages:
+  - Map viewer: `./pages/1_📍_Map_Viewer.py`
+  - Plan analyzer: `./pages/2_📐_Plan_Analyzer.py`
+  - Data management: `./pages/3_💾_Data_Management.py`
+- **Local vector DB (ChromaDB)** for semantic search over “regulations” (auto-initializes on first run).
+- **DataStore + CLI** for inspecting/searching/exporting iPlan plan metadata stored as JSON.
+- Optional **Gemini-powered** answer synthesis (LLM) and plan image analysis (vision) when `GEMINI_API_KEY` is set.
 
-### 🗺️ Interactive Map Viewer
-- Real planning data from iPlan database
-- Filter by district, city, status
-- Color-coded plan boundaries
-- Interactive markers with details
-- ITM to WGS84 coordinate transformation
+> [!NOTE]
+> This repo is structured around a local-first workflow: most state lives under `./data/` and is ignored by git (see `./.gitignore`).
 
-### 💾 Data Management
-- Browse and search 10+ real plans
-- Import data from files or AI-assisted fetch
-- Automatic backups
-- Statistics dashboard
-- Extensible architecture for multiple data sources
+## Quickstart
 
-### 📐 Plan Analyzer
-- Calculate building rights
-- Query regulations
-- Compliance checking
+### Prerequisites
 
-### 💬 Natural Language Interface
-- Ask questions in English or Hebrew
-- Get clear answers with sources
-- Context-aware responses
+- Python **3.10+** (tests enforce this via `./pytest.ini`)
+- (Optional, for live iPlan ingestion) Local Chrome installed for the CDP-based fetcher (`pydoll-python`)
+- (Optional) Gemini API key for LLM synthesis and vision: `GEMINI_API_KEY`
 
-## Quick Start
+### Setup + Run
 
 ```bash
-# Install everything
-pip install -r requirements.txt
+# One-shot setup (creates ./venv, installs deps, creates .env, initializes data dirs)
+./setup.sh
 
-# (Optional) install dev/test tools
-pip install -r requirements-dev.txt
+# Run the web app
+./run_webapp.sh
 
-# Set up your API key (for vision analysis)
-echo "GEMINI_API_KEY=your_key_here" > .env
+# Or directly:
+# source venv/bin/activate
+# streamlit run app.py
+```
 
-# Run the app
+Open http://localhost:8501
+
+## Usage
+
+### Web App
+
+Start with:
+
+```bash
 streamlit run app.py
 ```
 
-Open your browser to http://localhost:8501 and start exploring!
+Then use:
 
-## Data Management
+- **Query Assistant** (main page sidebar) for regulation search and Q&A.
+- **📍 Map Viewer** for browsing plan geometries and basic GIS filters.
+- **📐 Plan Analyzer** for building-rights calculations and uploads (vision requires `GEMINI_API_KEY`).
+- **💾 Data Management** for DataStore + vector DB status and maintenance.
 
-### Web Interface
-1. Launch app: `streamlit run app.py`
-2. Go to **💾 Data Management** page
-3. Browse plans, view statistics, import data
+### CLI
 
-### Command Line
+DataStore (plans JSON):
+
 ```bash
-# Check data status
+# View stats for the local DataStore JSON (data/raw/iplan_layers.json)
 python3 scripts/data_cli.py status -v
 
-# Search plans
+# Search by city (Hebrew works)
 python3 scripts/data_cli.py search --city "ירושלים"
 
-# Import sample data
-python3 scripts/import_sample_data.py
+# Export a filtered subset
+python3 scripts/data_cli.py export out/plans_jerusalem.json --city "ירושלים" --pretty
 ```
 
-See [docs/DATA_MANAGEMENT.md](docs/DATA_MANAGEMENT.md) for details.
+Vector DB builder (unified pipeline):
 
-## How to Use It
+```bash
+# Quick status for the vector DB persistence at data/vectorstore/
+python3 scripts/quick_status.py
 
-### In the Web App
+# Build/update the vector DB (example: process up to 10 plans; skip vision)
+python3 scripts/build_vectordb_cli.py build --max-plans 10 --no-vision
 
-The Streamlit interface has everything you need:
-- **📍 Map Viewer** - Visualize plans on interactive maps
-- **📐 Plan Analyzer** - Calculate building rights
-- **💾 Data Management** - Manage planning data sources
-- Ask questions about regulations in natural language
-- Search for plans by location or ID
-- View results with sources and explanations
+# Same CLI via wrapper:
+python3 build_vectordb.py build --max-plans 10 --no-vision
+```
 
-### In Your Code
+> [!IMPORTANT]
+> The vector DB auto-initializes with bundled sample regulations from `./src/vectorstore/data_sources.py`. For larger or fresher datasets, use the build pipeline (`./scripts/build_vectordb_cli.py`).
+
+### Python API
+
+Minimal “regulation query” path:
+
+```python
+from src.infrastructure.factory import get_factory
+from src.application.dtos import RegulationQuery
+
+factory = get_factory()
+service = factory.get_regulation_query_service()
+
+result = service.query(RegulationQuery(query_text="parking requirements", max_results=5))
+print(result.answer)
+for reg in result.regulations:
+    print("-", reg.title)
+```
+
+Plan search path (vision only runs when `GEMINI_API_KEY` is set):
 
 ```python
 from src.infrastructure.factory import get_factory
 from src.application.dtos import PlanSearchQuery
-from src.data_management import DataStore
 
-# Get the factory
 factory = get_factory()
-
-# Use data store
-store = DataStore()
-plans = store.search_features(city="ירושלים")
-```
-
-# Get a service
 service = factory.get_plan_search_service()
 
-# Search for plans
-query = PlanSearchQuery(location=\"תל אביב\", max_results=10)
-result = service.search_plans(query)
-
-# Use the results
-for plan in result.plans:
-    print(plan.plan.name)
+res = service.search_plans(PlanSearchQuery(location="תל אביב", max_results=3))
+for p in res.plans:
+    print(p.plan.name)
 ```
 
-Check out `examples.py` for more usage patterns.
+## Configuration
 
-## What's Inside?
+Settings are loaded from `./.env` (created by `./setup.sh`) via `./src/config.py`.
 
-We built this using Clean Architecture, which basically means everything is organized and easy to maintain:
+| Variable | Used for | Required |
+|---|---|---|
+| `GEMINI_API_KEY` | Gemini LLM synthesis + vision analysis (factory uses it for `GeminiLLMService` and `GeminiVisionService`) | Optional |
+| `GOOGLE_API_KEY` | Fallback key for Gemini (used if `GEMINI_API_KEY` is unset) | Optional |
+| `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` | Present in settings, but this repo’s factory currently wires Gemini for synthesis | Optional |
 
-```
-src/
-├── domain/           # Business logic (plans, regulations, rights calculations)
-├── application/      # Use cases (search, query, calculate)
-├── infrastructure/   # External stuff (APIs, database, AI services)
-└── (other files)
-```
+## How It Works (At a Glance)
 
-The important bits:
-- **Domain Layer** - Pure business rules, no dependencies on frameworks
-- **Application Services** - The smart stuff that coordinates everything
-- **Infrastructure** - Talks to iPlan API, ChromaDB, Gemini AI, etc.
-
-## Features
-
-### 📍 Plan Search
-Search for planning documents from the government's iPlan system:
-- By location (city, neighborhood)
-- By plan ID
-- By keywords
-- With automatic AI vision analysis of plan images
-
-### 💬 Regulation Queries  
-Ask questions in natural language:
-- \"What are the parking requirements for residential buildings?\"
-- \"What's the maximum building height in Tel Aviv R2 zone?\"
-- \"Explain TAMA 35\"
-
-Get answers with sources and citations.
-
-### 📐 Building Rights Calculator
-Calculate what you can build:
-- Input: plot size, zone type, location
-- Output: max building area, coverage %, FAR, height, parking spots
-- Based on Israeli regulations (TAMA, local zoning, etc.)
-
-### 🖼️ Vision Analysis
-AI analysis of plan images:
-- OCR text extraction (Hebrew & English)
-- Identify zones and land uses
-- Describe what's in the plan
-- Powered by Google Gemini
-
-## Tech Stack
-
-- **Python 3.12** - Because we like the new stuff
-- **Streamlit** - Beautiful web interface
-- **ChromaDB** - Vector database for semantic search
-- **Google Gemini** - Vision AI for analyzing plan images  
-- **iPlan API** - Israeli government planning system
-- **Clean Architecture** - SOLID principles, testable, maintainable
-
-## Project Structure
-
-```
-GISArchAgent/
-├── app.py                    # Main Streamlit app
-├── examples.py               # Usage examples
-├── src/
-│   ├── domain/              # Business entities and rules
-│   ├── application/         # Services and use cases
-│   ├── infrastructure/      # API clients, databases, AI
-│   ├── vectorstore/         # ChromaDB management
-│   └── config.py            # Configuration
-├── pages/                   # Streamlit pages
-├── docs/                    # Documentation
-└── data/                    # Databases and cache
+```mermaid
+flowchart LR
+  UI["Streamlit UI<br/>app.py + pages/*"] --> F["ApplicationFactory<br/>src/infrastructure/factory.py"]
+  F --> S1["RegulationQueryService"]
+  F --> S2["PlanSearchService"]
+  S1 --> VDB["ChromaDB<br/>data/vectorstore/"]
+  S2 --> IPLAN["iPlan GIS API<br/>(external)"]
+  S1 -. optional .-> GEM["Gemini LLM<br/>(answer synthesis)"]
+  S2 -. optional .-> GEMV["Gemini Vision<br/>(plan image analysis)"]
 ```
 
-## 📚 Documentation
+## Project Layout
 
-**→ See [DOCUMENTATION_MAP.md](DOCUMENTATION_MAP.md) for complete documentation index and maintenance guide**
+- `./app.py`: main Streamlit entrypoint
+- `./pages/`: Streamlit pages (map viewer, plan analyzer, data management)
+- `./src/`: clean-architecture layers (domain/application/infrastructure/vectorstore)
+- `./scripts/`: CLI utilities (`data_cli.py`, `build_vectordb_cli.py`, helpers)
+- `./docs/`: design + runbooks (start at `./docs/README.md`)
+- `./data/`: local cache, raw JSON, and vectorstore persistence (gitignored)
 
-All detailed documentation is organized in `docs/`:
-- [Quick Start](docs/QUICK_START.md) - Get running in 5 minutes
-- [How It Works](docs/HOW_IT_WORKS.md) - Complete system explanation
-- [Architecture](docs/ARCHITECTURE.md) - Clean architecture details
-- [Vision Features](docs/VISION_FEATURES.md) - AI document analysis
-- [Vector DB Validation](docs/VECTOR_DB_VALIDATION.md) - Health monitoring
-- [Run Guide](docs/RUN_GUIDE.md) - Testing and usage
-- [Data Management](docs/DATA_MANAGEMENT.md) - Data pipeline
+## Testing
 
-## Development
+This repo uses `pytest` with markers (see `./pytest.ini` and `./tests/README.md`):
 
-### Running Tests
 ```bash
-# Run integration tests
-python3 tests/test_vectordb_integration.py
-python3 tests/test_iplan_integration.py
+# Install dev dependencies (pytest, ruff, black)
+./venv/bin/pip install -r requirements-dev.txt
+
+# Full suite
+./venv/bin/python -m pytest
+
+# Unit-only
+./venv/bin/python -m pytest -m unit
 ```
 
-### Project Structure
-```
-GISArchAgent/
-├── app.py                    # Main Streamlit application
-├── src/                      # Source code (clean architecture)
-│   ├── domain/              # Business logic
-│   ├── application/         # Use cases
-│   ├── infrastructure/      # External integrations
-│   └── data_pipeline/       # Generic data pipeline
-├── scripts/                  # CLI tools and utilities
-├── tests/                    # Integration tests
-└── docs/                     # Documentation
-```
+## Deep Dive
 
-### Code Style
-We use type hints everywhere and follow clean architecture principles. Comments explain *why*, not *what*.
+<details>
+<summary>More docs and operational guides</summary>
 
-### Contributing
-Feel free to improve things! Just keep the architecture clean and write readable code.
+- Start here for the vector DB pipeline: `./docs/BUILD_VECTORDB_GUIDE.md`
+- End-to-end run + manual testing checklist: `./docs/RUN_GUIDE.md`
+- DataStore + JSON layout and CLI details: `./docs/DATA_MANAGEMENT.md`
+- Vector DB health checks and thresholds: `./docs/VECTOR_DB_VALIDATION.md`
+- Architecture notes: `./docs/ARCHITECTURE.md` and `./docs/HOW_IT_WORKS.md`
 
-## Notes
+</details>
 
-### API Keys
-You'll need a Gemini API key for vision analysis. Everything else works without external services (iPlan API is public).
+## TODO
 
-### Hebrew Support
-The system handles Hebrew text properly. Plan names, locations, and regulations are all in Hebrew where appropriate.
-
-## License
-
-[Add your license here]
-
-## Questions?
-
-Check the docs folder or look at the examples. The code is pretty readable - if you can't figure something out, that's a bug in the documentation! 😊
-
----
-
-Built with ❤️ for architecture firms working with Israeli planning regulations.
+- Add a `LICENSE` file (none found in this repo).
+- Add `CONTRIBUTING.md` (contribution process is not documented).
+- Update `./docs/QUICK_START.md` (it references `.env.example` and `scripts/populate_regulations.py`, which are not present).

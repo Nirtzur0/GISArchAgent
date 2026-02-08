@@ -22,7 +22,7 @@ python3 scripts/build_vectordb_cli.py build --max-plans 100
 ## ✅ What Was Already Done For You
 
 1. ✅ **Fixed dark mode** - No more white on white text
-2. ✅ **Discovered 1,000 plans** from iPlan (cached in `data/cache/selenium/`)
+2. ✅ **Discovered 1,000 plans** from iPlan (cached in `data/cache/pydoll/`)
 3. ✅ **Found existing tools** - Your project already has complete data management!
 4. ✅ **App is running** at http://localhost:8501
 
@@ -100,7 +100,7 @@ Should show: `Total regulations in DB: <number>`
   - Cities: Jerusalem, Tel Aviv, Haifa, etc.
   
 - **Discovered Data** (cached): 1,000 plans
-  - Location: `data/cache/selenium/*.json` (7 files)
+  - Location: `data/cache/pydoll/*.json` (7 files)
   - Ready to index if you need more data
 
 ---

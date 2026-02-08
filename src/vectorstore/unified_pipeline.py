@@ -2,7 +2,7 @@
 Unified data pipeline for building the vector database.
 
 This orchestrates the complete process:
-1. Discover all plans from iPlan (using Selenium via data_pipeline)
+1. Discover all plans from iPlan (using Pydoll via data_pipeline)
 2. Fetch plan documents from Mavat
 3. Process documents with vision service
 4. Extract regulations and building rights
@@ -21,14 +21,15 @@ import logging
 from datetime import datetime
 import json
 
-from src.data_pipeline import IPlanDataSource
+import asyncio
+from src.data_management.pydoll_fetcher import IPlanPydollSource
 from src.infrastructure.services.document_service import (
     MavatDocumentFetcher,
     DocumentProcessor
 )
 from src.infrastructure.services.vision_service import GeminiVisionService
 from src.domain.entities.regulation import Regulation
-from src.domain.value_objects.building_rights import BuildingRights
+from src.domain.entities.regulation import RegulationType
 from src.vectorstore.management_service import VectorDBManagementService
 
 logger = logging.getLogger(__name__)
@@ -60,7 +61,8 @@ class PipelineConfig:
     cache_dir: Path = Path("data/cache")
     
     # Performance
-    headless: bool = True
+    # MAVAT appears to block/downgrade headless browsers; default to headed.
+    headless: bool = False
     max_workers: int = 4
 
 
@@ -136,7 +138,7 @@ class UnifiedDataPipeline:
     def __init__(
         self,
         config: Optional[PipelineConfig] = None,
-        iplan_source: Optional[IPlanDataSource] = None,
+        iplan_source: Optional[IPlanPydollSource] = None,
         document_fetcher: Optional[MavatDocumentFetcher] = None,
         document_processor: Optional[DocumentProcessor] = None,
         vision_service: Optional[GeminiVisionService] = None,
@@ -156,8 +158,8 @@ class UnifiedDataPipeline:
         self.config = config or PipelineConfig()
         self.stats = PipelineStats(start_time=datetime.now())
         
-        # Initialize components using existing infrastructure
-        self.iplan_source = iplan_source or IPlanDataSource(headless=self.config.headless)
+        # Browser-backed data source (Pydoll). Started in run_async().
+        self.iplan_source = iplan_source or IPlanPydollSource(headless=self.config.headless)
         self.document_fetcher = document_fetcher or MavatDocumentFetcher()
         self.document_processor = document_processor or DocumentProcessor()
         
@@ -188,48 +190,60 @@ class UnifiedDataPipeline:
         
     def run(self) -> PipelineStats:
         """
-        Run the complete pipeline.
+        Run the complete pipeline (sync wrapper around async implementation).
         
         Returns:
             Pipeline statistics
         """
-        logger.info("="*80)
+        return asyncio.run(self.run_async())
+
+    async def run_async(self) -> PipelineStats:
+        """Async pipeline runner (Pydoll-native)."""
+        logger.info("=" * 80)
         logger.info("Starting Unified Data Pipeline")
-        logger.info("="*80)
-        
+        logger.info("=" * 80)
+
         try:
-            # Phase 1: Clear vector DB if rebuild requested
+            await self.iplan_source.__aenter__()
+
             if self.config.rebuild_vectordb:
                 logger.info("\n📦 Phase 0: Clearing vector database...")
                 self._clear_vectordb()
-            
-            # Phase 1: Discover plans
+
             logger.info("\n🔍 Phase 1: Discovering plans from iPlan...")
-            plans = self._discover_plans()
+            plans = await self._discover_plans_async()
             logger.info(f"✅ Discovered {len(plans)} plans")
-            
-            # Phase 2: Process each plan
+
             logger.info(f"\n🔧 Phase 2: Processing {len(plans)} plans...")
-            for i, plan in enumerate(plans, 1):
-                logger.info(f"\n--- Plan {i}/{len(plans)} ---")
-                self._process_plan(plan)
-            
-            # Phase 3: Finalize
+            sem = asyncio.Semaphore(max(1, int(self.config.max_workers or 1)))
+            ingest_lock = asyncio.Lock()
+            # One Pydoll source owns a single Chrome tab; serialize navigation.
+            browser_lock = asyncio.Lock()
+
+            async def _worker(i: int, plan: Dict[str, Any]):
+                async with sem:
+                    logger.info(f"\n--- Plan {i}/{len(plans)} ---")
+                    await self._process_plan_async(plan, ingest_lock=ingest_lock, browser_lock=browser_lock)
+
+            await asyncio.gather(*[_worker(i, p) for i, p in enumerate(plans, 1)])
+
             logger.info("\n📊 Phase 3: Finalizing...")
             self._finalize()
-            
-            logger.info("\n" + "="*80)
+
+            logger.info("\n" + "=" * 80)
             logger.info("Pipeline Complete!")
-            logger.info("="*80)
+            logger.info("=" * 80)
             self._print_stats()
-            
+
             return self.stats
-            
         except Exception as e:
             logger.error(f"Pipeline failed: {e}", exc_info=True)
             raise
         finally:
-            self.iplan_source.close()
+            try:
+                await self.iplan_source.__aexit__(None, None, None)
+            except Exception:
+                pass
     
     def _clear_vectordb(self):
         """Clear the vector database for rebuild."""
@@ -240,19 +254,17 @@ class UnifiedDataPipeline:
         except Exception as e:
             logger.warning(f"Failed to clear vector database: {e}")
     
-    def _discover_plans(self) -> List[Dict[str, Any]]:
-        """
-        Discover plans from iPlan.
-        
-        Returns:
-            List of plan features
-        """
-        plans = list(self.iplan_source.discover(limit=self.config.max_plans))
-        
+    async def _discover_plans_async(self) -> List[Dict[str, Any]]:
+        """Discover plans from iPlan (async)."""
+        plans = await self.iplan_source.discover_plans(
+            service_name=self.config.service_name,
+            max_plans=self.config.max_plans,
+            where=self.config.where_clause,
+        )
         self.stats.plans_discovered = len(plans)
         return plans
     
-    def _process_plan(self, plan: Dict[str, Any]):
+    async def _process_plan_async(self, plan: Dict[str, Any], *, ingest_lock: asyncio.Lock, browser_lock: asyncio.Lock):
         """
         Process a single plan: fetch documents, analyze, extract, index.
         
@@ -260,15 +272,36 @@ class UnifiedDataPipeline:
             plan: Plan feature from iPlan
         """
         try:
-            attrs = plan.get('attributes', {})
-            plan_id = attrs.get('OBJECTID')
-            plan_number = attrs.get('PL_NUMBER', 'unknown')
-            plan_name = attrs.get('PL_NAME', '')
+            attrs = plan.get("attributes", {}) or {}
+            # Real ArcGIS payloads often use lowercase keys.
+            def _get(*keys: str, default=None):
+                for k in keys:
+                    if isinstance(attrs, dict):
+                        if k in attrs and attrs.get(k) not in (None, ""):
+                            return attrs.get(k)
+                        lk = k.lower()
+                        if lk in attrs and attrs.get(lk) not in (None, ""):
+                            return attrs.get(lk)
+                        uk = k.upper()
+                        if uk in attrs and attrs.get(uk) not in (None, ""):
+                            return attrs.get(uk)
+                return default
+
+            plan_id = _get("OBJECTID", "objectid")
+            plan_number = _get("PL_NUMBER", "pl_number", default="unknown")
+            plan_name = _get("PL_NAME", "pl_name", default="") or ""
             pl_url = attrs.get('pl_url', '')
             
             logger.info(f"Processing plan {plan_number}: {plan_name}")
             logger.info(f"  Plan ID: {plan_id}")
             logger.info(f"  Mavat URL: {pl_url}")
+
+            # Always index at least the plan-level metadata so "ingest" works even
+            # when document fetching is unavailable or the plan has no MAVAT URL.
+            plan_reg = self._create_plan_regulation(attrs)
+            if plan_reg:
+                async with ingest_lock:
+                    self._upsert_regulations([plan_reg])
             
             # Skip if no Mavat URL
             if not pl_url or 'mavat.iplan.gov.il' not in pl_url:
@@ -276,32 +309,48 @@ class UnifiedDataPipeline:
                 self.stats.plans_processed += 1
                 return
             
-            # Extract Mavat plan ID from URL
-            import re
-            match = re.search(r'/(\d+)/', pl_url)
-            if not match:
-                logger.warning("  ⚠️ Could not extract Mavat plan ID")
+            # Extract MAVAT plan ID from URL.
+            # URL format: https://mavat.iplan.gov.il/SV4/1/{plan_id}/310
+            from urllib.parse import urlparse
+
+            path_parts = [p for p in urlparse(pl_url).path.split("/") if p]
+            mavat_plan_id = None
+            try:
+                # Expected: ["SV4", "1", "{plan_id}", "310"]
+                if len(path_parts) >= 4 and path_parts[0] == "SV4" and path_parts[1] == "1":
+                    mavat_plan_id = path_parts[2]
+                else:
+                    # Fallback: choose the last numeric path part before the trailing section.
+                    numeric = [p for p in path_parts if p.isdigit()]
+                    if len(numeric) >= 2:
+                        mavat_plan_id = numeric[-2]
+            except Exception:
+                mavat_plan_id = None
+
+            if not mavat_plan_id:
+                logger.warning("  ⚠️ Could not extract MAVAT plan ID")
                 self.stats.plans_processed += 1
                 return
             
-            mavat_plan_id = match.group(1)
-            
             # Phase 2.1: Fetch documents
             if self.config.fetch_documents:
-                documents = self._fetch_plan_documents(mavat_plan_id)
+                documents = await self._fetch_plan_documents_async(mavat_plan_id, browser_lock=browser_lock)
                 logger.info(f"  📄 Found {len(documents)} documents")
             else:
                 documents = []
             
-            # Phase 2.2: Process documents with vision
+            # Phase 2.2: Index document links (and optionally run vision later).
+            # Even if vision processing is disabled, document URLs are still useful
+            # to ingest into the vector DB for later retrieval.
             regulations = []
-            if self.config.process_documents and documents:
-                regulations = self._process_documents(documents, attrs)
-                logger.info(f"  📋 Extracted {len(regulations)} regulations")
+            if documents:
+                regulations = self._process_documents(documents, attrs, mavat_plan_id=mavat_plan_id)
+                logger.info(f"  📋 Extracted {len(regulations)} regulations (document-link records)")
             
             # Phase 2.3: Index regulations in vector DB
             if regulations:
-                self._index_regulations(regulations)
+                async with ingest_lock:
+                    self._upsert_regulations(regulations)
                 logger.info(f"  💾 Indexed {len(regulations)} regulations")
             
             self.stats.plans_processed += 1
@@ -311,7 +360,7 @@ class UnifiedDataPipeline:
             logger.error(f"  ❌ Failed to process plan: {e}")
             self.stats.plans_failed += 1
     
-    def _fetch_plan_documents(self, mavat_plan_id: str) -> List[Dict[str, str]]:
+    async def _fetch_plan_documents_async(self, mavat_plan_id: str, *, browser_lock: asyncio.Lock) -> List[Dict[str, str]]:
         """
         Fetch documents for a plan from Mavat.
         
@@ -322,8 +371,8 @@ class UnifiedDataPipeline:
             List of document metadata
         """
         try:
-            # Use Selenium fetcher via iplan_source
-            documents = self.iplan_source.selenium_source.extract_document_links(mavat_plan_id)
+            async with browser_lock:
+                documents = await self.iplan_source.fetch_plan_documents(mavat_plan_id)
             self.stats.documents_found += len(documents)
             
             # Download documents
@@ -348,7 +397,8 @@ class UnifiedDataPipeline:
     def _process_documents(
         self,
         documents: List[Dict[str, str]],
-        plan_attrs: Dict[str, Any]
+        plan_attrs: Dict[str, Any],
+        mavat_plan_id: str
     ) -> List[Regulation]:
         """
         Process documents with vision service to extract regulations.
@@ -377,7 +427,7 @@ class UnifiedDataPipeline:
                 logger.info(f"    Processing document: {doc.get('title')}")
                 
                 # Example regulation extraction (placeholder)
-                regulation = self._extract_regulation_from_document(doc, plan_attrs)
+                regulation = self._extract_regulation_from_document(doc, plan_attrs, mavat_plan_id=mavat_plan_id)
                 if regulation:
                     regulations.append(regulation)
                     self.stats.regulations_extracted += 1
@@ -393,7 +443,8 @@ class UnifiedDataPipeline:
     def _extract_regulation_from_document(
         self,
         document: Dict[str, str],
-        plan_attrs: Dict[str, Any]
+        plan_attrs: Dict[str, Any],
+        mavat_plan_id: str
     ) -> Optional[Regulation]:
         """
         Extract regulation from a document using vision service.
@@ -405,52 +456,148 @@ class UnifiedDataPipeline:
         Returns:
             Extracted regulation or None
         """
-        # TODO: Implement actual vision-based extraction
-        # This is a placeholder
-        
-        # For now, create a basic regulation from plan attributes
+        # TODO: Implement actual vision-based extraction.
+        # For now, index a stable, searchable record with document URL + plan metadata.
         try:
+            import hashlib
+
+            def _get(*keys: str, default=None):
+                for k in keys:
+                    if k in plan_attrs and plan_attrs.get(k) not in (None, ""):
+                        return plan_attrs.get(k)
+                    lk = k.lower()
+                    if lk in plan_attrs and plan_attrs.get(lk) not in (None, ""):
+                        return plan_attrs.get(lk)
+                    uk = k.upper()
+                    if uk in plan_attrs and plan_attrs.get(uk) not in (None, ""):
+                        return plan_attrs.get(uk)
+                return default
+
+            objectid = str(_get("OBJECTID", "objectid", default="") or "").strip()
+            plan_number = str(_get("PL_NUMBER", "pl_number", default="") or "").strip()
+            plan_name = str(_get("PL_NAME", "pl_name", default="") or "").strip() or plan_number or "Untitled Plan"
+            municipality = str(_get("MUNICIPALITY_NAME", "municipality_name", "plan_county_name", default="") or "").strip()
+            doc_url = str(document.get("url") or "").strip()
+            doc_title = str(document.get("title") or "").strip() or "Document"
+            artifact_type = str(document.get("artifact_type") or "").strip()
+
+            # Deterministic ID: reruns won't create duplicates.
+            url_hash = hashlib.sha1(doc_url.encode("utf-8")).hexdigest()[:12] if doc_url else "no_url"
+            reg_id = f"iplan_{objectid or 'unknown'}_mavat_{mavat_plan_id}_doc_{url_hash}"
+
+            parts = [
+                f"{plan_name}",
+                f"מספר תכנית: {plan_number}" if plan_number else "",
+                f"רשות: {municipality}" if municipality else "",
+                f"מסמך: {doc_title}",
+                f"סוג קובץ: {artifact_type}" if artifact_type else "",
+                f"URL: {doc_url}" if doc_url else "",
+                "",
+                str(_get("PLAN_TARGETS", "plan_targets", default="") or "").strip(),
+                str(_get("MAIN_DETAILS", "main_details", default="") or "").strip(),
+            ]
+            content = "\n".join([p for p in parts if p]).strip()
+
             regulation = Regulation(
-                id=f"reg_{plan_attrs.get('OBJECTID')}",
-                plan_id=f"iplan_{plan_attrs.get('OBJECTID')}",
-                regulation_type="general",
-                title=plan_attrs.get('PL_NAME', 'Untitled'),
-                content=plan_attrs.get('pl_objectives', ''),
-                zone_type=plan_attrs.get('entity_subtype_desc', ''),
-                building_rights=None,  # TODO: Extract from vision analysis
-                location=plan_attrs.get('municipality_name', ''),
-                source_url=document.get('url', ''),
+                id=reg_id,
+                type=RegulationType.LOCAL,
+                title=f"{plan_number} - {plan_name} - {doc_title}".strip(" -"),
+                content=content,
+                summary=None,
+                jurisdiction=municipality or "national",
+                effective_date=None,
+                source_document=f"MAVAT {mavat_plan_id}",
                 metadata={
-                    'plan_number': plan_attrs.get('PL_NUMBER'),
-                    'district': plan_attrs.get('district_name'),
-                    'station': plan_attrs.get('station_desc'),
-                    'document_title': document.get('title'),
-                }
+                    "source": "UnifiedDataPipeline",
+                    "objectid": objectid,
+                    "plan_number": plan_number,
+                    "municipality_name": municipality,
+                    "mavat_plan_id": mavat_plan_id,
+                    "document_title": doc_title,
+                    "document_url": doc_url,
+                    "artifact_type": artifact_type,
+                    "full_details": "false",
+                },
             )
             
             return regulation
         except Exception as e:
             logger.error(f"Failed to create regulation: {e}")
             return None
-    
-    def _index_regulations(self, regulations: List[Regulation]):
-        """
-        Index regulations in the vector database.
-        
-        Args:
-            regulations: Regulations to index
-        """
+
+    def _create_plan_regulation(self, plan_attrs: Dict[str, Any]) -> Optional[Regulation]:
+        """Create a plan-level searchable record (no document required)."""
         try:
-            # Add regulations to vector DB
-            for regulation in regulations:
-                try:
-                    self.vectordb_service.add_regulation(regulation)
-                    self.stats.regulations_indexed += 1
-                except Exception as e:
-                    logger.warning(f"    Failed to index regulation: {e}")
-                    self.stats.indexing_failed += 1
+            def _get(*keys: str, default=None):
+                for k in keys:
+                    if k in plan_attrs and plan_attrs.get(k) not in (None, ""):
+                        return plan_attrs.get(k)
+                    lk = k.lower()
+                    if lk in plan_attrs and plan_attrs.get(lk) not in (None, ""):
+                        return plan_attrs.get(lk)
+                    uk = k.upper()
+                    if uk in plan_attrs and plan_attrs.get(uk) not in (None, ""):
+                        return plan_attrs.get(uk)
+                return default
+
+            objectid = str(_get("OBJECTID", "objectid", default="") or "").strip()
+            if not objectid:
+                return None
+
+            plan_number = str(_get("PL_NUMBER", "pl_number", default="") or "").strip()
+            plan_name = str(_get("PL_NAME", "pl_name", default="") or "").strip() or plan_number or "Untitled Plan"
+            municipality = str(_get("MUNICIPALITY_NAME", "municipality_name", "plan_county_name", default="") or "").strip()
+            entity_subtype = str(_get("ENTITY_SUBTYPE_DESC", "entity_subtype_desc", default="") or "").strip()
+
+            parts = [
+                plan_name,
+                f"מספר תכנית: {plan_number}" if plan_number else "",
+                f"רשות: {municipality}" if municipality else "",
+                f"סוג: {entity_subtype}" if entity_subtype else "",
+                "",
+                str(_get("PLAN_TARGETS", "plan_targets", default="") or "").strip(),
+                str(_get("MAIN_DETAILS", "main_details", default="") or "").strip(),
+            ]
+            content = "\n".join([p for p in parts if p]).strip()
+
+            return Regulation(
+                id=f"iplan_{objectid}",
+                type=RegulationType.LOCAL,
+                title=plan_name,
+                content=content,
+                summary=None,
+                jurisdiction=municipality or "national",
+                effective_date=None,
+                source_document=f"iPlan OBJECTID {objectid}",
+                metadata={
+                    "source": "UnifiedDataPipeline",
+                    "objectid": objectid,
+                    "plan_number": plan_number,
+                    "entity_subtype": entity_subtype,
+                    "municipality_name": municipality,
+                    "indexed": "true",
+                },
+            )
+        except Exception as e:
+            logger.warning(f"Failed to create plan regulation: {e}")
+            return None
+
+    def _upsert_regulations(self, regulations: List[Regulation]):
+        """Upsert regulations into Chroma (idempotent continuous ingestion)."""
+        try:
+            repo = getattr(self.vectordb_service, "repository", None)
+            if repo is None:
+                raise RuntimeError("VectorDBManagementService has no repository")
+
+            if hasattr(repo, "upsert_regulations_batch"):
+                count = repo.upsert_regulations_batch(regulations)
+            else:
+                count = repo.add_regulations_batch(regulations)
+
+            self.stats.regulations_indexed += int(count or 0)
         except Exception as e:
             logger.error(f"  Failed to index regulations: {e}")
+            self.stats.indexing_failed += len(regulations)
     
     def _finalize(self):
         """Finalize the pipeline and save stats."""
@@ -522,7 +669,7 @@ if __name__ == "__main__":
     
     print("Building vector database from iPlan data...")
     print("This will:")
-    print("  1. Discover plans using Selenium (bypasses WAF)")
+    print("  1. Discover plans using Pydoll (bypasses WAF)")
     print("  2. Fetch documents from Mavat")
     print("  3. Process with vision AI")
     print("  4. Index in vector database")
