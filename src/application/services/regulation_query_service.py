@@ -74,14 +74,24 @@ class RegulationQueryService:
 
             # Generate answer using LLM if available
             answer: Optional[str] = None
+            answer_status = "no_results"
+            answer_warning: Optional[str] = None
             if regulations:
                 if self._llm:
                     answer = self._synthesize_answer(query, regulations)
                     if not answer:
                         degraded_reasons.append("llm_synthesis_unavailable")
-                        answer = self._fallback_answer(query, regulations)
+                        answer_status = "retrieval_only"
+                        answer_warning = (
+                            "MockChat synthesis is unavailable. Showing retrieved regulations only."
+                        )
+                    else:
+                        answer_status = "synthesized"
                 else:
-                    answer = self._fallback_answer(query, regulations)
+                    answer_status = "retrieval_only"
+                    answer_warning = (
+                        "MockChat is not configured. Showing retrieved regulations only."
+                    )
 
             duration_ms = round((perf_counter() - started_at) * 1000, 2)
             result = RegulationResult(
@@ -89,6 +99,8 @@ class RegulationQueryService:
                 query=query,
                 total_found=len(regulations),
                 answer=answer,
+                answer_status=answer_status,
+                answer_warning=answer_warning,
             )
             emit_observability_event(
                 logger,
@@ -120,23 +132,6 @@ class RegulationQueryService:
                 latency_ms=duration_ms,
             )
             return RegulationResult(regulations=[], query=query, total_found=0)
-
-    def _fallback_answer(
-        self, query: RegulationQuery, regulations: List[Regulation]
-    ) -> str:
-        """Generate a minimal, deterministic answer when no LLM is configured."""
-        top = regulations[: min(3, len(regulations))]
-        lines = [
-            "LLM synthesis is unavailable. Showing the most relevant regulations found:",
-            "",
-        ]
-        for i, reg in enumerate(top, 1):
-            snippet = (reg.summary or reg.content or "").strip().replace("\n", " ")
-            snippet = snippet[:220] + ("..." if len(snippet) > 220 else "")
-            lines.append(f"{i}. {reg.title} ({reg.type.value}, {reg.jurisdiction})")
-            if snippet:
-                lines.append(f"   {snippet}")
-        return "\n".join(lines)
 
     def _search_regulations(self, query: RegulationQuery) -> List[Regulation]:
         """

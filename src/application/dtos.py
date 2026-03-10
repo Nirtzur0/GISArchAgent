@@ -60,6 +60,8 @@ class RegulationResult:
     query: RegulationQuery
     total_found: int
     answer: Optional[str] = None  # AI-generated answer
+    answer_status: str = "unavailable"
+    answer_warning: Optional[str] = None
     timestamp: datetime = field(default_factory=datetime.now)
 
 

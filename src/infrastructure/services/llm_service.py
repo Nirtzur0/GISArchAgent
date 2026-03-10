@@ -11,6 +11,72 @@ import requests
 logger = logging.getLogger(__name__)
 
 
+def probe_openai_compatible_provider(
+    *,
+    base_url: str,
+    api_key: str | None,
+    timeout_seconds: int = 5,
+) -> dict[str, Any]:
+    """Probe an OpenAI-compatible provider without generating content."""
+    endpoint = f"{base_url.rstrip('/')}/models"
+    headers = {
+        "Authorization": f"Bearer {api_key or 'chatmock-local'}",
+        "Accept": "application/json",
+    }
+    try:
+        response = requests.get(endpoint, headers=headers, timeout=timeout_seconds)
+    except Exception as exc:
+        return {
+            "healthy": False,
+            "status": "unreachable",
+            "endpoint": endpoint,
+            "detail": str(exc),
+        }
+
+    content_type = response.headers.get("content-type", "")
+    if not response.ok:
+        return {
+            "healthy": False,
+            "status": "http_error",
+            "endpoint": endpoint,
+            "status_code": response.status_code,
+            "content_type": content_type,
+            "detail": response.text[:240],
+        }
+
+    if "json" not in content_type.lower():
+        return {
+            "healthy": False,
+            "status": "invalid_content_type",
+            "endpoint": endpoint,
+            "status_code": response.status_code,
+            "content_type": content_type,
+            "detail": "Provider returned non-JSON content. Check that OPENAI_BASE_URL points to the API endpoint, not a web UI.",
+        }
+
+    try:
+        payload = response.json()
+    except ValueError as exc:
+        return {
+            "healthy": False,
+            "status": "invalid_json",
+            "endpoint": endpoint,
+            "status_code": response.status_code,
+            "content_type": content_type,
+            "detail": str(exc),
+        }
+
+    models = payload.get("data") if isinstance(payload, dict) else None
+    return {
+        "healthy": True,
+        "status": "ready",
+        "endpoint": endpoint,
+        "status_code": response.status_code,
+        "content_type": content_type,
+        "model_count": len(models) if isinstance(models, list) else None,
+    }
+
+
 class OpenAICompatibleLLMService:
     """Generate answers through an OpenAI-compatible chat-completions API."""
 
@@ -100,6 +166,14 @@ class OpenAICompatibleLLMService:
                 str(part.get("text", "")) for part in content if isinstance(part, dict)
             )
         return str(content)
+
+    def probe(self) -> dict[str, Any]:
+        """Report whether the configured provider appears OpenAI-compatible."""
+        return probe_openai_compatible_provider(
+            base_url=self.base_url,
+            api_key=self.api_key,
+            timeout_seconds=min(self.timeout_seconds, 5),
+        )
 
 
 # Backwards-compatible alias for modules that still import the legacy name.

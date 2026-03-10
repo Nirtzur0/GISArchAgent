@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import tempfile
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
 from pathlib import Path
 from typing import Any, Optional
 
@@ -56,6 +57,7 @@ class DataFetchRequest(BaseModel):
     service_name: str = "xplan"
     max_plans: int = Field(default=100, ge=1, le=5000)
     where: str = "1=1"
+    timeout_seconds: int = Field(default=45, ge=5, le=180)
 
 
 class AppContext:
@@ -94,13 +96,16 @@ def create_app() -> FastAPI:
 
     @app.get("/api/health")
     def health() -> dict[str, Any]:
+        provider_status = ctx.factory.get_provider_status()
+        fetcher_status = _fetcher_capabilities("iplan", service_name="xplan")
+        fetcher_status["status"] = "ready" if fetcher_status["available"] else "unavailable"
+        overall_status = "ok"
+        if not provider_status["text"]["healthy"] or not fetcher_status["available"]:
+            overall_status = "degraded"
         return {
-            "status": "ok",
-            "provider": {
-                "base_url": ctx.factory.openai_base_url,
-                "model": ctx.factory.openai_model,
-                "vision_model": ctx.factory.openai_vision_model,
-            },
+            "status": overall_status,
+            "provider": provider_status,
+            "scraping": fetcher_status,
         }
 
     @app.get("/api/system/status")
@@ -109,6 +114,8 @@ def create_app() -> FastAPI:
         cache = ctx.factory.get_cache_service().get_stats()
         vectordb = ctx.factory.get_vectordb_status()
         return {
+            "provider": to_jsonable(ctx.factory.get_provider_status()),
+            "scraping": to_jsonable(_fetcher_capabilities("iplan", service_name="xplan")),
             "vector_db": to_jsonable(vectordb),
             "cache": to_jsonable(cache),
             "regulation_repository": to_jsonable(reg_repo.get_statistics()),
@@ -227,22 +234,38 @@ def create_app() -> FastAPI:
 
     @app.post("/api/data/fetch")
     def data_fetch(request: DataFetchRequest) -> dict[str, Any]:
-        fetcher = DataFetcherFactory.get_fetcher(request.source)
-        result = fetcher.fetch(
+        result = _execute_fetch(
+            source=request.source,
             service_name=request.service_name,
             max_plans=request.max_plans,
             where=request.where,
+            timeout_seconds=request.timeout_seconds,
         )
+        metadata = result.get("metadata") or {}
         features = result.get("features") or []
         added = 0
-        if features:
+        if metadata.get("status") == "success" and features:
             added = ctx.data_store.add_features(features, avoid_duplicates=True)
             ctx.data_store.save(backup=True)
         return {
-            "fetch": to_jsonable(result.get("metadata") or {}),
+            "fetch": to_jsonable(metadata),
             "fetched_count": len(features),
             "added_count": added,
         }
+
+    @app.get("/api/data/fetcher-health")
+    def data_fetcher_health(
+        source: str = "iplan",
+        service_name: str = "xplan",
+        probe_limit: int = Query(default=1, ge=1, le=5),
+        timeout_seconds: int = Query(default=20, ge=5, le=60),
+    ) -> dict[str, Any]:
+        return _probe_fetcher(
+            source=source,
+            service_name=service_name,
+            max_plans=probe_limit,
+            timeout_seconds=timeout_seconds,
+        )
 
     @app.get("/api/vectordb/status")
     def vectordb_status() -> dict[str, Any]:
@@ -368,3 +391,127 @@ class _BytesUpload:
 
 
 app = create_app()
+
+
+def _fetcher_capabilities(source: str, *, service_name: str) -> dict[str, Any]:
+    if source == "iplan":
+        try:
+            import pydoll  # noqa: F401
+
+            available = True
+        except ImportError:
+            available = False
+        return {
+            "source": source,
+            "service_name": service_name,
+            "label": "iPlan GIS (Pydoll)",
+            "available": available,
+        }
+
+    fetcher = DataFetcherFactory.get_fetcher(source)
+    return {
+        "source": source,
+        "service_name": service_name,
+        "label": fetcher.get_source_name(),
+        "available": fetcher.is_available(),
+    }
+
+
+def _execute_fetch(
+    *,
+    source: str,
+    service_name: str,
+    max_plans: int,
+    where: str,
+    timeout_seconds: int,
+) -> dict[str, Any]:
+    fetcher = DataFetcherFactory.get_fetcher(source)
+    executor = ThreadPoolExecutor(max_workers=1)
+    future = executor.submit(
+        fetcher.fetch,
+        service_name=service_name,
+        max_plans=max_plans,
+        where=where,
+    )
+    try:
+        result = future.result(timeout=timeout_seconds)
+    except FutureTimeoutError:
+        future.cancel()
+        executor.shutdown(wait=False, cancel_futures=True)
+        if hasattr(fetcher, "close"):
+            fetcher.close()
+        return {
+            "metadata": {
+                "source": fetcher.get_source_name(),
+                "service_name": service_name,
+                "status": "timeout",
+                "timeout_seconds": timeout_seconds,
+                "fetched_at": None,
+                "error": (
+                    "Scrape timed out before the provider returned data. "
+                    "Check browser automation, source availability, or increase timeout."
+                ),
+            },
+            "features": [],
+        }
+    finally:
+        if future.done():
+            executor.shutdown(wait=False, cancel_futures=True)
+        if hasattr(fetcher, "close"):
+            fetcher.close()
+
+    metadata = dict(result.get("metadata") or {})
+    metadata.setdefault("source", fetcher.get_source_name())
+    metadata.setdefault("service_name", service_name)
+    metadata.setdefault("status", "success" if result.get("features") else "empty")
+    result["metadata"] = metadata
+    return result
+
+
+def _probe_fetcher(
+    *,
+    source: str,
+    service_name: str,
+    max_plans: int,
+    timeout_seconds: int,
+) -> dict[str, Any]:
+    if os.getenv("GISARCHAGENT_SKIP_FETCHER_PROBE") == "1":
+        capabilities = _fetcher_capabilities(source, service_name=service_name)
+        return {
+            **capabilities,
+            "status": "skipped",
+            "detail": "Fetcher probe skipped by environment override.",
+            "fetched_at": None,
+            "count": 0,
+            "probe_limit": max_plans,
+            "timeout_seconds": timeout_seconds,
+            "metadata": {},
+        }
+
+    capabilities = _fetcher_capabilities(source, service_name=service_name)
+    if not capabilities["available"]:
+        return {
+            **capabilities,
+            "status": "unavailable",
+            "detail": "Fetcher dependencies are not installed.",
+        }
+
+    result = _execute_fetch(
+        source=source,
+        service_name=service_name,
+        max_plans=max_plans,
+        where="1=1",
+        timeout_seconds=timeout_seconds,
+    )
+    metadata = result.get("metadata") or {}
+    status = metadata.get("status", "unknown")
+    return {
+        **capabilities,
+        "status": "ready" if status == "success" else status,
+        "detail": metadata.get("error"),
+        "fetched_at": metadata.get("fetched_at"),
+        "count": len(result.get("features") or []),
+        "probe_limit": max_plans,
+        "timeout_seconds": timeout_seconds,
+        "metadata": metadata,
+    }

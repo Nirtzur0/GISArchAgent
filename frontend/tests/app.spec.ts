@@ -7,38 +7,36 @@ const tinyPng = Buffer.from(
 
 test("dashboard query and history flow renders", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByText("Intelligence cockpit")).toBeVisible();
-  await page.getByRole("button", { name: "Run query" }).click();
-  await expect(page.getByText("Answer")).toBeVisible();
-  await expect(page.getByText("Session history")).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Start from a site or plan/i })).toBeVisible();
+  await page.getByRole("button", { name: "Ask about this project" }).click();
+  await expect(page.getByText("Relevant source regulations")).toBeVisible();
+  await expect(page.getByText(/^Project dossier:/)).toBeVisible();
 });
 
 test("map workspace loads plan cards", async ({ page }) => {
   await page.goto("/map");
-  await expect(page.getByText("Geo-browse local plan data")).toBeVisible();
-  await expect(page.getByText("plans matched")).toBeVisible();
+  await expect(page.getByText("Browse planning geometry with the selected project kept in focus")).toBeVisible();
+  await expect(page.getByText("Selected site")).toBeVisible();
 });
 
 test("analyzer renders rights metrics and upload error/result surface", async ({ page }) => {
   await page.goto("/analyzer");
-  await expect(page.getByText("Program comparison and compliance")).toBeVisible();
-  await expect(page.getByText("Max floors")).toBeVisible();
+  await expect(page.getByText("Feasibility inputs")).toBeVisible();
+  await expect(page.getByText("Allowed floors")).toBeVisible();
   await page.locator('input[type="file"]').setInputFiles({
     name: "tiny.png",
     mimeType: "image/png",
     buffer: tinyPng
   });
-  await expect(
-    page.getByText(/Upload a file to run OCR|Vision service is unavailable|Upload analysis failed|Description/)
-  ).toBeVisible();
+  await expect(page.getByText(/MockChat vision unavailable|Upload analysis failed|Description/).first()).toBeVisible();
 });
 
 test("data ops supports vector search and regulation authoring", async ({ page }) => {
   await page.goto("/data");
-  await expect(page.getByText("Local plan inventory")).toBeVisible();
-  await page.getByRole("textbox").nth(1).fill("parking");
+  await expect(page.getByText("Runtime dependencies and scrape validation")).toBeVisible();
+  await page.getByRole("textbox").first().fill("parking");
   await page.getByRole("button", { name: "Search vector DB" }).click();
-  await expect(page.getByText("Parking Space Requirements").first()).toBeVisible();
+  await expect(page.getByText(/parking/i).first()).toBeVisible();
 
   await page.getByPlaceholder("Title").fill("Playwright Regulation");
   await page.getByPlaceholder("Content").fill("Regulation added through browser automation.");

@@ -1,4 +1,13 @@
 export type SystemStatus = {
+  provider?: {
+    configured?: boolean;
+    base_url?: string;
+    model?: string;
+    vision_model?: string;
+    text?: Record<string, unknown>;
+    vision?: Record<string, unknown>;
+  };
+  scraping?: Record<string, unknown>;
   vector_db: Record<string, unknown>;
   cache: Record<string, unknown>;
   regulation_repository: Record<string, unknown>;
@@ -25,6 +34,8 @@ export type RegulationResult = {
   regulations: Regulation[];
   total_found: number;
   answer?: string | null;
+  answer_status?: string;
+  answer_warning?: string | null;
   timestamp?: string;
 };
 
@@ -80,4 +91,37 @@ export type VectorDbStatus = {
   statistics?: Record<string, any>;
   status?: string;
   health?: string;
+};
+
+export type HealthProbe = {
+  status: string;
+  provider: {
+    configured?: boolean;
+    base_url?: string;
+    model?: string;
+    vision_model?: string;
+    text?: {
+      healthy?: boolean;
+      status?: string;
+      detail?: string;
+      endpoint?: string;
+      content_type?: string;
+    };
+    vision?: {
+      healthy?: boolean;
+      status?: string;
+      detail?: string;
+      endpoint?: string;
+      content_type?: string;
+    };
+  };
+  scraping?: {
+    available?: boolean;
+    status?: string;
+    detail?: string | null;
+    fetched_at?: string | null;
+    count?: number;
+    timeout_seconds?: number;
+    metadata?: Record<string, unknown>;
+  };
 };

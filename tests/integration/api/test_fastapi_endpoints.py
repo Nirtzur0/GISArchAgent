@@ -20,6 +20,7 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setenv("GISARCHAGENT_VECTORSTORE_DIR", str(vectorstore_dir))
     monkeypatch.setenv("GISARCHAGENT_CACHE_DIR", str(cache_dir))
     monkeypatch.setenv("GISARCHAGENT_DATA_FILE", str(data_file))
+    monkeypatch.setenv("GISARCHAGENT_SKIP_FETCHER_PROBE", "1")
 
     import src.api.app as api_app_module
 
@@ -32,8 +33,9 @@ def test_health__reports_provider_shape(client):
     response = client.get("/api/health")
     assert response.status_code == 200
     payload = response.json()
-    assert payload["status"] == "ok"
+    assert payload["status"] in {"ok", "degraded"}
     assert "base_url" in payload["provider"]
+    assert "scraping" in payload
 
 
 def test_system_status__returns_core_sections(client):
@@ -42,6 +44,8 @@ def test_system_status__returns_core_sections(client):
     payload = response.json()
     assert "vector_db" in payload
     assert "data_store" in payload
+    assert "provider" in payload
+    assert "scraping" in payload
 
 
 def test_regulation_query__returns_sources(client):
@@ -53,6 +57,7 @@ def test_regulation_query__returns_sources(client):
     payload = response.json()
     assert payload["total_found"] >= 1
     assert len(payload["regulations"]) >= 1
+    assert payload["answer_status"] in {"synthesized", "retrieval_only", "no_results"}
 
 
 def test_building_rights__returns_metrics(client):
@@ -115,3 +120,11 @@ def test_data_import_and_vectordb_mutations__work_on_temp_state(client, tmp_path
     )
     assert search_response.status_code == 200
     assert search_response.json()["total"] >= 1
+
+
+def test_fetcher_health__returns_probe_payload(client):
+    response = client.get("/api/data/fetcher-health?probe_limit=1&timeout_seconds=5")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["source"] == "iplan"
+    assert "status" in payload

@@ -15,7 +15,10 @@ from src.domain.repositories import IPlanRepository, IRegulationRepository
 from src.infrastructure.repositories.iplan_repository import IPlanGISRepository
 from src.infrastructure.repositories.chroma_repository import ChromaRegulationRepository
 from src.infrastructure.services.vision_service import OpenAICompatibleVisionService
-from src.infrastructure.services.llm_service import OpenAICompatibleLLMService
+from src.infrastructure.services.llm_service import (
+    OpenAICompatibleLLMService,
+    probe_openai_compatible_provider,
+)
 from src.infrastructure.services.cache_service import FileCacheService
 from src.infrastructure.services.document_service import (
     MavatDocumentFetcher,
@@ -214,6 +217,22 @@ class ApplicationFactory:
                 return None
 
         return self._llm_service
+
+    def get_provider_status(self) -> dict:
+        """Return OpenAI-compatible provider health for text and vision flows."""
+        base_probe = probe_openai_compatible_provider(
+            base_url=self.openai_base_url,
+            api_key=self.openai_api_key,
+            timeout_seconds=5,
+        )
+        return {
+            "configured": bool(self.openai_base_url),
+            "base_url": self.openai_base_url,
+            "model": self.openai_model,
+            "vision_model": self.openai_vision_model,
+            "text": base_probe,
+            "vision": dict(base_probe),
+        }
 
     def get_cache_service(self) -> FileCacheService:
         """Get cache service instance."""

@@ -1,6 +1,7 @@
 import type {
   BuildingRightsResult,
   DataSearchResponse,
+  HealthProbe,
   RegulationResult,
   SystemStatus,
   UploadAnalysis,
@@ -27,12 +28,23 @@ export async function getSystemStatus(): Promise<SystemStatus> {
   return parseResponse<SystemStatus>(await fetch(`${API_BASE}/api/system/status`));
 }
 
-export async function queryRegulations(queryText: string): Promise<RegulationResult> {
+export async function getHealth(): Promise<HealthProbe> {
+  return parseResponse<HealthProbe>(await fetch(`${API_BASE}/api/health`));
+}
+
+export async function queryRegulations(
+  queryText: string,
+  options: { location?: string; maxResults?: number } = {}
+): Promise<RegulationResult> {
   return parseResponse<RegulationResult>(
     await fetch(`${API_BASE}/api/regulations/query`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query_text: queryText, max_results: 5 })
+      body: JSON.stringify({
+        query_text: queryText,
+        location: options.location,
+        max_results: options.maxResults ?? 5
+      })
     })
   );
 }
@@ -138,6 +150,7 @@ export async function fetchFreshData(payload: {
   service_name: string;
   max_plans: number;
   where: string;
+  timeout_seconds?: number;
 }) {
   return parseResponse<any>(
     await fetch(`${API_BASE}/api/data/fetch`, {
@@ -146,4 +159,8 @@ export async function fetchFreshData(payload: {
       body: JSON.stringify(payload)
     })
   );
+}
+
+export async function getFetcherHealth() {
+  return parseResponse<any>(await fetch(`${API_BASE}/api/data/fetcher-health`));
 }
