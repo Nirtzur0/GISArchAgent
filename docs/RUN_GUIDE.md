@@ -1,517 +1,135 @@
 # Complete Application Run Guide
 
-Comprehensive guide to running and testing **every component** of the GIS Architecture Agent.
+This guide is the practical run path for local operation and validation.
+For canonical command IDs and latest command-map truth, use `docs/manifest/09_runbook.md`.
 
----
+## Scope and Source of Truth
+- Command map: `docs/manifest/09_runbook.md`
+- Testing strategy: `docs/manifest/10_testing.md`
+- Troubleshooting: `docs/troubleshooting.md`
+- CLI specs: `docs/reference/cli.md`
 
-## 🚀 Quick Start
+## 1) Setup and Launch
 
-### 1. Run the Full Web Application
+### Environment bootstrap
 ```bash
-# Main Streamlit app
-streamlit run app.py
+./setup.sh
+```
 
-# Or use the provided script
+### Start the app
+```bash
 ./run_webapp.sh
 ```
 
-**Access at**: http://localhost:8501
+Then open `http://localhost:8501`.
 
-### 2. Run All Tests
-```bash
-# Run complete test suite
-pytest tests/ -v
+## 2) Core Verification (Automated)
 
-# Run with coverage
-pytest tests/ --cov=src --cov-report=html
-
-# View coverage report
-open htmlcov/index.html
-```
-
----
-
-## 🗺️ Application Components Map
-
-### **Main App** ([app.py](app.py))
-- Homepage with regulation search
-- Natural language query interface
-- Building rights calculator
-- Plan search functionality
-
-**Test it manually:**
-```bash
-streamlit run app.py
-```
-
-Then try:
-- ✅ Search for regulations: "parking requirements in Tel Aviv"
-- ✅ Search for plans by PLAN_ID
-- ✅ Calculate building rights for a location
-- ✅ Test Hebrew queries: "תקנות חניה"
-
----
-
-### **Page 1: Map Viewer** ([pages/1_📍_Map_Viewer.py](pages/1_📍_Map_Viewer.py))
-Interactive map visualization of:
-- Planning schemes
-- TAMA zones
-- Building locations
-- Coordinate conversion (ITM ↔ WGS84)
-
-**Test it manually:**
-1. Navigate to "Map Viewer" page
-2. ✅ Select feature types (Plans, TAMA, Buildings)
-3. ✅ Filter by municipality
-4. ✅ Click markers for details
-5. ✅ Test coordinate conversion
-6. ✅ Verify Hebrew text displays correctly
-
-**Features to test:**
-- Map renders correctly
-- Markers appear for selected types
-- Popups show feature details
-- Filters work (municipality, plan type)
-- Statistics update correctly
-
----
-
-### **Page 2: Plan Analyzer** ([pages/2_📐_Plan_Analyzer.py](pages/2_📐_Plan_Analyzer.py))
-Visual analysis tools for:
-- Building rights calculations
-- Plot coverage analysis
-- Compliance checking
-- Plan upload & AI-powered analysis
-
-**Test it manually:**
-1. Navigate to "Plan Analyzer" page
-2. ✅ Enter project details (name, location, plot size)
-3. ✅ Select zone type (R1, R2, C1, M1)
-4. ✅ Adjust building parameters (floors, coverage)
-5. ✅ View analysis charts
-6. ✅ Check compliance indicators
-7. ✅ Upload plan documents for AI analysis (in Upload & Analyze tab)
-
-**Features to test:**
-- Parameter inputs work
-- Charts render (Plotly graphs)
-- Compliance calculations correct
-- Floor area ratios accurate
-- Plan upload and vision analysis works
-
----
-
-### **Page 3: Data Management** ([pages/3_💾_Data_Management.py](pages/3_💾_Data_Management.py))
-Data administration interface:
-- Vector database statistics
-- iPlan data fetching
-- Data source management
-- Cache clearing
-
-**Test it manually:**
-1. Navigate to "Data Management" page
-2. ✅ View vector database statistics
-3. ✅ Reload data sources
-4. ✅ Test iPlan API connection
-5. ✅ View cached data
-6. ✅ Clear cache
-7. ✅ Import sample data
-
-**Features to test:**
-- Statistics display correctly
-- Reload button works
-- iPlan connection status
-- Cache operations work
-- Sample data imports successfully
-
----
-
-## 🧪 Automated Testing Map
-
-### **Test Suite 1: Vector Database Integration**
-File: [tests/test_vectordb_integration.py](tests/test_vectordb_integration.py)
+Run marker suites from the repository venv:
 
 ```bash
-# Run all vector DB tests
-pytest tests/test_vectordb_integration.py -v
-
-# Run specific test class
-pytest tests/test_vectordb_integration.py::TestChromaDBPersistence -v
-pytest tests/test_vectordb_integration.py::TestVectorSearch -v
+./venv/bin/python -m pytest -m unit
+./venv/bin/python -m pytest -m integration
+./venv/bin/python -m pytest -m e2e
+./venv/bin/python -m pytest -m data_contracts
 ```
 
-**What it tests:**
-- ✅ ChromaDB file persistence (4 tests)
-- ✅ Database connection (4 tests)
-- ✅ Repository integration (4 tests)
-- ✅ Service integration (3 tests)
-- ✅ Data quality (4 tests)
-- ✅ Semantic search (5 tests)
-
-**Total:** 24 tests
-
----
-
-### **Test Suite 2: iPlan Integration**
-File: [tests/test_iplan_integration.py](tests/test_iplan_integration.py)
+Optional full-suite run:
 
 ```bash
-# Run all iPlan tests
-pytest tests/test_iplan_integration.py -v
-
-# Run specific test class
-pytest tests/test_iplan_integration.py::TestHebrewSupport -v
-pytest tests/test_iplan_integration.py::TestDatabasePopulation -v
+./venv/bin/python -m pytest
 ```
 
-**What it tests:**
-- ✅ Database population (3 tests)
-- ✅ Hebrew language support (6 tests - parametrized)
-- ✅ iPlan data quality (4 tests)
-- ✅ Data diversity (4 tests)
-- ✅ Search relevance (3 tests)
-- ✅ Metadata integrity (4 tests)
+## 3) Manual UI Walkthrough
 
-**Total:** 24 tests
+After `./run_webapp.sh`, verify these flows:
 
----
+### Main page (Query Assistant)
+- Query regulations in English and Hebrew.
+- Confirm result cards render and fallback/degraded messaging is understandable.
 
-## 🎯 Test By Feature Area
+### Map Viewer page
+- Load map layers and apply filters.
+- Confirm marker popups and summary counters update.
 
-### **Search & Query**
+### Plan Analyzer page
+- Run building-rights calculations with sample inputs.
+- Validate charts/tables render and no UI errors appear.
+
+### Data Management page
+- Check vector DB status.
+- Run safe maintenance actions (status/check paths before rebuild).
+
+## 4) CLI Operations
+
+### Data store CLI
 ```bash
-# Test semantic search
-pytest tests/test_vectordb_integration.py::TestVectorSearch -v
-
-# Test Hebrew search
-pytest tests/test_iplan_integration.py::TestHebrewSupport -v
-
-# Test search relevance
-pytest tests/test_iplan_integration.py::TestSearchRelevance -v
+python3 scripts/data_cli.py status -v
+python3 scripts/data_cli.py search --city "ירושלים"
+python3 scripts/data_cli.py export out/plans_jerusalem.json --city "ירושלים" --pretty
 ```
 
-### **Data Storage**
+### Vector DB pipeline CLI
 ```bash
-# Test persistence
-pytest tests/test_vectordb_integration.py::TestChromaDBPersistence -v
-
-# Test database connection
-pytest tests/test_vectordb_integration.py::TestChromaDBConnection -v
-
-# Test population
-pytest tests/test_iplan_integration.py::TestDatabasePopulation -v
+python3 scripts/build_vectordb_cli.py check
+python3 scripts/build_vectordb_cli.py status
+python3 scripts/build_vectordb_cli.py build --max-plans 10 --no-vision
 ```
 
-### **Data Quality**
+### Quick status and observability
 ```bash
-# Test data quality
-pytest tests/test_vectordb_integration.py::TestDataQuality -v
-
-# Test iPlan quality
-pytest tests/test_iplan_integration.py::TestIPlanDataQuality -v
-
-# Test metadata
-pytest tests/test_iplan_integration.py::TestMetadataIntegrity -v
+python3 scripts/quick_status.py
+python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500
+python3 scripts/observability_cli.py summary --since-minutes 180 --events-limit 2000 --alerts-limit 1000 --as-json
 ```
 
----
+## 5) External Dependency Triage Path
 
-## 🔍 Test By Marker
+Use the one-shot snapshot bundle first:
 
 ```bash
-# Run all integration tests
-pytest -m integration -v
-
-# Run only vector DB tests
-pytest -m vectordb -v
-
-# Run only iPlan tests
-pytest -m iplan -v
-
-# Skip slow tests
-pytest -m "not slow" -v
-
-# Combine markers
-pytest -m "integration and vectordb" -v
+python3 scripts/quick_status.py external --since-minutes 180 --events-limit 1000 --alerts-limit 500 --run-drills
 ```
 
----
+If output shows `status=WARNING`, follow `warning_context` guidance in:
+- `docs/manifest/09_runbook.md` (`CMD-040`)
+- `docs/troubleshooting.md`
 
-## 📊 Coverage Analysis
+Targeted slices:
 
-### Generate Coverage Report
 ```bash
-# Run with coverage
-pytest tests/ --cov=src --cov-report=html --cov-report=term
-
-# Open HTML report
-open htmlcov/index.html
+python3 scripts/observability_cli.py events --operation build --since-minutes 60 --limit 100
+python3 scripts/observability_cli.py events --outcome error --since-minutes 60 --limit 100
+python3 scripts/observability_cli.py alerts --since-minutes 60 --limit 50
 ```
 
-### Check Specific Modules
+## 6) Optional Live-Network Rehearsal
+
+Live provider checks are opt-in and bounded.
+
 ```bash
-# Test specific module coverage
-pytest tests/ --cov=src.application.services --cov-report=term
-
-# Test infrastructure coverage
-pytest tests/ --cov=src.infrastructure --cov-report=term
-
-# Test data management coverage
-pytest tests/ --cov=src.data_management --cov-report=term
+RUN_NETWORK_TESTS=1 \
+RUN_NETWORK_REHEARSAL_MAX_ATTEMPTS=2 \
+RUN_NETWORK_REHEARSAL_TIMEOUT_SECONDS=45 \
+./venv/bin/python -m pytest tests/integration/iplan/test_pydoll_live_mavat_documents__optional.py -q
 ```
 
----
+Do not add this lane to default CI gates.
 
-## 🛠️ Backend Services Testing
+## 7) Documentation Guardrails
 
-### **Data Pipeline CLI**
+After editing onboarding/reference boundary docs, run:
+
 ```bash
-# Run generic data pipeline
-python -m src.data_pipeline.cli.pipeline load iplan
-
-# Load from specific source
-python -m src.data_pipeline.cli.pipeline load iplan --limit 50
-
-# Check pipeline status
-python -m src.data_pipeline.cli.pipeline status
+for file in docs/README.md docs/INDEX.md docs/reference/configuration.md docs/artifacts/README.md; do
+  for id in artifact:ART-EXT-001 artifact:ART-EXT-002 artifact:ART-EXT-003 artifact:ART-EXT-004 artifact:ART-EXT-005; do
+    rg -q "$id" "$file" || { echo "$file missing $id"; exit 1; }
+  done
+done
+echo "onboarding_artifact_links_ok files=4 ids=5"
 ```
 
-### **Data Management CLI**
-```bash
-# Run data management script
-python scripts/data_cli.py list
+## 8) Notes on Legacy References
 
-# Import sample data
-python scripts/import_sample_data.py
-
-# Manage vector database
-python -m src.vectorstore.manager stats
-```
-
----
-
-## 🌐 End-to-End Testing Workflow
-
-### **Complete System Test**
-```bash
-# 1. Run all automated tests
-pytest tests/ -v --cov=src
-
-# 2. Start the web app
-streamlit run app.py
-
-# 3. Manual testing checklist:
-```
-
-**Main App (Homepage):**
-- [ ] Search regulations with English query
-- [ ] Search regulations with Hebrew query (תקנות חניה)
-- [ ] Search for specific plan (PLAN_ID)
-- [ ] Calculate building rights
-- [ ] Verify results display correctly
-
-**Map Viewer Page:**
-- [ ] Map loads and displays
-- [ ] Markers appear for different feature types
-- [ ] Click marker shows popup with details
-- [ ] Filters work (municipality, type)
-- [ ] Coordinate conversion works
-- [ ] Statistics update correctly
-
-**Plan Analyzer Page:**
-- [ ] Input project parameters
-- [ ] Charts render correctly
-- [ ] Building rights calculations work
-- [ ] Compliance indicators accurate
-- [ ] Floor visualization displays
-- [ ] Report generation works
-
-**Data Management Page:**
-- [ ] Statistics display
-- [ ] Database info loads
-- [ ] iPlan connection works
-- [ ] Reload button functions
-- [ ] Cache operations work
-- [ ] Sample data import works
-
----
-
-## 🎭 Performance Testing
-
-### **Load Testing**
-```bash
-# Test with multiple concurrent searches
-python -c "
-from src.infrastructure.factory import get_factory
-import time
-
-factory = get_factory()
-service = factory.get_regulation_query_service()
-
-# Run 100 searches
-start = time.time()
-for i in range(100):
-    service.query_regulations('parking')
-end = time.time()
-
-print(f'100 searches: {end-start:.2f}s')
-print(f'Average: {(end-start)/100*1000:.2f}ms per search')
-"
-```
-
-### **Database Performance**
-```bash
-# Test vector search performance
-python -c "
-from src.infrastructure.factory import get_factory
-import time
-
-factory = get_factory()
-repo = factory.get_regulation_repository()
-
-queries = ['parking', 'building height', 'zoning', 'residential']
-for query in queries:
-    start = time.time()
-    results = repo.search(query, limit=10)
-    duration = (time.time() - start) * 1000
-    print(f'{query}: {duration:.2f}ms ({len(results)} results)')
-"
-```
-
----
-
-## 📈 Monitoring & Debugging
-
-### **Enable Debug Logging**
-```bash
-# Run with debug logging
-STREAMLIT_LOG_LEVEL=debug streamlit run app.py
-
-# Or in pytest
-pytest tests/ -v -s --log-cli-level=DEBUG
-```
-
-### **Check Database Status**
-```bash
-# Verify ChromaDB
-python -c "
-from src.infrastructure.factory import ApplicationFactory
-factory = ApplicationFactory()
-repo = factory.get_regulation_repository()
-stats = repo.get_statistics()
-print(f'Total regulations: {stats.total_regulations}')
-print(f'Last updated: {stats.last_updated}')
-"
-```
-
-### **Validate Data**
-```bash
-# Check vector store
-python -c "
-from pathlib import Path
-db_path = Path('data/vectorstore/chroma.sqlite3')
-print(f'Database exists: {db_path.exists()}')
-print(f'Database size: {db_path.stat().st_size / 1024 / 1024:.2f} MB')
-"
-```
-
----
-
-## 🔧 Troubleshooting
-
-### **Tests Failing?**
-```bash
-# Clear cache and retry
-rm -rf data/cache/*
-rm -rf data/vectorstore/*
-pytest tests/ -v
-
-# Run tests one at a time
-pytest tests/test_vectordb_integration.py::TestChromaDBPersistence -v -s
-```
-
-### **Web App Not Loading?**
-```bash
-# Check port availability
-lsof -i :8501
-
-# Kill existing Streamlit processes
-pkill -f streamlit
-
-# Restart
-streamlit run app.py
-```
-
-### **No Search Results?**
-```bash
-# Verify database has data
-python -c "
-from src.infrastructure.factory import get_factory
-factory = get_factory()
-repo = factory.get_regulation_repository()
-print(repo.get_statistics())
-"
-
-# Repopulate if needed
-python populate_real_data.py
-```
-
----
-
-## 📋 Complete Testing Checklist
-
-### Automated Tests (Run Once)
-- [ ] `pytest tests/ -v` - All 48 tests
-- [ ] `pytest -m vectordb -v` - Vector DB tests
-- [ ] `pytest -m iplan -v` - iPlan tests
-- [ ] `pytest --cov=src` - Coverage report
-
-### Manual Web Testing (Run for each deployment)
-- [ ] Homepage loads
-- [ ] Search with English query works
-- [ ] Search with Hebrew query works
-- [ ] Map Viewer page renders
-- [ ] Plan Analyzer page works
-- [ ] Data Management page functional
-- [ ] All charts/visualizations render
-- [ ] Navigation between pages works
-- [ ] Error handling graceful
-
-### Performance Testing (Run periodically)
-- [ ] Search response < 500ms
-- [ ] Page load time < 2s
-- [ ] Map renders < 3s
-- [ ] Database queries < 100ms
-
-### Data Validation (Run after data updates)
-- [ ] Database has content
-- [ ] Hebrew text displays correctly
-- [ ] Search returns relevant results
-- [ ] Metadata complete
-- [ ] No duplicate entries
-
----
-
-## 🎉 Success Criteria
-
-Your system is fully functional when:
-
-✅ **All automated tests pass** (43+ out of 48)
-✅ **Web app starts** without errors
-✅ **All 4 pages load** successfully
-✅ **Search returns results** (English + Hebrew)
-✅ **Maps render** with markers
-✅ **Charts display** correctly
-✅ **Database has data** (10+ regulations)
-✅ **No console errors** in browser
-✅ **Performance acceptable** (<500ms searches)
-
----
-
-## 📚 Additional Resources
-
-- **Architecture**: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-- **Data Management**: [docs/DATA_MANAGEMENT.md](docs/DATA_MANAGEMENT.md)
-- **Vector DB**: [docs/VECTOR_DB_MANAGEMENT.md](docs/VECTOR_DB_MANAGEMENT.md)
-- **Quick Start**: [docs/QUICK_START.md](docs/QUICK_START.md)
-- **Test Documentation**: [tests/README.md](tests/README.md)
+This guide intentionally avoids deprecated references from retired top-level integration test files.
+Use marker-driven commands and current test paths under `tests/unit/`, `tests/integration/`, and `tests/e2e/`.

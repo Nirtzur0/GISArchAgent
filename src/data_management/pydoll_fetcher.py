@@ -193,7 +193,9 @@ class PydollFetcher:
     def _cache_path(self, key: str) -> Path:
         return self.cache_dir / f"{_stable_cache_key(key)}.json"
 
-    async def fetch_json(self, url: str, *, use_cache: bool = True, timeout_s: int = 60) -> dict[str, Any]:
+    async def fetch_json(
+        self, url: str, *, use_cache: bool = True, timeout_s: int = 60
+    ) -> dict[str, Any]:
         """
         Fetch and parse JSON through the browser session.
         """
@@ -229,7 +231,9 @@ class PydollFetcher:
         data = resp.json() if hasattr(resp, "json") else json.loads(resp.text)
 
         try:
-            cache_path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+            cache_path.write_text(
+                json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
+            )
         except Exception:
             pass
 
@@ -311,7 +315,9 @@ class PydollFetcher:
                 return "ready"
 
             # Sometimes the deep-link resolves to a generic informational page.
-            body = await self.tab.query("body", timeout=2, find_all=False, raise_exc=False)
+            body = await self.tab.query(
+                "body", timeout=2, find_all=False, raise_exc=False
+            )
             if body:
                 try:
                     t = body.text
@@ -320,7 +326,11 @@ class PydollFetcher:
                     t = (t or "")[:2000]
                     if "אתר מידע תכנוני" in t and "מה מתוכנן" in t:
                         return "wrong_page"
-                    if "access denied" in t.lower() or "request blocked" in t.lower() or "cloudflare" in t.lower():
+                    if (
+                        "access denied" in t.lower()
+                        or "request blocked" in t.lower()
+                        or "cloudflare" in t.lower()
+                    ):
                         return "wrong_page"
                 except Exception:
                     pass
@@ -331,7 +341,9 @@ class PydollFetcher:
             try:
                 # Seed origin; MAVAT sometimes serves a partial shell on deep links.
                 try:
-                    await self.tab.go_to("https://mavat.iplan.gov.il/", timeout=timeout_s)
+                    await self.tab.go_to(
+                        "https://mavat.iplan.gov.il/", timeout=timeout_s
+                    )
                     await asyncio.sleep(1.0)
                 except Exception:
                     pass
@@ -344,7 +356,9 @@ class PydollFetcher:
                     if state == "ready":
                         return None
                     if state == "wrong_page":
-                        raise RuntimeError("MAVAT deep-link did not resolve to the plan UI")
+                        raise RuntimeError(
+                            "MAVAT deep-link did not resolve to the plan UI"
+                        )
                     await asyncio.sleep(0.6 + random.random() * 0.4)
 
                 raise TimeoutError("MAVAT UI did not become ready before timeout")
@@ -356,7 +370,9 @@ class PydollFetcher:
 
         raise last_err or RuntimeError("fetch_mavat_page failed")
 
-    async def extract_mavat_artifacts(self, plan_id: str, *, max_clicks: int = 200) -> list[ExtractedArtifact]:
+    async def extract_mavat_artifacts(
+        self, plan_id: str, *, max_clicks: int = 200
+    ) -> list[ExtractedArtifact]:
         """
         Extract nominal artifact download URLs by expanding the documents UI and
         clicking download icons to trigger `/rest/api/Attacments` requests.
@@ -366,10 +382,14 @@ class PydollFetcher:
             await self.fetch_mavat_page(plan_id)
 
             # If document rows are already present, skip expensive accordion expansion.
-            doc_info = await self.tab.query("span.uk-text-lead.doc-info", timeout=3, find_all=True, raise_exc=False)
+            doc_info = await self.tab.query(
+                "span.uk-text-lead.doc-info", timeout=3, find_all=True, raise_exc=False
+            )
             if not doc_info:
                 # Expand accordions (if present) so document rows become available.
-                titles = await self.tab.query(".uk-accordion-title", timeout=8, find_all=True, raise_exc=False)
+                titles = await self.tab.query(
+                    ".uk-accordion-title", timeout=8, find_all=True, raise_exc=False
+                )
                 if titles:
                     for t in titles:
                         try:
@@ -382,7 +402,9 @@ class PydollFetcher:
             await asyncio.sleep(0.6)
 
             # Rows are "div[role=row]" in the rendered DOM.
-            rows = await self.tab.query("div[role='row']", timeout=12, find_all=True, raise_exc=False)
+            rows = await self.tab.query(
+                "div[role='row']", timeout=12, find_all=True, raise_exc=False
+            )
             if rows:
                 break
 
@@ -407,7 +429,11 @@ class PydollFetcher:
                     url = (log.get("params") or {}).get("request", {}).get("url", "")
                 except Exception:
                     url = ""
-                if url and "/rest/api/Attacments" in url and "mavat.iplan.gov.il" in url:
+                if (
+                    url
+                    and "/rest/api/Attacments" in url
+                    and "mavat.iplan.gov.il" in url
+                ):
                     out.add(url)
             return out
 
@@ -415,7 +441,9 @@ class PydollFetcher:
             logs = await self.tab.get_network_logs()
             return _extract_attachment_urls(logs)
 
-        async def _wait_for_new_attachment_urls(before: set[str], timeout_s: float = 4.5) -> set[str]:
+        async def _wait_for_new_attachment_urls(
+            before: set[str], timeout_s: float = 4.5
+        ) -> set[str]:
             deadline = time.time() + timeout_s
             while time.time() < deadline:
                 after = await _current_attachment_urls()
@@ -437,7 +465,9 @@ class PydollFetcher:
                 except Exception:
                     pass
 
-                title_el = await row.query("span.uk-text-lead.doc-info", find_all=False, raise_exc=False)
+                title_el = await row.query(
+                    "span.uk-text-lead.doc-info", find_all=False, raise_exc=False
+                )
                 title_val = ""
                 if title_el is not None:
                     try:
@@ -503,7 +533,11 @@ class PydollFetcher:
                             await el.click_using_js()
                         except Exception:
                             try:
-                                await self.tab.execute_script("arguments[0].click();", element=el, user_gesture=True)
+                                await self.tab.execute_script(
+                                    "arguments[0].click();",
+                                    element=el,
+                                    user_gesture=True,
+                                )
                             except Exception:
                                 continue
 
@@ -583,13 +617,17 @@ class IPlanPydollSource:
             use_cache=use_cache,
         )
 
-    async def fetch_plan_details(self, objectid: str, *, service_name: str = "xplan", use_cache: bool = True) -> dict[str, Any]:
+    async def fetch_plan_details(
+        self, objectid: str, *, service_name: str = "xplan", use_cache: bool = True
+    ) -> dict[str, Any]:
         service_url = self.SERVICES.get(service_name)
         if not service_url:
             raise ValueError(f"Unknown service: {service_name}")
 
         where = f"OBJECTID={objectid}"
-        resp = await self.fetcher.fetch_arcgis_service(service_url, where=where, use_cache=use_cache)
+        resp = await self.fetcher.fetch_arcgis_service(
+            service_url, where=where, use_cache=use_cache
+        )
         feats = resp.get("features", []) if isinstance(resp, dict) else []
         return feats[0] if feats else {}
 
@@ -599,19 +637,28 @@ class IPlanPydollSource:
             try:
                 arts = await self.fetcher.extract_mavat_artifacts(mavat_plan_id)
                 return [
-                    {"url": a.url, "title": a.title, "plan_id": a.plan_id, "artifact_type": a.artifact_type}
+                    {
+                        "url": a.url,
+                        "title": a.title,
+                        "plan_id": a.plan_id,
+                        "artifact_type": a.artifact_type,
+                    }
                     for a in arts
                 ]
             except Exception as e:
                 last_err = e
-                logger.warning(f"fetch_plan_documents failed (attempt {attempt}/3) for plan {mavat_plan_id}: {e}")
+                logger.warning(
+                    f"fetch_plan_documents failed (attempt {attempt}/3) for plan {mavat_plan_id}: {e}"
+                )
                 try:
                     await self.fetcher.restart()
                 except Exception:
                     pass
                 await asyncio.sleep(0.8 + random.random())
 
-        logger.error(f"fetch_plan_documents giving up for plan {mavat_plan_id}: {last_err}")
+        logger.error(
+            f"fetch_plan_documents giving up for plan {mavat_plan_id}: {last_err}"
+        )
         return []
 
 
@@ -646,14 +693,18 @@ class SyncIPlanPydollSource:
             self._loop = loop
 
             async def _init():
-                self._source = IPlanPydollSource(headless=self._headless, cache_dir=self._cache_dir)
+                self._source = IPlanPydollSource(
+                    headless=self._headless, cache_dir=self._cache_dir
+                )
                 await self._source.__aenter__()
                 self._started.set()
 
             loop.create_task(_init())
             loop.run_forever()
 
-        self._thread = threading.Thread(target=_run_loop, name="pydoll-loop", daemon=True)
+        self._thread = threading.Thread(
+            target=_run_loop, name="pydoll-loop", daemon=True
+        )
         self._thread.start()
         if not self._started.wait(timeout=120):
             raise TimeoutError("Timed out starting Pydoll browser thread")
@@ -666,13 +717,27 @@ class SyncIPlanPydollSource:
         fut = asyncio.run_coroutine_threadsafe(coro, self._loop)
         return fut.result(timeout=180)
 
-    def discover_plans(self, *, service_name: str = "xplan", max_plans: Optional[int] = None, where: str = "1=1") -> list[dict[str, Any]]:
+    def discover_plans(
+        self,
+        *,
+        service_name: str = "xplan",
+        max_plans: Optional[int] = None,
+        where: str = "1=1",
+    ) -> list[dict[str, Any]]:
         assert self._source is not None
-        return self._run(self._source.discover_plans(service_name=service_name, max_plans=max_plans, where=where))
+        return self._run(
+            self._source.discover_plans(
+                service_name=service_name, max_plans=max_plans, where=where
+            )
+        )
 
-    def fetch_plan_details(self, objectid: str, *, service_name: str = "xplan") -> dict[str, Any]:
+    def fetch_plan_details(
+        self, objectid: str, *, service_name: str = "xplan"
+    ) -> dict[str, Any]:
         assert self._source is not None
-        return self._run(self._source.fetch_plan_details(objectid, service_name=service_name))
+        return self._run(
+            self._source.fetch_plan_details(objectid, service_name=service_name)
+        )
 
     def fetch_plan_documents(self, mavat_plan_id: str) -> list[dict[str, str]]:
         assert self._source is not None
@@ -684,6 +749,7 @@ class SyncIPlanPydollSource:
         self._closed = True
 
         if self._loop:
+
             async def _shutdown():
                 try:
                     if self._source:

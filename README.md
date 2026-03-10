@@ -4,7 +4,7 @@ Streamlit web app + CLI tools for exploring Israeli planning data (iPlan) and qu
 
 Built for architecture workflows: map-based browsing, plan analysis, and reproducible data management.
 
-**Quick links:** [Run guide](./docs/RUN_GUIDE.md) · [Vector DB build](./docs/BUILD_VECTORDB_GUIDE.md) · [Scripts/CLI](./scripts/README.md) · [Docs index](./docs/README.md) · [Tests](./tests/README.md)
+**Quick links:** [Run guide](./docs/RUN_GUIDE.md) · [Vector DB build](./docs/BUILD_VECTORDB_GUIDE.md) · [Scripts/CLI](./scripts/README.md) · [Docs index](./docs/README.md) · [Tests](./tests/README.md) · [Contributing](./CONTRIBUTING.md) · [License](./LICENSE)
 
 ## What It Does
 
@@ -182,8 +182,7 @@ This repo uses `pytest` with markers (see `./pytest.ini` and `./tests/README.md`
 
 </details>
 
-## TODO
+## Contributing and License
 
-- Add a `LICENSE` file (none found in this repo).
-- Add `CONTRIBUTING.md` (contribution process is not documented).
-- Update `./docs/QUICK_START.md` (it references `.env.example` and `scripts/populate_regulations.py`, which are not present).
+- Contribution process: `./CONTRIBUTING.md`
+- License: `./LICENSE`

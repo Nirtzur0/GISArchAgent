@@ -14,17 +14,17 @@ from src.application.dtos import (
     RegulationQuery,
     RegulationResult,
     BuildingRightsQuery,
-    BuildingRightsResult
+    BuildingRightsResult,
 )
 
 __all__ = [
-    'PlanSearchService',
-    'RegulationQueryService',
-    'BuildingRightsService',
-    'PlanSearchQuery',
-    'PlanSearchResult',
-    'RegulationQuery',
-    'RegulationResult',
-    'BuildingRightsQuery',
-    'BuildingRightsResult',
+    "PlanSearchService",
+    "RegulationQueryService",
+    "BuildingRightsService",
+    "PlanSearchQuery",
+    "PlanSearchResult",
+    "RegulationQuery",
+    "RegulationResult",
+    "BuildingRightsQuery",
+    "BuildingRightsResult",
 ]

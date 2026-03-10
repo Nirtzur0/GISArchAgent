@@ -1,28 +1,654 @@
-# Test Stabilization Status
+# Implementation Status
 
-Date: 2026-02-06
+Date: 2026-02-09
 
-## Done
+## Objective Check
+- Objective: maintain a reliable local-first GIS planning assistant with coherent architecture, testability, and operational discipline.
+- This step advances objective by: running the required `prompt-03` convergence checkpoint after the docs drift packet and routing to a non-redundant next-cycle rerank packet.
+- Risks of misalignment: residual risk is process-oriented (repetitive routing without rerank refresh) plus normal external provider/runtime variability.
 
-- Refactored tests into pyramid structure (`unit`/`integration`/`e2e`) and added `data_contracts` suites.
-- Full suite passes locally.
-- Flake proof:
-  - Unit suite passed 3x (`./venv/bin/python -m pytest -m unit`)
-  - Data contract suite passed 3x (`./venv/bin/python -m pytest -m data_contracts`)
+## Packet Metadata
+- Intensity mode: Standard
+- Entry mode: Existing Repo
+- Cycle stage: Cool-down (Phase 5/5)
+- Scope state: downhill
 
-## In Progress
+## Progress
+- Completed:
+  - Post-docs drift convergence checkpoint completed (`prompt-03`):
+    - refreshed alignment gate artifacts with current evidence window and narrowed-window follow-through.
+    - confirmed M11/M12 remain closed and no mandatory implementation packet was reopened.
+    - routed next non-redundant packet to `prompt-14-improvement-direction-bet-loop`.
+  - Post-audit docs/release drift cleanup completed (`prompt-11`):
+    - rewrote `docs/RUN_GUIDE.md` to current marker-driven commands and existing test paths.
+    - removed stale release-workflow wording in `docs/HOW_IT_WORKS.md`.
+    - added repository metadata files `LICENSE` and `CONTRIBUTING.md`.
+    - linked new metadata docs from `README.md`, `docs/INDEX.md`, and `docs/README.md`.
+  - Prompt-system/docs baseline, architecture coherence (`prompt-04`), CI/release baselines (`prompt-02`), improvement shaping (`prompt-14`), docs cleanup (`prompt-11`), stabilization (`prompt-10`), and IMP-04 degraded-mode follow-through (`prompt-10` -> `prompt-02`).
+  - M5 correction 1 completed (`prompt-02`): observability dashboard CLI + richer saturation signals.
+  - M5 correction 2 completed (`prompt-02`): expanded CI quality gates with bounded formatting debt burn.
+  - M5 correction 3 completed (`prompt-02`): reproducibility lock + dependency-doc drift automation.
+    - Added `requirements.lock`.
+    - Added `scripts/check_dependency_sync.py`.
+    - Added generated `docs/reference/dependencies.md`.
+    - Added CI enforcement step `CMD-033` and regenerate path `CMD-032`.
+    - Fixed manifest compatibility regression by updating `requirements-dev.txt` to `pytest-asyncio>=1,<2` for pytest-9 compatibility.
+  - Post-M5 alignment gate rerun completed (`prompt-03`).
+    - Updated `docs/implementation/checklists/07_alignment_review.md`.
+    - Updated `docs/implementation/reports/alignment_review.md`.
+  - Post-M5 improvement-direction rerun completed (`prompt-14`):
+    - refreshed next-cycle bet ranking and selected immediate direction in `docs/implementation/reports/improvement_directions.md`
+    - added open next-cycle bets to `docs/implementation/checklists/03_improvement_bets.md`
+  - IMP-07 formatting debt burn phase 2 completed (`prompt-02`):
+    - reformatted and promoted `src/domain/*` files into always-enforced `CMD-022` surfaces.
+    - reduced formatting allowlist baseline from `96` lines to `81` lines.
+    - synced CI/runbook/milestones/bets/decisions artifacts.
+  - Post-IMP-07 alignment refresh completed (`prompt-03`):
+    - updated `docs/implementation/checklists/07_alignment_review.md`
+    - updated `docs/implementation/reports/alignment_review.md`
+    - residual corrections now anchored to `IMP-08`, `IMP-09`, and continuing debt burn progression.
+  - Post-IMP-07 improvement-direction rerun completed (`prompt-14`):
+    - re-ranked remaining opportunities and selected `IMP-08` as immediate packet.
+  - IMP-08 observability backend evolution decision completed (`prompt-02`):
+    - added `ADR-0017` to lock local-only backend mode for current cycle.
+    - defined explicit hosted-backend promotion triggers and migration seam policy.
+    - marked IMP-08 completed in milestones and improvement bets.
+  - IMP-09 external dependency drill depth completed (`prompt-02`):
+    - added deterministic non-network integration drills in `tests/integration/iplan/test_external_dependency_drills.py`.
+    - added explicit rehearsal commands `CMD-034` and `CMD-035` in `docs/manifest/09_runbook.md`.
+    - tightened degraded triage guidance in `docs/troubleshooting.md` and `docs/manifest/07_observability.md`.
+    - marked IMP-09 completed in milestones and improvement bets.
+  - Post-IMP-09 alignment refresh completed (`prompt-03`):
+    - updated `docs/implementation/checklists/07_alignment_review.md`.
+    - updated `docs/implementation/reports/alignment_review.md`.
+    - mapped next correction set into `M7` in `docs/implementation/checklists/02_milestones.md`.
+    - updated next-prompt routing in `docs/implementation/reports/improvement_directions.md`.
+  - Post-IMP-09 improvement-direction rerun completed (`prompt-14`):
+    - re-ranked M7 corrections and selected IMP-10 as the immediate packet.
+    - added next-cycle bets (`IMP-10`..`IMP-12`) in `docs/implementation/checklists/03_improvement_bets.md`.
+  - IMP-10 formatting debt burn phase 3 completed (`prompt-02`):
+    - reformatted and promoted bounded `src/application/*` files into always-enforced `CMD-022` surfaces.
+    - reduced formatting allowlist baseline from `81` lines to `77` lines.
+    - synced CI/runbook/milestones/bets/decisions artifacts.
+  - Post-IMP-10 alignment refresh completed (`prompt-03`):
+    - updated `docs/implementation/checklists/07_alignment_review.md`.
+    - updated `docs/implementation/reports/alignment_review.md`.
+    - updated next-prompt routing in `docs/implementation/reports/improvement_directions.md`.
+  - IMP-11 observability threshold calibration completed (`prompt-02`):
+    - calibrated regulation-query latency thresholds in `src/telemetry.py` (`sev3: 3000ms -> 4000ms`, `sev2: 6000ms -> 8000ms`).
+    - added threshold calibration command map entry `CMD-036` in `docs/manifest/09_runbook.md`.
+    - updated observability/troubleshooting docs and checklists.
+  - Post-IMP-11 alignment refresh completed (`prompt-03`):
+    - updated `docs/implementation/checklists/07_alignment_review.md`.
+    - updated `docs/implementation/reports/alignment_review.md`.
+    - updated next-prompt routing in `docs/implementation/reports/improvement_directions.md`.
+  - IMP-12 optional live-network rehearsal policy completed (`prompt-02`):
+    - bounded optional rehearsal guardrails implemented in `tests/integration/iplan/test_pydoll_live_mavat_documents__optional.py`.
+    - added live rehearsal command map entry `CMD-037` in `docs/manifest/09_runbook.md`.
+    - documented cadence/guardrails in `docs/manifest/10_testing.md` and `docs/troubleshooting.md`.
+    - marked M7 and improvement bets tracking complete.
+  - Post-IMP-12 alignment refresh completed (`prompt-03`):
+    - updated `docs/implementation/checklists/07_alignment_review.md`.
+    - updated `docs/implementation/reports/alignment_review.md`.
+    - updated next-prompt routing in `docs/implementation/reports/improvement_directions.md`.
+  - Post-IMP-12 improvement-direction rerun completed (`prompt-14`):
+    - re-ranked post-M7 corrections and selected IMP-13 as immediate packet.
+    - added post-M7 bets (`IMP-13`..`IMP-15`) in `docs/implementation/checklists/03_improvement_bets.md`.
+    - mapped post-M7 outcomes into `M8` in `docs/implementation/checklists/02_milestones.md`.
+  - IMP-13 threshold recalibration cadence policy completed (`prompt-02`):
+    - added explicit weekly + trigger-based recalibration cadence policy around `CMD-036`.
+    - codified paired evidence capture discipline (`CMD-036` + `CMD-029`) in observability/runbook/troubleshooting docs.
+    - recorded decision in `docs/manifest/03_decisions.md` (ADR-0021).
+    - marked IMP-13 and first M8 outcome complete.
+  - Post-IMP-13 alignment refresh completed (`prompt-03`):
+    - updated `docs/implementation/checklists/07_alignment_review.md`.
+    - updated `docs/implementation/reports/alignment_review.md`.
+    - updated next-prompt routing in `docs/implementation/reports/improvement_directions.md`.
+  - IMP-14 formatting debt burn phase 4 completed (`prompt-02`):
+    - reformatted and promoted bounded `src/data_management/*` files into always-enforced `CMD-022` surfaces.
+    - reduced formatting allowlist baseline from `77` lines to `73` lines.
+    - synced CI/runbook/milestones/bets/decisions artifacts.
+  - Post-IMP-14 alignment refresh completed (`prompt-03`):
+    - updated `docs/implementation/checklists/07_alignment_review.md`.
+    - updated `docs/implementation/reports/alignment_review.md`.
+    - updated next-prompt routing in `docs/implementation/reports/improvement_directions.md`.
+  - IMP-15 saturation snapshot discipline completed (`prompt-02`):
+    - added canonical build-window snapshot drill (`CMD-038`) to runbook command map.
+    - codified build-window saturation evidence and null-handling guidance in observability/troubleshooting docs.
+    - recorded decision in `docs/manifest/03_decisions.md` (ADR-0023).
+    - marked IMP-15 and final M8 outcome complete.
+  - Post-IMP-15 alignment refresh completed (`prompt-03`):
+    - updated `docs/implementation/checklists/07_alignment_review.md`.
+    - updated `docs/implementation/reports/alignment_review.md`.
+    - updated next-prompt routing in `docs/implementation/reports/improvement_directions.md`.
+  - Post-M8 improvement-direction rerun completed (`prompt-14`):
+    - ranked post-M8 opportunities and selected top directions `IMP-16`..`IMP-18`.
+    - added new open bets in `docs/implementation/checklists/03_improvement_bets.md`.
+    - mapped selected outcomes into `M9` in `docs/implementation/checklists/02_milestones.md`.
+  - Post-M8 artifact-feature alignment gate completed (`prompt-15`):
+    - created artifact-feature alignment artifacts:
+      - `docs/implementation/checklists/08_artifact_feature_alignment.md`
+      - `docs/implementation/reports/artifact_feature_alignment.md`
+    - established alignment verdict `ALIGNED_WITH_GAPS` with explicit corrective/opportunity outcomes.
+    - refined `M9` milestone outcomes for artifact-store grounding and endpoint-family contract mapping.
+  - `COR-01` artifact store baseline initialization completed (`prompt-02`):
+    - added canonical artifact store:
+      - `docs/artifacts/README.md`
+      - `docs/artifacts/index.json`
+      - `docs/artifacts/blobs/.gitkeep`
+      - `docs/artifacts/excerpts/.gitkeep`
+    - seeded `ART-EXT-001..ART-EXT-005` baseline entries with URL/kind/retrieval metadata.
+    - updated decision log with artifact-store baseline policy (`ADR-0024`).
+    - marked `COR-01` done and advanced `M9` artifact baseline outcome.
+  - Post-`COR-01` alignment refresh completed (`prompt-03`):
+    - updated `docs/implementation/checklists/07_alignment_review.md`.
+    - updated `docs/implementation/reports/alignment_review.md`.
+    - routed immediate next packet to `prompt-10` for `COR-02` stabilization prep.
+  - `COR-02` stabilization prep completed (`prompt-10`):
+    - refreshed test stabilization checklist/report evidence:
+      - `docs/implementation/checklists/04_test_stabilization.md`
+      - `docs/implementation/reports/test_stabilization_final_report.md`
+    - verified flake-proof gates:
+      - unit x3 (`50 passed, 28 deselected`)
+      - data-contract x3 (`17 passed, 61 deselected`)
+      - integration (`21 passed, 1 skipped, 56 deselected`)
+      - e2e (`5 passed, 73 deselected`)
+      - historical prior-failure tests x5 each
+    - confirmed optional live-network path remains explicitly gated (`RUN_NETWORK_TESTS=1`).
+  - `COR-02` endpoint-family artifact-to-contract mapping completed (`prompt-02`):
+    - explicit endpoint-family contract map added:
+      - `docs/manifest/04_api_contracts.md`
+    - integration contract coverage tightened:
+      - `tests/integration/data_contracts/test_boundary_payload_contracts.py`
+      - `tests/integration/iplan/test_iplan_sample_data_quality.py`
+    - endpoint-family triage workflow codified:
+      - `docs/troubleshooting.md`
+    - artifact-alignment and milestone tracking synchronized:
+      - `docs/implementation/checklists/08_artifact_feature_alignment.md` (`COR-02` checked)
+      - `docs/implementation/checklists/02_milestones.md` (M9 endpoint-family outcome checked)
+      - `docs/implementation/reports/artifact_feature_alignment.md`
+      - `docs/manifest/03_decisions.md` (`ADR-0025`)
+  - Post-`COR-02` alignment refresh completed (`prompt-03`):
+    - updated `docs/implementation/checklists/07_alignment_review.md`.
+    - updated `docs/implementation/reports/alignment_review.md`.
+    - routed immediate next packet to `prompt-11` for `COR-03` artifact-citation adoption.
+  - `COR-03` artifact-citation adoption completed (`prompt-11`):
+    - external dependency artifact citations added in:
+      - `docs/manifest/03_decisions.md`
+      - `docs/implementation/reports/assumptions_register.md`
+      - `docs/manifest/07_observability.md`
+    - artifact-alignment and milestone tracking synchronized:
+      - `docs/implementation/checklists/08_artifact_feature_alignment.md` (`COR-03` checked)
+      - `docs/implementation/checklists/02_milestones.md` (M9 artifact-citation outcome checked)
+      - `docs/implementation/reports/artifact_feature_alignment.md`
+  - Post-`COR-03` alignment refresh completed (`prompt-03`):
+    - updated `docs/implementation/checklists/07_alignment_review.md`.
+    - updated `docs/implementation/reports/alignment_review.md`.
+    - routed immediate next packet to `prompt-02` for `IMP-17` memory-pressure signal completeness.
+  - `IMP-17` memory-pressure signal completeness completed (`prompt-02`):
+    - added explicit memory probe fallback + provenance fields in build observability payloads:
+      - `memory_used_ratio_source`
+      - `memory_used_ratio_unavailable_reason`
+    - added macOS fallback probe (`memory_pressure -Q`) when `SC_AVPHYS_PAGES` is unavailable.
+    - updated observability query/dashboard context to surface memory-signal availability semantics.
+    - synchronized observability/runbook/troubleshooting/milestone/bets/decision docs.
+  - Post-`IMP-17` alignment refresh completed (`prompt-03`):
+    - updated `docs/implementation/checklists/07_alignment_review.md`.
+    - updated `docs/implementation/reports/alignment_review.md`.
+    - routed immediate next packet to `prompt-02` for `IMP-18` formatting debt burn phase 5.
+  - `IMP-18` formatting debt burn phase 5 completed (`prompt-02`):
+    - reformatted bounded infrastructure module group and promoted it into always-enforced `CMD-022` surfaces:
+      - `src/infrastructure/__init__.py`
+      - `src/infrastructure/factory.py`
+      - `src/infrastructure/repositories/chroma_repository.py`
+      - `src/infrastructure/services/cache_service.py`
+      - `src/infrastructure/services/document_service.py`
+      - `src/infrastructure/services/llm_service.py`
+      - `src/infrastructure/services/vision_service.py`
+    - reduced formatting debt allowlist baseline from `73` lines to `66` lines.
+    - synchronized CI/runbook/milestones/bets/decisions artifacts.
+  - Post-`IMP-18` alignment refresh completed (`prompt-03`):
+    - updated `docs/implementation/checklists/07_alignment_review.md`.
+    - updated `docs/implementation/reports/alignment_review.md`.
+    - routed immediate next packet to `prompt-11` for `OPP-01` artifact freshness cadence policy.
+  - `OPP-01` artifact freshness cadence policy completed (`prompt-11`):
+    - codified owner/cadence/trigger policy in:
+      - `docs/artifacts/README.md`
+    - added canonical freshness audit command in:
+      - `docs/manifest/09_runbook.md` (`CMD-039`)
+    - synchronized artifact-alignment tracking:
+      - `docs/implementation/checklists/08_artifact_feature_alignment.md` (`OPP-01` checked)
+      - `docs/implementation/reports/artifact_feature_alignment.md`
+    - recorded decision policy:
+      - `docs/manifest/03_decisions.md` (`ADR-0028`)
+  - Post-`OPP-01` alignment refresh completed (`prompt-03`):
+    - updated `docs/implementation/checklists/07_alignment_review.md`.
+    - updated `docs/implementation/reports/alignment_review.md`.
+    - routed immediate next packet to `prompt-11` for `IMP-19` evidence-cadence ledger hardening.
+  - `IMP-19` evidence-cadence ledger hardening completed (`prompt-11`):
+    - added canonical recurring evidence ledger:
+      - `docs/implementation/checklists/09_evidence_cadence_ledger.md`
+    - synchronized recording requirements and command-map references in:
+      - `docs/manifest/09_runbook.md`
+      - `docs/manifest/07_observability.md`
+    - synchronized tracking/docs:
+      - `docs/implementation/checklists/02_milestones.md` (M9 evidence-cadence outcome checked)
+      - `docs/implementation/checklists/03_improvement_bets.md` (`IMP-19` checked)
+      - `docs/manifest/03_decisions.md` (`ADR-0029`)
+  - Post-`IMP-19` alignment refresh completed (`prompt-03`):
+    - updated `docs/implementation/checklists/07_alignment_review.md`.
+    - updated `docs/implementation/reports/alignment_review.md`.
+    - routed immediate next packet to `prompt-02` for `OPP-02` external dependency health snapshot bundle.
+  - `OPP-02` external dependency health snapshot bundle completed (`prompt-02`):
+    - added single-command boundary snapshot bundle in:
+      - `scripts/quick_status.py`
+    - added canonical runbook command:
+      - `docs/manifest/09_runbook.md` (`CMD-040`)
+    - synchronized triage/reference docs:
+      - `docs/troubleshooting.md`
+      - `docs/reference/cli.md`
+    - synchronized tracking/docs:
+      - `docs/implementation/checklists/08_artifact_feature_alignment.md` (`OPP-02` checked)
+      - `docs/implementation/checklists/02_milestones.md` (external snapshot outcome checked)
+      - `docs/manifest/03_decisions.md` (`ADR-0030`)
+  - Post-`OPP-02` alignment refresh completed (`prompt-03`):
+    - updated `docs/implementation/checklists/07_alignment_review.md`.
+    - updated `docs/implementation/reports/alignment_review.md`.
+    - routed immediate next packet to `prompt-11` for `OPP-03` onboarding artifact-link coverage.
+  - `OPP-03` onboarding artifact-link coverage completed (`prompt-11`):
+    - added artifact-linked boundary onboarding notes in:
+      - `docs/README.md`
+      - `docs/INDEX.md`
+      - `docs/reference/configuration.md`
+      - `docs/artifacts/README.md`
+    - synchronized tracking/docs:
+      - `docs/implementation/checklists/08_artifact_feature_alignment.md` (`OPP-03` checked)
+      - `docs/implementation/checklists/02_milestones.md` (onboarding artifact-link outcome checked)
+      - `docs/manifest/03_decisions.md` (`ADR-0031`)
+  - Post-`OPP-03` alignment refresh completed (`prompt-03`):
+    - updated `docs/implementation/checklists/07_alignment_review.md`.
+    - updated `docs/implementation/reports/alignment_review.md`.
+    - routed immediate next packet to `prompt-02` for `CMD-040` warning/cadence hardening.
+  - `CMD-040` warning/cadence hardening completed (`prompt-02`):
+    - hardened warning semantics in snapshot output:
+      - added `warning_context` classification and context-specific follow-up in `scripts/quick_status.py`
+    - added unit coverage for warning-context interpretation:
+      - `tests/unit/scripts/test_quick_status_external_snapshot.py`
+    - enforced recurring `CMD-040` cadence capture in docs/runbook/ledger:
+      - `docs/implementation/checklists/09_evidence_cadence_ledger.md`
+      - `docs/manifest/09_runbook.md`
+      - `docs/manifest/07_observability.md`
+      - `docs/troubleshooting.md`
+      - `docs/reference/cli.md`
+    - synchronized decision tracking:
+      - `docs/manifest/03_decisions.md` (`ADR-0032`)
+  - Post-`CMD-040` hardening alignment refresh completed (`prompt-03`):
+    - updated `docs/implementation/checklists/07_alignment_review.md`.
+    - updated `docs/implementation/reports/alignment_review.md`.
+    - routed immediate next packet to `prompt-11` for onboarding artifact-link guardrail command-map coverage.
+  - Onboarding artifact-link guardrail command-map coverage completed (`prompt-11`):
+    - added canonical command-map guardrail:
+      - `docs/manifest/09_runbook.md` (`CMD-041`)
+    - wired command usage into onboarding/reference docs:
+      - `docs/reference/cli.md`
+      - `docs/README.md`
+      - `docs/INDEX.md`
+    - synchronized decision tracking:
+      - `docs/manifest/03_decisions.md` (`ADR-0033`)
+  - Historical-noise narrowed-window confirmation policy hardening completed (`prompt-11`):
+    - required narrowed-window evidence is now explicit in:
+      - `docs/implementation/checklists/09_evidence_cadence_ledger.md`
+      - `docs/manifest/09_runbook.md`
+      - `docs/troubleshooting.md`
+    - captured narrowed-window confirmation evidence (`--since-minutes 60`) before escalation.
+  - Post-`CMD-041` alignment refresh completed (`prompt-03`):
+    - updated `docs/implementation/checklists/07_alignment_review.md`.
+    - updated `docs/implementation/reports/alignment_review.md`.
+    - routed immediate next packet to `prompt-02` for warning-follow-up regression coverage + output warning cleanup.
+  - Warning-follow-up regression coverage + output warning cleanup completed (`prompt-02`):
+    - added rendered-output regression coverage for non-boundary warning branches:
+      - `tests/unit/scripts/test_quick_status_external_snapshot.py`
+    - removed pydantic startup warning noise from `CMD-040` path:
+      - `src/config.py` (`protected_namespaces=("settings_",)`)
+    - synchronized decision/milestone tracking:
+      - `docs/manifest/03_decisions.md` (`ADR-0034`)
+      - `docs/implementation/checklists/02_milestones.md` (`M10` outcomes checked)
+  - Post-regression alignment refresh completed (`prompt-03`):
+    - updated `docs/implementation/checklists/07_alignment_review.md`.
+    - updated `docs/implementation/reports/alignment_review.md`.
+    - mapped next open drift into `M11` release-readiness guardrail wiring.
+    - routed immediate next packet to `prompt-11` for release-readiness `CMD-041` wiring.
+  - Release-readiness `CMD-041` guardrail wiring completed (`prompt-11`):
+    - added explicit release checklist guardrail step:
+      - `docs/implementation/checklists/06_release_readiness.md`
+    - mapped `CMD-041` as required pre-tag documentation guardrail:
+      - `docs/reference/release_workflow.md`
+      - `docs/manifest/11_ci.md`
+      - `docs/manifest/09_runbook.md` (release packet validation path)
+    - synchronized decision/milestone tracking:
+      - `docs/manifest/03_decisions.md` (`ADR-0035`)
+      - `docs/implementation/checklists/02_milestones.md` (`M11` checked; `M12` opened)
+  - Post-release-wiring alignment refresh completed (`prompt-03`):
+    - updated `docs/implementation/checklists/07_alignment_review.md`.
+    - updated `docs/implementation/reports/alignment_review.md`.
+    - routed immediate next packet to `prompt-14` for post-M11 re-ranking.
+  - `IMP-21` timeout-noise boundary triage tightening completed (`prompt-02`):
+    - `scripts/quick_status.py` now emits `warning_context=historical_build_timeout_sev1_noise` for drill-passing warning windows dominated by recurring build-timeout sev1 signals.
+    - `CMD-040` snapshot output now includes `warning_noise_profile` counters for first-pass operator triage.
+    - warning-context policy/docs synchronized in:
+      - `docs/troubleshooting.md`
+      - `docs/manifest/07_observability.md`
+      - `docs/manifest/09_runbook.md`
+      - `docs/reference/cli.md`
+    - milestone/bet tracking synchronized:
+      - `docs/implementation/checklists/02_milestones.md`
+      - `docs/implementation/checklists/03_improvement_bets.md`
+  - Post-`IMP-21` alignment refresh completed (`prompt-03`):
+    - updated `docs/implementation/checklists/07_alignment_review.md`.
+    - updated `docs/implementation/reports/alignment_review.md`.
+    - routed immediate next packet to `prompt-14` for `IMP-22` convergence guardrail closure.
+  - `IMP-22` post-M12 convergence guardrail closure completed (`prompt-14`):
+    - rerank routing now includes explicit repeat-loop stop conditions and unresolved-outcome delta checks before reusing the same immediate route.
+    - tracking synchronized:
+      - `docs/implementation/reports/improvement_directions.md`
+      - `docs/implementation/checklists/03_improvement_bets.md`
+      - `docs/implementation/checklists/02_milestones.md`
+  - Post-`IMP-22` alignment refresh completed (`prompt-03`):
+    - updated `docs/implementation/checklists/07_alignment_review.md`.
+    - updated `docs/implementation/reports/alignment_review.md`.
+    - M12 outcomes are fully closed; only cadence/evidence follow-through remains.
+  - Post-`IMP-22` cadence-ledger follow-through completed (`prompt-11`):
+    - added a targeted ledger entry capturing:
+      - 180-minute `CMD-040` with `historical_build_timeout_sev1_noise`,
+      - narrowed-window `CMD-040` rerun,
+      - `CMD-026`/`CMD-028` narrowed-window triage slices.
+    - updated alignment/report routing to mark this correction closed and route next packet to `prompt-03`.
+  - Post-cadence convergence confirmation completed (`prompt-03`):
+    - reran full gate evidence bundle (unit/integration/lint/observability/dependency-sync/prompt-pack integrity).
+    - confirmed routing remains converged and no M12 implementation outcomes reopened.
+- In progress:
+  - Monitoring cadence and release-doc surfaces for drift.
 
-- Documented stabilization workflow and auditing artifacts (checklist/worklog/final report).
-- (none)
+## Now
+- Continue scheduled cadence captures; no mandatory implementation prompt is open.
+- Keep legacy deep-dive docs monitored for stale reference regressions after the run-guide rewrite.
 
 ## Next
+- Run `prompt-14-improvement-direction-bet-loop` to select the next bounded non-redundant packet.
+- Then run `prompt-02-app-development-playbook` or `prompt-11-docs-diataxis-release` based on the selected top bet.
 
-- Optional: add CI workflow (see `/Users/nirtzur/Documents/projects/GISArchAgent/docs/manifest/11_ci.md`).
+## Not now
+- Major platform decomposition (service/API split).
+- One-shot full-repo formatting rewrite.
 
-## Commands
+## Commands Run (Latest Packets)
+- `./venv/bin/python -m pytest -m unit -q` (`65 passed, 30 deselected`)
+- `./venv/bin/python -m pytest -m integration -q` (`23 passed, 1 skipped, 71 deselected`)
+- `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` (pass)
+- `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` (`events=222`, `alerts=7`, `regulation_query p95=3772.02ms`, `build p95=43434.35ms`, `memory_used_ratio_p95=0.59`)
+- `python3 scripts/observability_cli.py summary --since-minutes 180 --events-limit 2000 --alerts-limit 1000 --as-json` (`events_total=222`, `alerts_total=7`, `memory_signal_context.status=available`)
+- `python3 scripts/quick_status.py external --since-minutes 180 --events-limit 1000 --alerts-limit 500 --run-drills` (`status=WARNING`, `warning_context=historical_build_timeout_sev1_noise`, `warning_noise_profile: build_timeout_error_events=3 non_build_error_events=0 build_timeout_sev1_alerts=3 non_build_sev1_alerts=0`, deterministic drills `PASS/PASS/PASS`)
+- `python3 scripts/quick_status.py external --since-minutes 60 --events-limit 1000 --alerts-limit 500 --run-drills` (`status=HEALTHY`, `events=50`, `alerts=0`, deterministic drills `PASS/PASS/PASS`)
+- `python3 scripts/observability_cli.py events --operation build --since-minutes 60 --limit 100` (`No matching events.`)
+- `python3 scripts/observability_cli.py events --outcome error --since-minutes 60 --limit 100` (`No matching events.`)
+- `python3 scripts/observability_cli.py alerts --since-minutes 60 --limit 100` (`No matching alerts.`)
+- `rg -n "convergence guardrail|repeat-loop|unresolved-outcome delta|IMP-22" docs/implementation/reports/improvement_directions.md docs/implementation/checklists/03_improvement_bets.md docs/implementation/checklists/02_milestones.md`
+- `rg -n "CMD-041|onboarding_artifact_links_ok|artifact:ART-EXT-001" .github/workflows/release.yml docs/reference/release_workflow.md docs/manifest/11_ci.md`
+- `python3 project-prompts/scripts/prompts_manifest.py --check && echo prompts_manifest_ok` (`prompts_manifest_ok`)
+- `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` (`System integrity checks passed.`)
+- `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` (`Dependency lock and docs inventory are synchronized (38 direct requirements, 199 locked packages).`)
+- `for file in docs/README.md docs/INDEX.md docs/reference/configuration.md docs/artifacts/README.md; do for id in artifact:ART-EXT-001 artifact:ART-EXT-002 artifact:ART-EXT-003 artifact:ART-EXT-004 artifact:ART-EXT-005; do rg -q "$id" "$file" || { echo "$file missing $id"; exit 1; }; done; done; echo "onboarding_artifact_links_ok files=4 ids=5"` (`onboarding_artifact_links_ok files=4 ids=5`)
+- `test -f LICENSE && test -f CONTRIBUTING.md && echo metadata_files_ok` (`metadata_files_ok`)
+- `if rg -n "still pending|release workflow is still pending" docs/HOW_IT_WORKS.md; then echo stale_release_claim_found; else echo stale_release_claim_absent; fi` (`stale_release_claim_absent`)
+- `if rg -n "tests/test_vectordb_integration.py|tests/test_iplan_integration.py" docs/RUN_GUIDE.md; then echo stale_test_refs_found; else echo stale_test_refs_absent; fi` (`stale_test_refs_absent`)
+- `rg -n "CONTRIBUTING.md|LICENSE" README.md docs/INDEX.md docs/README.md` (links present in all three docs surfaces)
+- `for file in docs/README.md docs/INDEX.md docs/reference/configuration.md docs/artifacts/README.md; do for id in artifact:ART-EXT-001 artifact:ART-EXT-002 artifact:ART-EXT-003 artifact:ART-EXT-004 artifact:ART-EXT-005; do rg -q "$id" "$file" || { echo "$file missing $id"; exit 1; }; done; done; echo "onboarding_artifact_links_ok files=4 ids=5"` (`onboarding_artifact_links_ok files=4 ids=5`)
+- `python3 project-prompts/scripts/prompts_manifest.py --check && echo prompts_manifest_ok` (`prompts_manifest_ok`)
+- `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` (`System integrity checks passed.`)
+- `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` (`Dependency lock and docs inventory are synchronized (38 direct requirements, 199 locked packages).`)
+- `./venv/bin/python -m pytest -m unit -q` (`65 passed, 30 deselected`)
+- `./venv/bin/python -m pytest -m integration -q` (`23 passed, 1 skipped, 71 deselected`)
+- `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` (pass)
+- `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` (`events=232`, `alerts=7`, `regulation_query p95=3467.34ms`, `build p95=43434.35ms`, `memory_used_ratio_p95=0.59`)
+- `python3 scripts/observability_cli.py summary --since-minutes 180 --events-limit 2000 --alerts-limit 1000 --as-json` (`events_total=232`, `alerts_total=7`, `memory_signal_context.status=available`)
+- `python3 scripts/quick_status.py external --since-minutes 180 --events-limit 1000 --alerts-limit 500 --run-drills` (`status=WARNING`, `warning_context=historical_build_timeout_sev1_noise`, `warning_noise_profile: build_timeout_error_events=3 non_build_error_events=0 build_timeout_sev1_alerts=3 non_build_sev1_alerts=0`, deterministic drills `PASS/PASS/PASS`)
+- `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` (pass)
+- `python3 project-prompts/scripts/prompts_manifest.py --check` (pass)
+- `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` (pass)
+- `./venv/bin/python -m pytest tests/unit/scripts/test_quick_status_external_snapshot.py -q` (`11 passed`)
+- `./venv/bin/ruff check scripts/quick_status.py tests/unit/scripts/test_quick_status_external_snapshot.py --select E9,F63,F7` (pass)
+- `python3 scripts/quick_status.py external --since-minutes 180 --events-limit 1000 --alerts-limit 500 --run-drills` (`status=WARNING`, `warning_context=historical_build_timeout_sev1_noise`, `warning_noise_profile: build_timeout_error_events=4 non_build_error_events=0 build_timeout_sev1_alerts=4 non_build_sev1_alerts=0`, deterministic drills `PASS/PASS/PASS`)
+- `python3 scripts/quick_status.py external --since-minutes 60 --events-limit 1000 --alerts-limit 500 --run-drills` (`status=HEALTHY`, `events=60`, `alerts=1`, deterministic drills `PASS/PASS/PASS`)
+- `python3 scripts/observability_cli.py events --operation build --since-minutes 60 --limit 100` (`No matching events.`)
+- `python3 scripts/observability_cli.py events --outcome error --since-minutes 60 --limit 100` (`No matching events.`)
+- `python3 scripts/observability_cli.py alerts --since-minutes 60 --limit 100` (`sev3 regulation_query` record only)
+- `python3 scripts/observability_cli.py summary --since-minutes 180 --events-limit 2000 --alerts-limit 1000 --as-json` (`events_total=223`, `alerts_total=8`)
+- `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` (`events=223`, `alerts=8`, `regulation_query p95=3706.13ms`, `build p95=44985.39ms`)
+- `python3 -c "import json,datetime,pathlib; items=json.loads(pathlib.Path('docs/artifacts/index.json').read_text(encoding='utf-8')).get('artifacts', []); cutoff=(datetime.datetime.now(datetime.timezone.utc)-datetime.timedelta(days=30)).isoformat(); stale=[i.get('id','unknown') for i in items if (not isinstance(i.get('retrieved_at'), str)) or (i.get('retrieved_at') < cutoff)]; print(f'artifacts_total={len(items)} stale_total={len(stale)}'); print('stale_ids=' + ','.join(stale) if stale else 'stale_ids=')"` (`artifacts_total=5`, `stale_total=0`)
+- `rg -n "historical_build_timeout_sev1_noise|warning_noise_profile|CMD-026|CMD-028" scripts/quick_status.py docs/troubleshooting.md docs/manifest/07_observability.md docs/manifest/09_runbook.md docs/reference/cli.md`
+- `rg -n "convergence guardrail|repeat-loop|unresolved-outcome delta|IMP-22" docs/implementation/reports/improvement_directions.md docs/implementation/checklists/03_improvement_bets.md docs/implementation/checklists/02_milestones.md`
+- `rg -n "CMD-041|onboarding artifact-link|citation guardrail" docs/implementation/checklists/06_release_readiness.md docs/reference/release_workflow.md docs/manifest/11_ci.md docs/manifest/09_runbook.md` (release-readiness guardrail wiring verification)
+- `for file in docs/README.md docs/INDEX.md docs/reference/configuration.md docs/artifacts/README.md; do for id in artifact:ART-EXT-001 artifact:ART-EXT-002 artifact:ART-EXT-003 artifact:ART-EXT-004 artifact:ART-EXT-005; do rg -q "$id" "$file" || { echo "$file missing $id"; exit 1; }; done; done; echo "onboarding_artifact_links_ok files=4 ids=5"` (`onboarding_artifact_links_ok files=4 ids=5`)
+- `./venv/bin/python -m pytest -m unit -q` (`61 passed, 30 deselected`)
+- `./venv/bin/python -m pytest -m integration -q` (`23 passed, 1 skipped, 67 deselected`)
+- `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` (pass)
+- `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` (`events=276`, `alerts=9`, `regulation_query p95=3502.91ms`, `build p95=44985.39ms`, `memory_used_ratio_p95=0.59`)
+- `python3 scripts/observability_cli.py summary --since-minutes 180 --events-limit 2000 --alerts-limit 1000 --as-json` (`events_total=276`, `alerts_total=9`, `memory_signal_context.status=available`)
+- `python3 scripts/quick_status.py external --since-minutes 180 --events-limit 1000 --alerts-limit 500 --run-drills` (`status=WARNING`, `warning_context=historical_runtime_window_noise`, deterministic drills `PASS/PASS/PASS`)
+- `./venv/bin/python -m pytest tests/unit/scripts/test_quick_status_external_snapshot.py -q` (`7 passed`)
+- `./venv/bin/ruff check src/config.py tests/unit/scripts/test_quick_status_external_snapshot.py --select E9,F63,F7` (pass)
+- `./venv/bin/black src/config.py tests/unit/scripts/test_quick_status_external_snapshot.py && ./venv/bin/black --check src/config.py tests/unit/scripts/test_quick_status_external_snapshot.py` (pass)
+- `python3 scripts/quick_status.py external --since-minutes 60 --events-limit 200 --alerts-limit 200 --run-drills` (no startup warning noise; `status=WARNING`, `warning_context=historical_runtime_window_noise`, deterministic drills `PASS/PASS/PASS`)
+- `if python3 scripts/quick_status.py external --since-minutes 60 --events-limit 200 --alerts-limit 200 --run-drills 2>&1 | rg -n "protected namespace|UserWarning"; then echo "warning_noise_detected"; else echo "warning_noise_absent"; fi` (`warning_noise_absent`)
+- `./venv/bin/python -m pytest -m unit -q` (`61 passed, 30 deselected`)
+- `./venv/bin/python -m pytest -m integration -q` (`23 passed, 1 skipped, 67 deselected`)
+- `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` (pass)
+- `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` (`events=266`, `alerts=9`, `regulation_query p95=3570.85ms`, `build p95=44985.39ms`, `memory_used_ratio_p95=0.59`)
+- `python3 scripts/observability_cli.py summary --since-minutes 180 --events-limit 2000 --alerts-limit 1000 --as-json` (`events_total=266`, `alerts_total=9`, `memory_signal_context.status=available`)
+- `python3 scripts/quick_status.py external --since-minutes 180 --events-limit 1000 --alerts-limit 500 --run-drills` (`status=WARNING`, `warning_context=historical_runtime_window_noise`, deterministic drills `PASS/PASS/PASS`)
+- `for file in docs/README.md docs/INDEX.md docs/reference/configuration.md docs/artifacts/README.md; do for id in artifact:ART-EXT-001 artifact:ART-EXT-002 artifact:ART-EXT-003 artifact:ART-EXT-004 artifact:ART-EXT-005; do rg -q "$id" "$file" || { echo "$file missing $id"; exit 1; }; done; done; echo "onboarding_artifact_links_ok files=4 ids=5"` (`onboarding_artifact_links_ok files=4 ids=5`)
+- `python3 scripts/quick_status.py external --since-minutes 60 --events-limit 1000 --alerts-limit 500 --run-drills` (`status=WARNING`, `warning_context=historical_runtime_window_noise`, deterministic drills `PASS/PASS/PASS`)
+- `python3 scripts/observability_cli.py alerts --since-minutes 60 --limit 50` (narrowed-window alert slice)
+- `python3 scripts/observability_cli.py events --outcome error --since-minutes 60 --limit 100` (narrowed-window error slice)
+- `./venv/bin/python -m pytest -m unit -q` (`59 passed, 30 deselected`)
+- `./venv/bin/python -m pytest -m integration -q` (`23 passed, 1 skipped, 65 deselected`)
+- `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` (pass)
+- `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` (`events=286`, `alerts=11`, `regulation_query p95=3502.91ms`, `build p95=44985.39ms`, `memory_used_ratio_p95=0.59`)
+- `python3 scripts/observability_cli.py summary --since-minutes 180 --events-limit 2000 --alerts-limit 1000 --as-json` (`events_total=286`, `alerts_total=11`, `memory_signal_context.status=available`)
+- `./venv/bin/pip install -r requirements.txt -r requirements-dev.txt`
+- `./venv/bin/pip freeze --all | LC_ALL=C sort > requirements.lock`
+- `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md --write-doc`
+- `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` (pass)
+- `rg -n "CMD-032|CMD-033|check_dependency_sync.py|requirements.lock" docs/manifest/09_runbook.md docs/manifest/11_ci.md .github/workflows/ci.yml`
+- `./venv/bin/black src/domain/__init__.py src/domain/entities/__init__.py src/domain/entities/analysis.py src/domain/entities/plan.py src/domain/entities/regulation.py src/domain/repositories/__init__.py src/domain/value_objects/__init__.py src/domain/value_objects/building_rights.py src/domain/value_objects/geometry.py` (pass)
+- `wc -l scripts/quality_black_debt_allowlist.txt` (before: `96`, after: `81`)
+- `rg -n "^src/domain/" scripts/quality_black_debt_allowlist.txt` (pass: no matches)
+- `rg -n "src/domain/__init__.py|src/domain/entities/analysis.py|src/domain/value_objects/building_rights.py|CMD-022" .github/workflows/ci.yml docs/manifest/09_runbook.md`
+- `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` (pass)
+- `./venv/bin/black --check src/telemetry.py src/observability/query.py src/application/services/regulation_query_service.py src/application/services/plan_search_service.py src/infrastructure/repositories/iplan_repository.py src/vectorstore/unified_pipeline.py src/domain/__init__.py src/domain/entities/__init__.py src/domain/entities/analysis.py src/domain/entities/plan.py src/domain/entities/regulation.py src/domain/repositories/__init__.py src/domain/value_objects/__init__.py src/domain/value_objects/building_rights.py src/domain/value_objects/geometry.py tests/unit/infrastructure/test_telemetry_backend.py tests/unit/infrastructure/test_observability_query.py tests/unit/application/test_external_dependency_degraded_modes.py tests/unit/infrastructure/test_iplan_repository_error_signal.py scripts/observability_cli.py scripts/check_release_semantics.py` (pass)
+- `BASE_SHA=$(git rev-parse HEAD~1) && python3 scripts/quality_changed_python.py --base "$BASE_SHA" --head HEAD --exclude-file scripts/quality_black_debt_allowlist.txt --print0 | xargs -0 -r ./venv/bin/black --check` (pass)
+- `./venv/bin/python -m pytest -m unit -q` (pass: `49 passed, 23 deselected`)
+- `./venv/bin/python -m pytest -m integration -q` (pass: `16 passed, 1 skipped, 55 deselected`)
+- `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` (pass)
+- `python3 project-prompts/scripts/prompts_manifest.py --check` (pass)
+- `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` (pass)
+- `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` (pass)
+- `rg -n "local-only|hosted|trigger|ADR-0017" docs/manifest/07_observability.md docs/manifest/03_decisions.md`
+- `rg -n "IMP-08|observability backend evolution" docs/implementation/reports/improvement_directions.md docs/implementation/checklists/03_improvement_bets.md docs/implementation/checklists/02_milestones.md`
+- `./venv/bin/python -m pytest tests/integration/iplan/test_external_dependency_drills.py -q` (pass: `5 passed`)
+- `./venv/bin/python -m pytest tests/unit/application/test_external_dependency_degraded_modes.py tests/unit/infrastructure/test_iplan_repository_error_signal.py tests/integration/iplan/test_external_dependency_drills.py -q` (pass: `9 passed`)
+- `rg -n "CMD-034|CMD-035|External dependency deterministic rehearsal" docs/manifest/09_runbook.md`
+- `rg -n "test_external_dependency_drills.py|CMD-034|CMD-035|rehearsal" docs/troubleshooting.md docs/manifest/07_observability.md`
+- `./venv/bin/black src/application/__init__.py src/application/dtos.py src/application/services/building_rights_service.py src/application/services/plan_upload_service.py` (pass)
+- `wc -l scripts/quality_black_debt_allowlist.txt` (before: `81`, after: `77`)
+- `rg -n "^src/application/(__init__\\.py|dtos\\.py|services/building_rights_service\\.py|services/plan_upload_service\\.py)$" scripts/quality_black_debt_allowlist.txt` (pass: no matches)
+- `rg -n "src/application/__init__\\.py|src/application/dtos\\.py|src/application/services/building_rights_service\\.py|src/application/services/plan_upload_service\\.py|CMD-022" .github/workflows/ci.yml docs/manifest/09_runbook.md`
+- `python3 scripts/observability_cli.py summary --since-minutes 180 --events-limit 2000 --alerts-limit 1000 --as-json` (baseline snapshot)
+- `./venv/bin/python -m pytest tests/unit/infrastructure/test_telemetry_backend.py -q` (pass: `5 passed`)
+- `./venv/bin/black --check src/telemetry.py tests/unit/infrastructure/test_telemetry_backend.py` (pass)
+- `./venv/bin/python -m pytest -m unit -q` (pass: `50 passed, 28 deselected`)
+- `./venv/bin/python -m pytest -m integration -q` (pass: `21 passed, 1 skipped, 56 deselected`)
+- `rg -n "4000ms|8000ms|CMD-036|calibration|threshold" src/telemetry.py docs/manifest/07_observability.md docs/troubleshooting.md docs/manifest/09_runbook.md docs/manifest/11_ci.md`
+- `./venv/bin/python -m pytest tests/integration/iplan/test_pydoll_live_mavat_documents__optional.py -q` (default: `1 skipped`)
+- `RUN_NETWORK_TESTS=1 RUN_NETWORK_REHEARSAL_MAX_ATTEMPTS=1 RUN_NETWORK_REHEARSAL_TIMEOUT_SECONDS=45 ./venv/bin/python -m pytest tests/integration/iplan/test_pydoll_live_mavat_documents__optional.py -q` (opt-in rehearsal path: `1 skipped`, bounded provider-dependent run)
+- `rg -n "RUN_NETWORK_TESTS|RUN_NETWORK_ALLOW_CI|RUN_NETWORK_REHEARSAL_MAX_ATTEMPTS|CMD-037|bounded|cadence" tests/integration/iplan/test_pydoll_live_mavat_documents__optional.py docs/troubleshooting.md docs/manifest/10_testing.md docs/manifest/09_runbook.md`
+- `wc -l scripts/quality_black_debt_allowlist.txt` (`77`)
+- `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` (saturation fields can be `None` outside build windows)
+- `rg -n "CMD-036|calibration|threshold" docs/manifest/07_observability.md docs/manifest/09_runbook.md docs/troubleshooting.md`
+- `rg -n "CMD-036|cadence|weekly|trigger|recalibration" docs/manifest/07_observability.md docs/manifest/09_runbook.md docs/troubleshooting.md`
+- `python3 scripts/observability_cli.py summary --since-minutes 180 --events-limit 2000 --alerts-limit 1000 --as-json` (calibration evidence snapshot)
+- `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` (latest rerun: `events=274`, `alerts=16`, `regulation_query p95=3502.91ms`; saturation fields `None` outside build windows)
+- `python3 scripts/observability_cli.py summary --since-minutes 180 --events-limit 2000 --alerts-limit 1000 --as-json` (latest rerun snapshot: `events_total=274`, `alerts_total=16`)
+- `./venv/bin/black src/data_management/__init__.py src/data_management/data_store.py src/data_management/fetchers.py src/data_management/pydoll_fetcher.py` (pass)
+- `wc -l scripts/quality_black_debt_allowlist.txt` (before: `77`, after: `73`)
+- `rg -n "^src/data_management/(__init__\\.py|data_store\\.py|fetchers\\.py|pydoll_fetcher\\.py)$" scripts/quality_black_debt_allowlist.txt` (pass: no matches)
+- `rg -n "src/data_management/__init__\\.py|src/data_management/data_store\\.py|src/data_management/fetchers\\.py|src/data_management/pydoll_fetcher\\.py|CMD-022" .github/workflows/ci.yml docs/manifest/09_runbook.md docs/manifest/11_ci.md`
+- `./venv/bin/python -m pytest -m unit -q` (latest rerun: `50 passed, 28 deselected`)
+- `./venv/bin/python -m pytest -m integration -q` (latest rerun: `21 passed, 1 skipped, 56 deselected`)
+- `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` (latest rerun: pass)
+- `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` (latest rerun: `events=284`, `alerts=16`, `regulation_query p95=3502.91ms`; saturation fields `None` outside build windows)
+- `python3 scripts/observability_cli.py summary --since-minutes 180 --events-limit 2000 --alerts-limit 1000 --as-json` (latest rerun snapshot: `events_total=284`, `alerts_total=16`)
+- `(python3 scripts/build_vectordb_cli.py build --max-plans 1 --no-vision || true) && python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` (build-window drill; build degraded with timeout but snapshot captured `build` operation + saturation fields)
+- `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` (post-drill: `events=286`, `alerts=17`, `build p95=44985.39ms`, `saturation_ratio_1m_p95=0.267`, `disk_free_ratio_cache_dir_p05=0.3203`, `rss_mb_p95=280.56`)
+- `python3 scripts/observability_cli.py summary --since-minutes 180 --events-limit 2000 --alerts-limit 1000 --as-json` (post-drill snapshot: `events_total=286`, `alerts_total=17`, `events_by_operation.build=2`)
+- `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` (post-M8 rerank evidence: `events=306`, `alerts=17`, `memory_used_ratio_p95=None`)
+- `wc -l scripts/quality_black_debt_allowlist.txt` (post-M8 rerank evidence: `73`)
+- `ls -1 docs/implementation/checklists | sort` (artifact alignment checklist/report not present yet)
+- `test -f docs/implementation/checklists/08_artifact_feature_alignment.md && test -f docs/implementation/reports/artifact_feature_alignment.md` (expected fail; confirms IMP-16 gap)
+- `rg -n "https?://" src/config.py src/infrastructure/repositories/iplan_repository.py src/data_management/pydoll_fetcher.py src/infrastructure/services/document_service.py` (captured load-bearing external endpoint families for prompt-15 evidence set)
+- `rg -n "degraded_reasons|consume_last_error|RUN_NETWORK_TESTS" src tests docs/manifest docs/troubleshooting.md` (captured provider-boundary degraded coverage mapping)
+- `ls -1 tests/integration/iplan tests/integration/data_contracts` (captured current endpoint/drill coverage surfaces)
+- `python3 project-prompts/scripts/prompts_manifest.py --check` (post-prompt-15 pass)
+- `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` (post-prompt-15 pass)
+- `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` (post-prompt-15 pass)
+- `test -f docs/artifacts/README.md && test -f docs/artifacts/index.json` (artifact store baseline exists)
+- `python3 -m json.tool docs/artifacts/index.json > /dev/null` (artifact index JSON validity pass)
+- `rg -n "ART-EXT-001|ART-EXT-002|ART-EXT-003|ART-EXT-004|ART-EXT-005|retrieved_at" docs/artifacts/index.json` (artifact IDs and retrieval metadata present)
+- `rg -n "docs/artifacts|ART-EXT-001" docs/implementation/reports/artifact_feature_alignment.md docs/implementation/checklists/08_artifact_feature_alignment.md docs/implementation/checklists/02_milestones.md` (alignment/milestone sync pass)
+- `python3 project-prompts/scripts/prompts_manifest.py --check` (post-`COR-01` pass)
+- `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` (post-`COR-01` pass)
+- `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` (post-`COR-01` pass)
+- `./venv/bin/python -m pytest -m unit -q` (post-`COR-01` alignment rerun: `50 passed, 28 deselected`)
+- `./venv/bin/python -m pytest -m integration -q` (post-`COR-01` alignment rerun: `21 passed, 1 skipped, 56 deselected`)
+- `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` (post-`COR-01` alignment rerun: pass)
+- `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` (post-`COR-01` alignment rerun: `events=278`, `alerts=15`, `regulation_query p95=3431.15ms`, `build p95=44985.39ms`, `memory_used_ratio_p95=None`)
+- `python3 scripts/observability_cli.py summary --since-minutes 180 --events-limit 2000 --alerts-limit 1000 --as-json` (post-`COR-01` alignment rerun: `events_total=278`, `alerts_total=15`)
+- `wc -l scripts/quality_black_debt_allowlist.txt` (post-`COR-01` alignment rerun: `73`)
+- `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` (post-`COR-01` alignment rerun: pass)
+- `python3 project-prompts/scripts/prompts_manifest.py --check && python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` (post-`COR-01` alignment rerun: pass)
+- `rg -n "python -m pytest -m (unit|integration|e2e|data_contracts)" .github/workflows/ci.yml docs/manifest/09_runbook.md` (`COR-02` prep command-map parity)
+- `python3 --version && ./venv/bin/python --version && ./venv/bin/pip --version && uname -a` (`COR-02` prep environment capture)
+- `shasum -a 256 requirements.txt requirements-dev.txt requirements.lock` (`COR-02` prep dependency-state fingerprints)
+- `./venv/bin/python -m pytest -m unit -q` (`COR-02` prep: `50 passed, 28 deselected` x3)
+- `./venv/bin/python -m pytest -m data_contracts -q` (`COR-02` prep: `17 passed, 61 deselected` x3)
+- `./venv/bin/python -m pytest -m integration -q` (`COR-02` prep: `21 passed, 1 skipped, 56 deselected`)
+- `./venv/bin/python -m pytest -m e2e -q` (`COR-02` prep: `5 passed, 73 deselected`)
+- `./venv/bin/python -m pytest tests/integration/data_contracts/test_boundary_payload_contracts.py::test_chroma_metadata__required_keys_present__no_null_values -q` (`COR-02` prep: pass x5)
+- `./venv/bin/python -m pytest tests/unit/domain/test_building_rights_calculator.py::test_calculate_from_zone__tama35__more_intense_than_r2 -q` (`COR-02` prep: pass x5)
+- `./venv/bin/python -m pytest -q` (`COR-02` prep: attempted; no-progress sleep state, terminated, non-blocking for prompt-10 DoD)
+- `rg -n "ART-EXT-001|ART-EXT-002|endpoint-family|MAVAT|iPlan" docs/manifest/04_api_contracts.md docs/troubleshooting.md` (`COR-02` mapping evidence)
+- `./venv/bin/python -m pytest tests/integration/data_contracts/test_boundary_payload_contracts.py -q` (`COR-02`: `3 passed, 1 warning`)
+- `./venv/bin/python -m pytest tests/integration/iplan/test_iplan_sample_data_quality.py -q` (`COR-02`: `4 passed, 2 warnings`)
+- `./venv/bin/black tests/integration/data_contracts/test_boundary_payload_contracts.py tests/integration/iplan/test_iplan_sample_data_quality.py` (`COR-02`: reformatted 2 files)
+- `./venv/bin/python -m pytest tests/integration/data_contracts/test_boundary_payload_contracts.py tests/integration/iplan/test_iplan_sample_data_quality.py -q` (`COR-02`: `7 passed, 2 warnings`)
+- `./venv/bin/ruff check tests/integration/data_contracts/test_boundary_payload_contracts.py tests/integration/iplan/test_iplan_sample_data_quality.py --select E9,F63,F7` (`COR-02`: pass)
+- `./venv/bin/python -m pytest -m unit -q` (post-`COR-02` alignment rerun: `50 passed, 30 deselected`)
+- `./venv/bin/python -m pytest -m integration -q` (post-`COR-02` alignment rerun: `23 passed, 1 skipped, 56 deselected`)
+- `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` (post-`COR-02` alignment rerun: pass)
+- `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` (post-`COR-02` alignment rerun: `events=303`, `alerts=17`, `regulation_query p95=3467.34ms`, `build p95=44985.39ms`, `memory_used_ratio_p95=None`)
+- `python3 scripts/observability_cli.py summary --since-minutes 180 --events-limit 2000 --alerts-limit 1000 --as-json` (post-`COR-02` alignment rerun: `events_total=303`, `alerts_total=17`)
+- `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` (post-`COR-02` alignment rerun: pass)
+- `python3 project-prompts/scripts/prompts_manifest.py --check && python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` (post-`COR-02` alignment rerun: pass)
+- `wc -l scripts/quality_black_debt_allowlist.txt` (post-`COR-02` alignment rerun: `73`)
+- `rg -n "ART-EXT-00[1-5]" docs/manifest/03_decisions.md docs/implementation/reports/assumptions_register.md docs/manifest/07_observability.md` (`COR-03` citation adoption evidence)
+- `rg -n "Artifact citations|Artifact Citations" docs/manifest/03_decisions.md docs/manifest/07_observability.md` (`COR-03` citation section evidence)
+- `python3 project-prompts/scripts/prompts_manifest.py --check && python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` (`COR-03`: pass)
+- `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` (`COR-03`: pass)
+- `./venv/bin/python -m pytest -m unit -q` (post-`COR-03` alignment rerun: `50 passed, 30 deselected`)
+- `./venv/bin/python -m pytest -m integration -q` (post-`COR-03` alignment rerun: `23 passed, 1 skipped, 56 deselected`)
+- `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` (post-`COR-03` alignment rerun: pass)
+- `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` (post-`COR-03` alignment rerun: `events=313`, `alerts=17`, `regulation_query p95=3467.34ms`, `build p95=44985.39ms`, `memory_used_ratio_p95=None`)
+- `python3 scripts/observability_cli.py summary --since-minutes 180 --events-limit 2000 --alerts-limit 1000 --as-json` (post-`COR-03` alignment rerun: `events_total=313`, `alerts_total=17`)
+- `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` (post-`COR-03` alignment rerun: pass)
+- `python3 project-prompts/scripts/prompts_manifest.py --check && python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` (post-`COR-03` alignment rerun: pass)
+- `wc -l scripts/quality_black_debt_allowlist.txt` (post-`COR-03` alignment rerun: `73`)
+- `./venv/bin/black src/vectorstore/unified_pipeline.py src/observability/query.py scripts/observability_cli.py tests/unit/infrastructure/test_observability_query.py tests/unit/vectorstore/test_unified_pipeline_saturation_snapshot.py` (`IMP-17` formatting pass)
+- `./venv/bin/python -m pytest tests/unit/infrastructure/test_telemetry_backend.py tests/unit/infrastructure/test_observability_query.py tests/unit/vectorstore/test_unified_pipeline_saturation_snapshot.py -q` (`IMP-17`: `13 passed, 1 warning`)
+- `(python3 scripts/build_vectordb_cli.py build --max-plans 1 --no-vision || true) && python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` (`IMP-17` drill: build errored with provider timeout; dashboard captured `memory_used_ratio_p95=0.52`, `memory_signal_latest_source=memory_pressure_q`)
+- `python3 scripts/observability_cli.py summary --since-minutes 180 --events-limit 2000 --alerts-limit 1000 --as-json` (`IMP-17` snapshot: `memory_signal_context.status=available`)
+- `rg -n "memory_used_ratio|memory_used_ratio_source|memory_used_ratio_unavailable_reason|rss_mb|saturation_ratio_1m" src/vectorstore/unified_pipeline.py src/observability/query.py docs/manifest/07_observability.md docs/troubleshooting.md docs/manifest/09_runbook.md`
+- `./venv/bin/python -m pytest -m unit -q` (post-`IMP-17` alignment rerun: `54 passed, 30 deselected`)
+- `./venv/bin/python -m pytest -m integration -q` (post-`IMP-17` alignment rerun: `23 passed, 1 skipped, 60 deselected`)
+- `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` (post-`IMP-17` alignment rerun: pass)
+- `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` (post-`IMP-17` alignment rerun: `events=312`, `alerts=15`, `regulation_query p95=3467.34ms`, `build p95=44985.39ms`, `memory_used_ratio_p95=0.52`)
+- `python3 scripts/observability_cli.py summary --since-minutes 180 --events-limit 2000 --alerts-limit 1000 --as-json` (post-`IMP-17` alignment rerun: `events_total=312`, `alerts_total=15`, `memory_signal_context.status=available`)
+- `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` (post-`IMP-17` alignment rerun: pass)
+- `python3 project-prompts/scripts/prompts_manifest.py --check && python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` (post-`IMP-17` alignment rerun: pass)
+- `wc -l scripts/quality_black_debt_allowlist.txt` (post-`IMP-17` alignment rerun: `73`)
+- `./venv/bin/black src/infrastructure/__init__.py src/infrastructure/factory.py src/infrastructure/repositories/chroma_repository.py src/infrastructure/services/cache_service.py src/infrastructure/services/document_service.py src/infrastructure/services/llm_service.py src/infrastructure/services/vision_service.py` (`IMP-18` formatting packet pass)
+- `wc -l scripts/quality_black_debt_allowlist.txt` (`IMP-18` packet: `66`)
+- `rg -n "^src/infrastructure/(__init__\\.py|factory\\.py|repositories/chroma_repository\\.py|services/cache_service\\.py|services/document_service\\.py|services/llm_service\\.py|services/vision_service\\.py)$" scripts/quality_black_debt_allowlist.txt || true` (`IMP-18` packet: no matches)
+- `rg -n "src/infrastructure/__init__\\.py|src/infrastructure/factory\\.py|src/infrastructure/repositories/chroma_repository\\.py|src/infrastructure/repositories/iplan_repository\\.py|src/infrastructure/services/cache_service\\.py|src/infrastructure/services/document_service\\.py|src/infrastructure/services/llm_service\\.py|src/infrastructure/services/vision_service\\.py|CMD-022" .github/workflows/ci.yml docs/manifest/09_runbook.md docs/manifest/11_ci.md`
+- `./venv/bin/python -m pytest -m unit -q` (post-`IMP-18` alignment rerun: `54 passed, 30 deselected`)
+- `./venv/bin/python -m pytest -m integration -q` (post-`IMP-18` alignment rerun: `23 passed, 1 skipped, 60 deselected`)
+- `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` (post-`IMP-18` alignment rerun: pass)
+- `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` (post-`IMP-18` alignment rerun: `events=310`, `alerts=14`, `regulation_query p95=3467.34ms`, `build p95=44985.39ms`, `memory_used_ratio_p95=0.52`)
+- `python3 scripts/observability_cli.py summary --since-minutes 180 --events-limit 2000 --alerts-limit 1000 --as-json` (post-`IMP-18` alignment rerun: `events_total=310`, `alerts_total=14`, `memory_signal_context.status=available`)
+- `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` (post-`IMP-18` alignment rerun: pass)
+- `python3 project-prompts/scripts/prompts_manifest.py --check && python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` (post-`IMP-18` alignment rerun: pass)
+- `test -f docs/implementation/checklists/09_evidence_cadence_ledger.md` (`IMP-19` ledger file exists)
+- `rg -n "CMD-036|CMD-029|CMD-038|CMD-039|IMP-19 bootstrap entry" docs/implementation/checklists/09_evidence_cadence_ledger.md docs/manifest/09_runbook.md docs/manifest/07_observability.md` (`IMP-19` ledger + policy linkage evidence)
+- `python3 scripts/observability_cli.py summary --since-minutes 180 --events-limit 2000 --alerts-limit 1000 --as-json` (`IMP-19` + post-`IMP-19` rerun: `events_total=304`, `alerts_total=13`, `memory_signal_context.status=available`)
+- `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` (`IMP-19` + post-`IMP-19` rerun: `events=304`, `alerts=13`, `regulation_query p95=3467.34ms`, `build p95=44985.39ms`, `memory_used_ratio_p95=0.52`)
+- `(python3 scripts/build_vectordb_cli.py build --max-plans 1 --no-vision || true) && python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` (`IMP-19`: build degraded with provider timeout; `build` telemetry + saturation snapshot captured)
+- `python3 -c "import json,datetime,pathlib; items=json.loads(pathlib.Path('docs/artifacts/index.json').read_text(encoding='utf-8')).get('artifacts', []); cutoff=(datetime.datetime.now(datetime.timezone.utc)-datetime.timedelta(days=30)).isoformat(); stale=[i.get('id','unknown') for i in items if (not isinstance(i.get('retrieved_at'), str)) or (i.get('retrieved_at') < cutoff)]; print(f'artifacts_total={len(items)} stale_total={len(stale)}'); print('stale_ids=' + ','.join(stale) if stale else 'stale_ids=')"` (`IMP-19` + post-`IMP-19` rerun: `artifacts_total=5`, `stale_total=0`)
+- `./venv/bin/python -m pytest -m unit -q` (post-`IMP-19` alignment rerun: `54 passed, 30 deselected`)
+- `./venv/bin/python -m pytest -m integration -q` (post-`IMP-19` alignment rerun: `23 passed, 1 skipped, 60 deselected`)
+- `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` (post-`IMP-19` alignment rerun: pass)
+- `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` (post-`IMP-19` alignment rerun: pass)
+- `python3 project-prompts/scripts/prompts_manifest.py --check && python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` (post-`IMP-19` alignment rerun: pass)
+- `wc -l scripts/quality_black_debt_allowlist.txt` (post-`IMP-19` alignment rerun: `66`)
+- `./venv/bin/python -m pytest tests/unit/scripts/test_quick_status_external_snapshot.py -q` (`OPP-02`: `3 passed`)
+- `python3 scripts/quick_status.py external --since-minutes 180 --events-limit 1000 --alerts-limit 500 --run-drills` (`OPP-02`: `status=WARNING`; deterministic drills `PASS/PASS/PASS`)
+- `./venv/bin/python -m pytest tests/integration/iplan/test_external_dependency_drills.py -q` (`OPP-02`: `5 passed`)
+- `./venv/bin/python -m pytest tests/integration/data_contracts/test_boundary_payload_contracts.py tests/integration/iplan/test_iplan_sample_data_quality.py -q` (`OPP-02`: `7 passed`)
+- `rg -n "CMD-040|external --since-minutes|snapshot bundle" scripts/quick_status.py docs/manifest/09_runbook.md docs/troubleshooting.md docs/reference/cli.md` (`OPP-02` command-map/doc linkage)
+- `./venv/bin/python -m pytest -m unit -q` (post-`OPP-02` alignment rerun: `57 passed, 30 deselected`)
+- `./venv/bin/python -m pytest -m integration -q` (post-`OPP-02` alignment rerun: `23 passed, 1 skipped, 63 deselected`)
+- `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` (post-`OPP-02` alignment rerun: pass)
+- `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` (post-`OPP-02` alignment rerun: `events=294`, `alerts=12`, `regulation_query p95=3467.34ms`, `build p95=44985.39ms`, `memory_used_ratio_p95=0.52`)
+- `python3 scripts/observability_cli.py summary --since-minutes 180 --events-limit 2000 --alerts-limit 1000 --as-json` (post-`OPP-02` alignment rerun: `events_total=294`, `alerts_total=12`)
+- `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` (post-`OPP-02` alignment rerun: pass)
+- `python3 project-prompts/scripts/prompts_manifest.py --check && python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` (post-`OPP-02` alignment rerun: pass)
+- `python3 -c "import json,datetime,pathlib; items=json.loads(pathlib.Path('docs/artifacts/index.json').read_text(encoding='utf-8')).get('artifacts', []); cutoff=(datetime.datetime.now(datetime.timezone.utc)-datetime.timedelta(days=30)).isoformat(); stale=[i.get('id','unknown') for i in items if (not isinstance(i.get('retrieved_at'), str)) or (i.get('retrieved_at') < cutoff)]; print(f'artifacts_total={len(items)} stale_total={len(stale)}'); print('stale_ids=' + ','.join(stale) if stale else 'stale_ids=')"` (post-`OPP-02` alignment rerun: `artifacts_total=5`, `stale_total=0`)
+- `wc -l scripts/quality_black_debt_allowlist.txt` (post-`OPP-02` alignment rerun: `66`)
+- `rg -n "artifact:ART-EXT-001|artifact:ART-EXT-002|artifact:ART-EXT-003|artifact:ART-EXT-004|artifact:ART-EXT-005" docs/README.md docs/INDEX.md docs/reference/configuration.md docs/artifacts/README.md` (`OPP-03` onboarding artifact-link verification)
+- `rg -n "External dependency boundaries|External Boundary Artifacts|Boundary Onboarding Map" docs/README.md docs/INDEX.md docs/reference/configuration.md docs/artifacts/README.md` (`OPP-03` onboarding section verification)
+- `./venv/bin/python -m pytest -m unit -q` (post-`OPP-03` alignment rerun: `57 passed, 30 deselected`)
+- `./venv/bin/python -m pytest -m integration -q` (post-`OPP-03` alignment rerun: `23 passed, 1 skipped, 63 deselected`)
+- `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` (post-`OPP-03` alignment rerun: pass)
+- `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` (post-`OPP-03` alignment rerun: `events=295`, `alerts=12`, `regulation_query p95=3502.91ms`, `build p95=44985.39ms`, `memory_used_ratio_p95=0.52`)
+- `python3 scripts/observability_cli.py summary --since-minutes 180 --events-limit 2000 --alerts-limit 1000 --as-json` (post-`OPP-03` alignment rerun: `events_total=295`, `alerts_total=12`)
+- `python3 scripts/quick_status.py external --since-minutes 180 --events-limit 1000 --alerts-limit 500 --run-drills` (post-`OPP-03` alignment rerun: `status=WARNING`; deterministic drills `PASS/PASS/PASS`)
+- `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` (post-`OPP-03` alignment rerun: pass)
+- `python3 project-prompts/scripts/prompts_manifest.py --check && python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` (post-`OPP-03` alignment rerun: pass)
+- `python3 -c "import json,datetime,pathlib; items=json.loads(pathlib.Path('docs/artifacts/index.json').read_text(encoding='utf-8')).get('artifacts', []); cutoff=(datetime.datetime.now(datetime.timezone.utc)-datetime.timedelta(days=30)).isoformat(); stale=[i.get('id','unknown') for i in items if (not isinstance(i.get('retrieved_at'), str)) or (i.get('retrieved_at') < cutoff)]; print(f'artifacts_total={len(items)} stale_total={len(stale)}'); print('stale_ids=' + ','.join(stale) if stale else 'stale_ids=')"` (post-`OPP-03` alignment rerun: `artifacts_total=5`, `stale_total=0`)
+- `wc -l scripts/quality_black_debt_allowlist.txt` (post-`OPP-03` alignment rerun: `66`)
+- `./venv/bin/python -m pytest tests/unit/scripts/test_quick_status_external_snapshot.py -q` (post-`CMD-040` hardening: `5 passed`)
+- `./venv/bin/ruff check scripts/quick_status.py tests/unit/scripts/test_quick_status_external_snapshot.py --select E9,F63,F7` (post-`CMD-040` hardening: pass)
+- `(python3 scripts/build_vectordb_cli.py build --max-plans 1 --no-vision || true) && python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` (post-`CMD-040` hardening: build degraded with timeout; dashboard captured `build` + saturation fields)
+- `python3 scripts/observability_cli.py summary --since-minutes 180 --events-limit 2000 --alerts-limit 1000 --as-json` (post-`CMD-040` hardening: `events_total=286`, `alerts_total=12`, `memory_signal_context.status=available`)
+- `python3 scripts/quick_status.py external --since-minutes 180 --events-limit 1000 --alerts-limit 500 --run-drills` (post-`CMD-040` hardening: `status=WARNING`, `warning_context=historical_runtime_window_noise`, deterministic drills `PASS/PASS/PASS`)
+- `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` (post-`CMD-040` hardening: pass)
+- `python3 project-prompts/scripts/prompts_manifest.py --check && python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` (post-`CMD-040` hardening: pass)
+- `./venv/bin/python -m pytest -m unit -q` (post-`CMD-040` alignment rerun: `59 passed, 30 deselected`)
+- `./venv/bin/python -m pytest -m integration -q` (post-`CMD-040` alignment rerun: `23 passed, 1 skipped, 65 deselected`)
+- `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` (post-`CMD-040` alignment rerun: pass)
+- `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` (post-`CMD-040` alignment rerun: `events=286`, `alerts=12`, `regulation_query p95=3502.91ms`, `build p95=44985.39ms`, `memory_used_ratio_p95=0.59`)
+- `wc -l scripts/quality_black_debt_allowlist.txt` (post-`CMD-040` alignment rerun: `66`)
 
-- All: `./venv/bin/python -m pytest`
-- Unit: `./venv/bin/python -m pytest -m unit`
-- Integration: `./venv/bin/python -m pytest -m integration`
-- E2E: `./venv/bin/python -m pytest -m e2e`
-- Data contracts: `./venv/bin/python -m pytest -m data_contracts`
+## Blockers / Assumptions
+- External API dependencies (iPlan/Gemini/live MAVAT scraping) remain variable and environment-sensitive.
+- Optional live network coverage remains gated via `RUN_NETWORK_TESTS=1` with bounded rehearsal caps and CI block-by-default policy (`RUN_NETWORK_ALLOW_CI=1` override only for manual drills).
+- Aggregate full-suite order-run (`./venv/bin/python -m pytest -q`) may enter no-progress sleep state; tracked as non-blocking for prompt-10 DoD and should be revisited only if it recurs in subsequent implementation verification.
+- High-impact assumptions remain tracked in `docs/implementation/reports/assumptions_register.md`.

@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "artifacts": [
+    {
+      "id": "ART-EXT-001",
+      "kind": "web_page",
+      "title": "iPlan ArcGIS PlanningPublic Endpoint Family",
+      "url": "https://ags.iplan.gov.il/arcgisiplan/rest/services/PlanningPublic/",
+      "retrieved_at": "2026-02-09T01:54:57Z",
+      "tags": [
+        "external",
+        "iplan",
+        "arcgis",
+        "endpoint-family"
+      ],
+      "notes": "Companion base URL used in configuration/runtime assumptions: https://ags.iplan.gov.il/xplan/"
+    },
+    {
+      "id": "ART-EXT-002",
+      "kind": "web_page",
+      "title": "MAVAT Portal and Attachment Endpoint Pattern",
+      "url": "https://mavat.iplan.gov.il/rest/api/Attacments/?eid={eid}&fn={filename}",
+      "retrieved_at": "2026-02-09T01:54:57Z",
+      "tags": [
+        "external",
+        "mavat",
+        "attachments",
+        "document-ingestion"
+      ],
+      "notes": "Companion navigation pattern used by document workflows: https://mavat.iplan.gov.il/SV4/1/{plan_id}/310"
+    },
+    {
+      "id": "ART-EXT-003",
+      "kind": "web_page",
+      "title": "Google Gemini API Documentation",
+      "url": "https://ai.google.dev/gemini-api/docs",
+      "retrieved_at": "2026-02-09T01:54:57Z",
+      "tags": [
+        "external",
+        "gemini",
+        "provider",
+        "llm"
+      ],
+      "notes": "Provider behavior and outage semantics inform degraded fallback policy."
+    },
+    {
+      "id": "ART-EXT-004",
+      "kind": "web_page",
+      "title": "pydoll-python Package Reference",
+      "url": "https://pypi.org/project/pydoll-python/",
+      "retrieved_at": "2026-02-09T01:54:57Z",
+      "tags": [
+        "external",
+        "pydoll",
+        "browser-automation",
+        "runtime-dependency"
+      ],
+      "notes": "Runtime/browser automation dependency backing MAVAT fetch flows and optional live rehearsal."
+    },
+    {
+      "id": "ART-EXT-005",
+      "kind": "web_page",
+      "title": "Chroma Documentation",
+      "url": "https://docs.trychroma.com/",
+      "retrieved_at": "2026-02-09T01:54:57Z",
+      "tags": [
+        "external",
+        "chroma",
+        "vectorstore",
+        "persistence"
+      ],
+      "notes": "Companion package reference used in dependency inventory: https://pypi.org/project/chromadb/"
+    }
+  ]
+}

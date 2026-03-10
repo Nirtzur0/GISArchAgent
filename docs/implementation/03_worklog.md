@@ -1,23 +1,1165 @@
-# Worklog: Test Stabilization
+# Worklog
+
+## 2026-02-09
+- Executed next non-redundant packet: `prompt-03-alignment-review-gate` (post-docs drift convergence checkpoint, manual/no router script).
+  - Why this prompt: `docs/implementation/00_status.md` and `docs/implementation/checklists/07_alignment_review.md` marked this as the required next checkpoint after `prompt-11`.
+  - Updated:
+    - `docs/implementation/checklists/07_alignment_review.md`
+    - `docs/implementation/reports/alignment_review.md`
+    - `docs/implementation/00_status.md`
+    - `docs/implementation/03_worklog.md`
+  - Evidence:
+    - `./venv/bin/python -m pytest -m unit -q` -> `65 passed, 30 deselected`
+    - `./venv/bin/python -m pytest -m integration -q` -> `23 passed, 1 skipped, 71 deselected`
+    - `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` -> pass
+    - `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` -> `events=222`, `alerts=7`, `regulation_query p95=3772.02ms`, `build p95=43434.35ms`, `memory_used_ratio_p95=0.59`
+    - `python3 scripts/observability_cli.py summary --since-minutes 180 --events-limit 2000 --alerts-limit 1000 --as-json` -> `events_total=222`, `alerts_total=7`
+    - `python3 scripts/quick_status.py external --since-minutes 180 --events-limit 1000 --alerts-limit 500 --run-drills` -> `status=WARNING`, `warning_context=historical_build_timeout_sev1_noise`, deterministic drills `PASS/PASS/PASS`
+    - `python3 scripts/quick_status.py external --since-minutes 60 --events-limit 1000 --alerts-limit 500 --run-drills` -> `status=HEALTHY`, `events=50`, `alerts=0`, deterministic drills `PASS/PASS/PASS`
+    - `python3 scripts/observability_cli.py events --operation build --since-minutes 60 --limit 100` -> `No matching events.`
+    - `python3 scripts/observability_cli.py events --outcome error --since-minutes 60 --limit 100` -> `No matching events.`
+    - `python3 scripts/observability_cli.py alerts --since-minutes 60 --limit 100` -> `No matching alerts.`
+    - `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` -> pass
+    - `python3 project-prompts/scripts/prompts_manifest.py --check && echo prompts_manifest_ok` -> `prompts_manifest_ok`
+    - `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` -> `System integrity checks passed.`
+    - `for file in docs/README.md docs/INDEX.md docs/reference/configuration.md docs/artifacts/README.md; do for id in artifact:ART-EXT-001 artifact:ART-EXT-002 artifact:ART-EXT-003 artifact:ART-EXT-004 artifact:ART-EXT-005; do rg -q \"$id\" \"$file\" || { echo \"$file missing $id\"; exit 1; }; done; done; echo \"onboarding_artifact_links_ok files=4 ids=5\"` -> `onboarding_artifact_links_ok files=4 ids=5`
+  - Result:
+    - verdict remains `ALIGNED_WITH_RISKS`.
+    - no M11/M12 implementation outcomes reopened.
+    - next non-redundant prompt is `prompt-14-improvement-direction-bet-loop` (fresh rerank to avoid checkpoint-only loops).
+
+- Executed next non-redundant packet: `prompt-11-docs-diataxis-release` (post-audit docs/release metadata drift cleanup, manual/no router script).
+  - Why this prompt: `checkbox.md` identified stale legacy docs and missing repository metadata (`LICENSE`, `CONTRIBUTING.md`) as the highest-impact remaining docs packet.
+  - Updated:
+    - `docs/RUN_GUIDE.md`
+    - `docs/HOW_IT_WORKS.md`
+    - `README.md`
+    - `docs/INDEX.md`
+    - `docs/README.md`
+    - `CONTRIBUTING.md`
+    - `LICENSE`
+    - `docs/implementation/00_status.md`
+    - `docs/implementation/03_worklog.md`
+  - Evidence:
+    - `test -f LICENSE && test -f CONTRIBUTING.md && echo metadata_files_ok` -> `metadata_files_ok`
+    - `if rg -n "still pending|release workflow is still pending" docs/HOW_IT_WORKS.md; then echo stale_release_claim_found; else echo stale_release_claim_absent; fi` -> `stale_release_claim_absent`
+    - `if rg -n "tests/test_vectordb_integration.py|tests/test_iplan_integration.py" docs/RUN_GUIDE.md; then echo stale_test_refs_found; else echo stale_test_refs_absent; fi` -> `stale_test_refs_absent`
+    - `rg -n "CONTRIBUTING.md|LICENSE" README.md docs/INDEX.md docs/README.md` -> links present in all three docs surfaces
+    - `for file in docs/README.md docs/INDEX.md docs/reference/configuration.md docs/artifacts/README.md; do for id in artifact:ART-EXT-001 artifact:ART-EXT-002 artifact:ART-EXT-003 artifact:ART-EXT-004 artifact:ART-EXT-005; do rg -q "$id" "$file" || { echo "$file missing $id"; exit 1; }; done; done; echo "onboarding_artifact_links_ok files=4 ids=5"` -> `onboarding_artifact_links_ok files=4 ids=5`
+    - `python3 project-prompts/scripts/prompts_manifest.py --check && echo prompts_manifest_ok` -> `prompts_manifest_ok`
+    - `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` -> `System integrity checks passed.`
+    - `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` -> `Dependency lock and docs inventory are synchronized (38 direct requirements, 199 locked packages).`
+  - Result:
+    - legacy run/release docs no longer contradict current release workflow state.
+    - run guide now points only to active marker/test/CLI paths.
+    - repository metadata drift (`LICENSE`, `CONTRIBUTING.md`) is closed.
+    - next non-redundant prompt is `prompt-03-alignment-review-gate` on the next checkpoint.
+
+- Executed next non-redundant packet: `prompt-03-alignment-review-gate` (post-`COR-03` drift refresh, manual/no router script).
+  - Why this prompt: `COR-03` implementation was complete; one alignment rerun was required to route the next corrective packet without repeating finished prompts.
+  - Updated:
+    - `docs/implementation/checklists/07_alignment_review.md`
+    - `docs/implementation/reports/alignment_review.md`
+    - `docs/implementation/00_status.md`
+    - `docs/implementation/03_worklog.md`
+  - Evidence:
+    - `./venv/bin/python -m pytest -m unit -q` -> `50 passed, 30 deselected`
+    - `./venv/bin/python -m pytest -m integration -q` -> `23 passed, 1 skipped, 56 deselected`
+    - `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` -> pass
+    - `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` -> `events=313`, `alerts=17`, `regulation_query p95=3467.34ms`, `build p95=44985.39ms`, `memory_used_ratio_p95=None`
+    - `python3 scripts/observability_cli.py summary --since-minutes 180 --events-limit 2000 --alerts-limit 1000 --as-json` -> `events_total=313`, `alerts_total=17`
+    - `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` -> pass
+    - `python3 project-prompts/scripts/prompts_manifest.py --check` -> pass
+    - `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` -> pass
+    - `wc -l scripts/quality_black_debt_allowlist.txt` -> `73`
+  - Result:
+    - verdict remains `ALIGNED_WITH_RISKS`.
+    - `M9` now has `COR-01`, `COR-02`, and `COR-03` complete.
+    - open corrections are `IMP-17` and `IMP-18`; next non-redundant prompt is `prompt-02-app-development-playbook` for `IMP-17`.
+
+- Executed next non-redundant packet: `prompt-11-docs-diataxis-release` (`COR-03` artifact-citation adoption, manual/no router script).
+  - Why this prompt: post-`COR-02` alignment routing marked `COR-03` as the highest-priority remaining artifact-traceability correction.
+  - Updated:
+    - `docs/manifest/03_decisions.md`
+    - `docs/implementation/reports/assumptions_register.md`
+    - `docs/manifest/07_observability.md`
+    - `docs/implementation/checklists/08_artifact_feature_alignment.md`
+    - `docs/implementation/checklists/02_milestones.md`
+    - `docs/implementation/reports/artifact_feature_alignment.md`
+    - `docs/implementation/reports/improvement_directions.md`
+    - `docs/implementation/00_status.md`
+    - `docs/implementation/03_worklog.md`
+  - Evidence:
+    - `rg -n "ART-EXT-00[1-5]" docs/manifest/03_decisions.md docs/implementation/reports/assumptions_register.md docs/manifest/07_observability.md`
+    - `rg -n "Artifact citations|Artifact Citations" docs/manifest/03_decisions.md docs/manifest/07_observability.md`
+    - `python3 project-prompts/scripts/prompts_manifest.py --check` -> pass
+    - `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` -> pass
+    - `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` -> pass
+  - Result:
+    - `COR-03` is complete and checked in artifact-alignment and M9 milestone tracking.
+    - load-bearing external dependency assumptions now consistently cite stable artifact IDs.
+    - next non-redundant prompt is `prompt-03-alignment-review-gate`.
+
+- Executed next non-redundant packet: `prompt-03-alignment-review-gate` (post-`COR-02` drift refresh, manual/no router script).
+  - Why this prompt: `COR-02` implementation was complete; one alignment rerun was required to route the next corrective packet without repeating finished prompts.
+  - Updated:
+    - `docs/implementation/checklists/07_alignment_review.md`
+    - `docs/implementation/reports/alignment_review.md`
+    - `docs/implementation/00_status.md`
+    - `docs/implementation/03_worklog.md`
+  - Evidence:
+    - `./venv/bin/python -m pytest -m unit -q` -> `50 passed, 30 deselected`
+    - `./venv/bin/python -m pytest -m integration -q` -> `23 passed, 1 skipped, 56 deselected`
+    - `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` -> pass
+    - `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` -> `events=303`, `alerts=17`, `regulation_query p95=3467.34ms`, `build p95=44985.39ms`, `memory_used_ratio_p95=None`
+    - `python3 scripts/observability_cli.py summary --since-minutes 180 --events-limit 2000 --alerts-limit 1000 --as-json` -> `events_total=303`, `alerts_total=17`
+    - `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` -> pass
+    - `python3 project-prompts/scripts/prompts_manifest.py --check` -> pass
+    - `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` -> pass
+    - `wc -l scripts/quality_black_debt_allowlist.txt` -> `73`
+  - Result:
+    - verdict remains `ALIGNED_WITH_RISKS`.
+    - `M9` now has `COR-01` and `COR-02` complete; open corrections are `COR-03`, `IMP-17`, and `IMP-18`.
+    - next non-redundant prompt is `prompt-11-docs-diataxis-release` for `COR-03`.
+
+- Executed next non-redundant packet: `prompt-02-app-development-playbook` (`COR-02` endpoint-family artifact-to-contract mapping, manual/no router script).
+  - Why this prompt: `prompt-10` preflight was complete; the next required corrective packet was `COR-02` implementation.
+  - Updated:
+    - `docs/manifest/04_api_contracts.md`
+    - `tests/integration/data_contracts/test_boundary_payload_contracts.py`
+    - `tests/integration/iplan/test_iplan_sample_data_quality.py`
+    - `docs/troubleshooting.md`
+    - `docs/implementation/checklists/08_artifact_feature_alignment.md`
+    - `docs/implementation/reports/artifact_feature_alignment.md`
+    - `docs/implementation/checklists/02_milestones.md`
+    - `docs/manifest/03_decisions.md`
+    - `docs/implementation/00_status.md`
+    - `docs/implementation/03_worklog.md`
+  - Evidence:
+    - `rg -n "ART-EXT-001|ART-EXT-002|endpoint-family|MAVAT|iPlan" docs/manifest/04_api_contracts.md docs/troubleshooting.md`
+    - `./venv/bin/python -m pytest tests/integration/data_contracts/test_boundary_payload_contracts.py -q` -> `3 passed, 1 warning`
+    - `./venv/bin/python -m pytest tests/integration/iplan/test_iplan_sample_data_quality.py -q` -> `4 passed, 2 warnings`
+    - `./venv/bin/black tests/integration/data_contracts/test_boundary_payload_contracts.py tests/integration/iplan/test_iplan_sample_data_quality.py` -> reformatted 2 files
+    - `./venv/bin/python -m pytest tests/integration/data_contracts/test_boundary_payload_contracts.py tests/integration/iplan/test_iplan_sample_data_quality.py -q` -> `7 passed, 2 warnings`
+    - `./venv/bin/ruff check tests/integration/data_contracts/test_boundary_payload_contracts.py tests/integration/iplan/test_iplan_sample_data_quality.py --select E9,F63,F7` -> pass
+  - Result:
+    - `COR-02` is complete and checked in artifact-alignment and M9 milestone tracking.
+    - endpoint-family assumptions are now explicitly linked to verification and triage surfaces.
+    - next non-redundant prompt is `prompt-03-alignment-review-gate`.
+
+- Executed next non-redundant packet: `prompt-10-tests-stabilization-loop` (`COR-02` prep, manual/no router script).
+  - Why this prompt: post-`COR-01` alignment routing marked `prompt-10` as required preflight to prove test/contract stability before `COR-02` endpoint-family artifact-to-contract implementation.
+  - Updated:
+    - `docs/implementation/checklists/04_test_stabilization.md`
+    - `docs/implementation/reports/test_stabilization_final_report.md`
+    - `docs/implementation/reports/improvement_directions.md`
+    - `docs/implementation/00_status.md`
+    - `docs/implementation/03_worklog.md`
+  - Evidence:
+    - `rg -n "python -m pytest -m (unit|integration|e2e|data_contracts)" .github/workflows/ci.yml docs/manifest/09_runbook.md` -> command-map parity confirmed.
+    - `python3 --version && ./venv/bin/python --version && ./venv/bin/pip --version && uname -a` -> `Python 3.12.6`, `pip 25.3`, `Darwin 25.3.0`.
+    - `shasum -a 256 requirements.txt requirements-dev.txt requirements.lock` -> dependency-state fingerprints refreshed.
+    - `./venv/bin/python -m pytest -m unit -q` -> `50 passed, 28 deselected` (x3).
+    - `./venv/bin/python -m pytest -m data_contracts -q` -> `17 passed, 61 deselected` (x3).
+    - `./venv/bin/python -m pytest -m integration -q` -> `21 passed, 1 skipped, 56 deselected`.
+    - `./venv/bin/python -m pytest -m e2e -q` -> `5 passed, 73 deselected`.
+    - `./venv/bin/python -m pytest tests/integration/data_contracts/test_boundary_payload_contracts.py::test_chroma_metadata__required_keys_present__no_null_values -q` -> pass (x5).
+    - `./venv/bin/python -m pytest tests/unit/domain/test_building_rights_calculator.py::test_calculate_from_zone__tama35__more_intense_than_r2 -q` -> pass (x5).
+    - `./venv/bin/python -m pytest -q` -> entered no-progress sleep state; terminated and tracked as non-blocking for prompt-10 DoD.
+  - Result:
+    - `COR-02` stabilization prep is complete with required rerun proof and zero flakes in required suites.
+    - intentional network-gated coverage remains explicit (`RUN_NETWORK_TESTS=1` path).
+    - next non-redundant prompt is `prompt-02-app-development-playbook` for `COR-02`, then `prompt-03-alignment-review-gate`.
+
+- Executed next non-redundant packet: `prompt-03-alignment-review-gate` (post-`COR-01` drift refresh, manual/no router script).
+  - Why this prompt: `COR-01` implementation was complete; one alignment rerun was required to route the next corrective packet without repeating finished prompts.
+  - Updated:
+    - `docs/implementation/checklists/07_alignment_review.md`
+    - `docs/implementation/reports/alignment_review.md`
+    - `docs/implementation/00_status.md`
+    - `docs/implementation/03_worklog.md`
+  - Evidence:
+    - `./venv/bin/python -m pytest -m unit -q` -> `50 passed, 28 deselected`
+    - `./venv/bin/python -m pytest -m integration -q` -> `21 passed, 1 skipped, 56 deselected`
+    - `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` -> pass
+    - `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` -> `events=278`, `alerts=15`, `regulation_query p95=3431.15ms`, `build p95=44985.39ms`, `memory_used_ratio_p95=None`
+    - `python3 scripts/observability_cli.py summary --since-minutes 180 --events-limit 2000 --alerts-limit 1000 --as-json` -> `events_total=278`, `alerts_total=15`
+    - `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` -> pass
+    - `python3 project-prompts/scripts/prompts_manifest.py --check` -> pass
+    - `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` -> pass
+    - `wc -l scripts/quality_black_debt_allowlist.txt` -> `73`
+  - Result:
+    - verdict remains `ALIGNED_WITH_RISKS`.
+    - `M9` remains in progress with `COR-02`, `COR-03`, `IMP-17`, and `IMP-18` open.
+    - next non-redundant prompt is `prompt-10-tests-stabilization-loop` for `COR-02` prep.
+
+- Executed next non-redundant packet: `prompt-02-app-development-playbook` (`COR-01` artifact store baseline, manual/no router script).
+  - Why this prompt: `prompt-15` identified `COR-01` as the highest-priority corrective outcome and required implementation before the next alignment gate.
+  - Updated:
+    - `docs/artifacts/README.md`
+    - `docs/artifacts/index.json`
+    - `docs/artifacts/blobs/.gitkeep`
+    - `docs/artifacts/excerpts/.gitkeep`
+    - `docs/implementation/checklists/08_artifact_feature_alignment.md`
+    - `docs/implementation/checklists/02_milestones.md`
+    - `docs/implementation/checklists/03_improvement_bets.md`
+    - `docs/implementation/reports/artifact_feature_alignment.md`
+    - `docs/manifest/03_decisions.md`
+    - `docs/implementation/00_status.md`
+    - `docs/implementation/03_worklog.md`
+  - Evidence:
+    - `test -f docs/artifacts/README.md && test -f docs/artifacts/index.json` -> pass
+    - `python3 -m json.tool docs/artifacts/index.json > /dev/null` -> pass
+    - `rg -n "ART-EXT-001|ART-EXT-002|ART-EXT-003|ART-EXT-004|ART-EXT-005|retrieved_at" docs/artifacts/index.json` -> pass
+    - `python3 project-prompts/scripts/prompts_manifest.py --check` -> pass
+    - `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` -> pass
+    - `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` -> pass
+  - Result:
+    - canonical artifact store baseline is now established.
+    - `COR-01` is complete and M9 artifact baseline outcome is checked.
+    - next non-redundant prompt is `prompt-03-alignment-review-gate`.
+
+- Executed next non-redundant packet: `prompt-15-artifact-feature-alignment-gate` (post-M8, manual/no router script).
+  - Why this prompt: post-M8 `prompt-14` selected artifact-feature alignment as the highest-impact unrun gate and the required next step before another implementation packet.
+  - Updated:
+    - `docs/implementation/checklists/08_artifact_feature_alignment.md`
+    - `docs/implementation/reports/artifact_feature_alignment.md`
+    - `docs/implementation/checklists/02_milestones.md`
+    - `docs/implementation/00_status.md`
+    - `docs/implementation/03_worklog.md`
+  - Evidence:
+    - `find . -maxdepth 4 -type d \\( -name artifacts -o -name docs/artifacts \\)` -> no canonical artifact store present
+    - `test -f docs/implementation/checklists/08_artifact_feature_alignment.md && test -f docs/implementation/reports/artifact_feature_alignment.md` -> fail before packet (expected)
+    - `rg -n "https?://" src/config.py src/infrastructure/repositories/iplan_repository.py src/data_management/pydoll_fetcher.py src/infrastructure/services/document_service.py` -> captured load-bearing external endpoint families
+    - `rg -n "degraded_reasons|consume_last_error|RUN_NETWORK_TESTS" src tests docs/manifest docs/troubleshooting.md` -> captured current dependency-degraded coverage
+    - `ls -1 tests/integration/iplan tests/integration/data_contracts` -> captured current contract/drill surfaces
+  - Result:
+    - artifact-feature verdict is `ALIGNED_WITH_GAPS`.
+    - corrective and opportunity outcomes are now explicit with prompt-chain routing.
+    - `M9` now includes measurable artifact-store grounding and endpoint-family contract mapping outcomes.
+    - next non-redundant prompt is `prompt-02-app-development-playbook` for `COR-01`.
+
+- Executed next non-redundant packet: `prompt-14-improvement-direction-bet-loop` (post-M8 rerank, manual/no router script).
+  - Why this prompt: post-IMP-15 `prompt-03` refresh confirmed M8 closure, so a new ranking pass was required to avoid repeating closed implementation packets.
+  - Updated:
+    - `docs/implementation/reports/improvement_directions.md`
+    - `docs/implementation/checklists/03_improvement_bets.md`
+    - `docs/implementation/checklists/02_milestones.md`
+    - `docs/implementation/00_status.md`
+    - `docs/implementation/03_worklog.md`
+  - Evidence:
+    - `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` -> `events=306`, `alerts=17`, `regulation_query p95=3453.42ms`, `build p95=44985.39ms`, `memory_used_ratio_p95=None`
+    - `wc -l scripts/quality_black_debt_allowlist.txt` -> `73`
+    - `ls -1 docs/implementation/checklists | sort` -> no `08_artifact_feature_alignment.md` present
+    - `test -f docs/implementation/checklists/08_artifact_feature_alignment.md && test -f docs/implementation/reports/artifact_feature_alignment.md` -> fail (expected gap evidence)
+  - Result:
+    - selected post-M8 top directions: IMP-16 (artifact-feature alignment gate), IMP-17 (memory-pressure saturation signal completeness), IMP-18 (formatting debt burn phase 5).
+    - mapped selected outcomes into `M9` and added open bets in `03_improvement_bets.md`.
+    - next non-redundant prompt is `prompt-15-artifact-feature-alignment-gate`.
+
+- Executed next non-redundant packet: `prompt-03-alignment-review-gate` (post-IMP-15 drift refresh, manual/no router script).
+  - Why this prompt: IMP-15 implementation was complete; one alignment rerun was required to close M8 and route to post-M8 ranking.
+  - Updated:
+    - `docs/implementation/checklists/07_alignment_review.md`
+    - `docs/implementation/reports/alignment_review.md`
+    - `docs/implementation/reports/improvement_directions.md`
+    - `docs/implementation/00_status.md`
+    - `docs/implementation/03_worklog.md`
+  - Evidence:
+    - `./venv/bin/python -m pytest -m unit -q` -> `50 passed, 28 deselected`
+    - `./venv/bin/python -m pytest -m integration -q` -> `21 passed, 1 skipped, 56 deselected`
+    - `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` -> pass
+    - `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` -> `events=306`, `alerts=17`, `regulation_query p95=3453.42ms`, `build p95=44985.39ms`, saturation fields present except `memory_used_ratio`
+    - `python3 scripts/observability_cli.py summary --since-minutes 180 --events-limit 2000 --alerts-limit 1000 --as-json` -> `events_total=306`, `alerts_total=17`
+    - `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` -> pass
+    - `python3 project-prompts/scripts/prompts_manifest.py --check` -> pass
+    - `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` -> pass
+  - Result:
+    - Verdict remains `ALIGNED_WITH_RISKS`.
+    - M8 is fully complete (`IMP-13`, `IMP-14`, `IMP-15`).
+    - next non-redundant prompt is `prompt-14-improvement-direction-bet-loop`.
+
+- Executed next non-redundant packet: `prompt-02-app-development-playbook` (IMP-15 saturation snapshot discipline, manual/no router script).
+  - Why this prompt: post-IMP-14 alignment refresh left IMP-15 as the only open M8 correction.
+  - Code/docs updates:
+    - added canonical build-window saturation drill command:
+      - `docs/manifest/09_runbook.md` (`CMD-038`)
+    - codified build-window saturation evidence policy and null-handling guidance:
+      - `docs/manifest/07_observability.md`
+      - `docs/troubleshooting.md`
+    - decision and tracking artifacts updated:
+      - `docs/manifest/03_decisions.md` (ADR-0023)
+      - `docs/implementation/checklists/02_milestones.md` (M8 third outcome checked; M8 complete)
+      - `docs/implementation/checklists/03_improvement_bets.md` (IMP-15 checked)
+      - `docs/implementation/reports/improvement_directions.md`
+      - `docs/implementation/00_status.md`
+      - `docs/implementation/03_worklog.md`
+  - Verification:
+    - `(python3 scripts/build_vectordb_cli.py build --max-plans 1 --no-vision || true) && python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` -> build degraded with timeout but emitted structured build telemetry and saturation snapshot
+    - `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` -> `events=286`, `alerts=17`, `build p95=44985.39ms`, `saturation_ratio_1m_p95=0.267`, `disk_free_ratio_cache_dir_p05=0.3203`, `rss_mb_p95=280.56`
+    - `python3 scripts/observability_cli.py summary --since-minutes 180 --events-limit 2000 --alerts-limit 1000 --as-json` -> `events_total=286`, `alerts_total=17`, `events_by_operation.build=2`
+    - `rg -n "CMD-038|build-window|saturation_ratio_1m|memory_used_ratio|disk_free_ratio_cache_dir" docs/manifest/07_observability.md docs/manifest/09_runbook.md docs/troubleshooting.md` -> pass
+    - `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` -> pass
+    - `./venv/bin/python -m pytest -m unit -q` -> `50 passed, 28 deselected`
+    - `./venv/bin/python -m pytest -m integration -q` -> `21 passed, 1 skipped, 56 deselected`
+    - `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` -> pass
+    - `python3 project-prompts/scripts/prompts_manifest.py --check` -> pass
+    - `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` -> pass
+  - Result:
+    - IMP-15 is now complete and no longer open.
+    - M8 is fully complete.
+    - next non-redundant prompt is `prompt-03-alignment-review-gate`.
+
+- Executed next non-redundant packet: `prompt-03-alignment-review-gate` (post-IMP-14 drift refresh, manual/no router script).
+  - Why this prompt: IMP-14 implementation was complete; one alignment rerun was required before the final open M8 implementation packet.
+  - Updated:
+    - `docs/implementation/checklists/07_alignment_review.md`
+    - `docs/implementation/reports/alignment_review.md`
+    - `docs/implementation/reports/improvement_directions.md`
+    - `docs/implementation/00_status.md`
+    - `docs/implementation/03_worklog.md`
+  - Evidence:
+    - `./venv/bin/python -m pytest -m unit -q` -> `50 passed, 28 deselected`
+    - `./venv/bin/python -m pytest -m integration -q` -> `21 passed, 1 skipped, 56 deselected`
+    - `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` -> pass
+    - `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` -> `events=284`, `alerts=16`, `regulation_query p95=3502.91ms`, saturation fields `None` in non-build window
+    - `python3 scripts/observability_cli.py summary --since-minutes 180 --events-limit 2000 --alerts-limit 1000 --as-json` -> `events_total=284`, `alerts_total=16`
+    - `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` -> pass
+    - `python3 project-prompts/scripts/prompts_manifest.py --check` -> pass
+    - `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` -> pass
+  - Result:
+    - Verdict remains `ALIGNED_WITH_RISKS`.
+    - M8 state is now explicit: `IMP-13` and `IMP-14` complete; `IMP-15` open.
+    - next non-redundant prompt is `prompt-02-app-development-playbook` for IMP-15.
+
+- Executed next non-redundant packet: `prompt-02-app-development-playbook` (IMP-14 formatting debt burn phase 4, manual/no router script).
+  - Why this prompt: post-IMP-13 `prompt-03` refresh cleared the cadence-policy correction, and IMP-14 was the highest-impact open M8 implementation packet.
+  - Code/config updates:
+    - reformatted and promoted bounded `src/data_management/*` group:
+      - `src/data_management/__init__.py`
+      - `src/data_management/data_store.py`
+      - `src/data_management/fetchers.py`
+      - `src/data_management/pydoll_fetcher.py`
+    - promoted migrated files into always-enforced format surfaces (`CMD-022`) in:
+      - `.github/workflows/ci.yml`
+      - `docs/manifest/09_runbook.md`
+    - removed migrated files from formatting debt allowlist:
+      - `scripts/quality_black_debt_allowlist.txt` (reduced from `77` to `73` lines).
+  - Docs/checklist updates:
+    - `docs/manifest/11_ci.md` (phase-4 debt-burn progress note)
+    - `docs/manifest/03_decisions.md` (ADR-0022)
+    - `docs/implementation/checklists/03_improvement_bets.md` (IMP-14 checked)
+    - `docs/implementation/checklists/02_milestones.md` (M8 second outcome checked)
+    - `docs/implementation/reports/improvement_directions.md` (IMP-14 completion + next prompt handoff)
+    - `docs/implementation/00_status.md`
+    - `docs/implementation/03_worklog.md`
+  - Verification:
+    - `./venv/bin/black src/data_management/__init__.py src/data_management/data_store.py src/data_management/fetchers.py src/data_management/pydoll_fetcher.py` -> pass
+    - `wc -l scripts/quality_black_debt_allowlist.txt` -> `73`
+    - `rg -n "^src/data_management/(__init__\\.py|data_store\\.py|fetchers\\.py|pydoll_fetcher\\.py)$" scripts/quality_black_debt_allowlist.txt` -> no matches
+    - `rg -n "src/data_management/__init__\\.py|src/data_management/data_store\\.py|src/data_management/fetchers\\.py|src/data_management/pydoll_fetcher\\.py|CMD-022" .github/workflows/ci.yml docs/manifest/09_runbook.md docs/manifest/11_ci.md`
+    - `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` -> pass
+    - `python3 project-prompts/scripts/prompts_manifest.py --check` -> pass
+    - `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` -> pass
+  - Result:
+    - IMP-14 is now complete and no longer open.
+    - next non-redundant prompt is `prompt-03-alignment-review-gate`.
+
+- Executed next non-redundant packet: `prompt-03-alignment-review-gate` (post-IMP-13 drift refresh, manual/no router script).
+  - Why this prompt: IMP-13 was complete, so one alignment rerun was required before moving to the next M8 implementation packet.
+  - Updated:
+    - `docs/implementation/checklists/07_alignment_review.md`
+    - `docs/implementation/reports/alignment_review.md`
+    - `docs/implementation/reports/improvement_directions.md`
+    - `docs/implementation/00_status.md`
+    - `docs/implementation/03_worklog.md`
+  - Evidence:
+    - `./venv/bin/python -m pytest -m unit -q` -> `50 passed, 28 deselected`
+    - `./venv/bin/python -m pytest -m integration -q` -> `21 passed, 1 skipped, 56 deselected`
+    - `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` -> pass
+    - `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` -> `events=274`, `alerts=16`, `regulation_query p95=3502.91ms`, saturation fields `None` in non-build window
+    - `python3 scripts/observability_cli.py summary --since-minutes 180 --events-limit 2000 --alerts-limit 1000 --as-json` -> `events_total=274`, `alerts_total=16`
+    - `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` -> pass
+    - `python3 project-prompts/scripts/prompts_manifest.py --check` -> pass
+    - `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` -> pass
+  - Result:
+    - Verdict remains `ALIGNED_WITH_RISKS`.
+    - M8 state is now explicit: `IMP-13` complete, `IMP-14` and `IMP-15` open.
+    - next non-redundant prompt is `prompt-02-app-development-playbook` for IMP-14.
+
+- Executed next non-redundant packet: `prompt-02-app-development-playbook` (IMP-13 threshold recalibration cadence policy, manual/no router script).
+  - Why this prompt: post-M7 prompt-14 re-ranking selected IMP-13 as the highest-impact immediate operational-discipline bet.
+  - Code/docs updates:
+    - added explicit `CMD-036` cadence and trigger policy in:
+      - `docs/manifest/07_observability.md`
+      - `docs/manifest/09_runbook.md`
+      - `docs/troubleshooting.md`
+    - added decision log entry:
+      - `docs/manifest/03_decisions.md` (ADR-0021)
+    - updated milestone and bet tracking:
+      - `docs/implementation/checklists/02_milestones.md` (M8 first outcome checked)
+      - `docs/implementation/checklists/03_improvement_bets.md` (IMP-13 checked)
+      - `docs/implementation/reports/improvement_directions.md`
+      - `docs/implementation/00_status.md`
+      - `docs/implementation/03_worklog.md`
+  - Verification:
+    - `rg -n "CMD-036|cadence|weekly|trigger|recalibration" docs/manifest/07_observability.md docs/manifest/09_runbook.md docs/troubleshooting.md`
+    - `python3 scripts/observability_cli.py summary --since-minutes 180 --events-limit 2000 --alerts-limit 1000 --as-json`
+    - `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500`
+    - `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` -> pass
+    - `./venv/bin/python -m pytest -m unit -q` -> `50 passed, 28 deselected`
+    - `./venv/bin/python -m pytest -m integration -q` -> `21 passed, 1 skipped, 56 deselected`
+    - `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` -> pass
+    - `python3 project-prompts/scripts/prompts_manifest.py --check` -> pass
+    - `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` -> pass
+  - Result:
+    - IMP-13 is now complete and no longer open.
+    - next non-redundant prompt is `prompt-03-alignment-review-gate`.
+
+- Executed next non-redundant packet: `prompt-14-improvement-direction-bet-loop` (post-IMP-12 re-ranking, manual/no router script).
+  - Why this prompt: post-IMP-12 alignment refresh confirmed M7 was fully complete; re-ranking was required to avoid repeating closed packets.
+  - Updated:
+    - `docs/implementation/reports/improvement_directions.md`
+    - `docs/implementation/checklists/03_improvement_bets.md`
+    - `docs/implementation/checklists/02_milestones.md`
+    - `docs/implementation/00_status.md`
+    - `docs/implementation/03_worklog.md`
+  - Evidence:
+    - `wc -l scripts/quality_black_debt_allowlist.txt` -> `77`
+    - `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` (saturation fields may be `None` outside build windows)
+    - `rg -n "CMD-036|calibration|threshold" docs/manifest/07_observability.md docs/manifest/09_runbook.md docs/troubleshooting.md`
+    - `./venv/bin/python -m pytest -m unit -q` -> `50 passed, 28 deselected`
+    - `./venv/bin/python -m pytest -m integration -q` -> `21 passed, 1 skipped, 56 deselected`
+    - `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` -> pass
+  - Result:
+    - selected immediate post-M7 bet: IMP-13 threshold recalibration cadence policy.
+    - added post-M7 bets (`IMP-13`..`IMP-15`) and mapped them into new milestone `M8`.
+    - next non-redundant prompt is `prompt-02-app-development-playbook` for IMP-13.
+
+- Executed next non-redundant packet: `prompt-03-alignment-review-gate` (post-IMP-12 drift refresh).
+  - Why this prompt: IMP-12 implementation was complete; one alignment rerun was required to confirm M7 closure and avoid repeating completed packets.
+  - Updated:
+    - `docs/implementation/checklists/07_alignment_review.md`
+    - `docs/implementation/reports/alignment_review.md`
+    - `docs/implementation/reports/improvement_directions.md`
+    - `docs/implementation/00_status.md`
+    - `docs/implementation/03_worklog.md`
+  - Evidence:
+    - `./venv/bin/python -m pytest -m unit -q` -> `50 passed, 28 deselected`
+    - `./venv/bin/python -m pytest -m integration -q` -> `21 passed, 1 skipped, 56 deselected`
+    - `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` -> pass
+    - `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` -> pass
+    - `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` -> pass
+    - `python3 project-prompts/scripts/prompts_manifest.py --check` -> pass
+    - `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` -> pass
+  - Result:
+    - Verdict remains `ALIGNED_WITH_RISKS`.
+    - M7 is confirmed fully complete.
+    - Next non-redundant prompt is `prompt-14-improvement-direction-bet-loop`.
+
+- Executed next non-redundant packet: `prompt-02-app-development-playbook` (IMP-12 optional live-network rehearsal policy, manual/no router script).
+  - Why this prompt: post-IMP-11 alignment refresh left IMP-12 as the only open M7 correction.
+  - Code/docs updates:
+    - bounded optional rehearsal guardrails implemented in:
+      - `tests/integration/iplan/test_pydoll_live_mavat_documents__optional.py`
+    - command map extended with live rehearsal command:
+      - `docs/manifest/09_runbook.md` (`CMD-037`)
+    - explicit cadence/guardrail policy documented in:
+      - `docs/manifest/10_testing.md`
+      - `docs/troubleshooting.md`
+      - `docs/manifest/11_ci.md`
+      - `docs/manifest/07_observability.md`
+    - decision and tracking artifacts updated:
+      - `docs/manifest/03_decisions.md` (ADR-0020)
+      - `docs/implementation/checklists/02_milestones.md` (M7 third outcome checked; M7 complete)
+      - `docs/implementation/checklists/03_improvement_bets.md` (IMP-12 checked)
+      - `docs/implementation/reports/improvement_directions.md`
+      - `docs/implementation/00_status.md`
+      - `docs/implementation/03_worklog.md`
+  - Verification:
+    - `./venv/bin/black --check tests/integration/iplan/test_pydoll_live_mavat_documents__optional.py` -> pass
+    - `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` -> pass
+    - `./venv/bin/python -m pytest -m integration -q` -> `21 passed, 1 skipped, 56 deselected`
+    - `./venv/bin/python -m pytest tests/integration/iplan/test_pydoll_live_mavat_documents__optional.py -q` -> `1 skipped`
+    - `RUN_NETWORK_TESTS=1 RUN_NETWORK_REHEARSAL_MAX_ATTEMPTS=1 RUN_NETWORK_REHEARSAL_TIMEOUT_SECONDS=45 ./venv/bin/python -m pytest tests/integration/iplan/test_pydoll_live_mavat_documents__optional.py -q` -> `1 skipped` (bounded live rehearsal path)
+    - `rg -n "RUN_NETWORK_TESTS|RUN_NETWORK_ALLOW_CI|RUN_NETWORK_REHEARSAL_MAX_ATTEMPTS|CMD-037|bounded|cadence" tests/integration/iplan/test_pydoll_live_mavat_documents__optional.py docs/troubleshooting.md docs/manifest/10_testing.md docs/manifest/09_runbook.md`
+    - `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` -> pass
+    - `python3 project-prompts/scripts/prompts_manifest.py --check` -> pass
+    - `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` -> pass
+  - Result:
+    - IMP-12 is now complete and no longer open.
+    - M7 is fully complete.
+    - Next non-redundant prompt is `prompt-03-alignment-review-gate`.
+
+- Executed next non-redundant packet: `prompt-03-alignment-review-gate` (post-IMP-11 drift refresh).
+  - Why this prompt: IMP-11 implementation was complete; one alignment rerun was required before executing the final open M7 packet.
+  - Updated:
+    - `docs/implementation/checklists/07_alignment_review.md`
+    - `docs/implementation/reports/alignment_review.md`
+    - `docs/implementation/reports/improvement_directions.md`
+    - `docs/implementation/00_status.md`
+    - `docs/implementation/03_worklog.md`
+  - Evidence:
+    - `./venv/bin/python -m pytest -m unit -q` -> `50 passed, 28 deselected`
+    - `./venv/bin/python -m pytest -m integration -q` -> `21 passed, 1 skipped, 56 deselected`
+    - `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` -> pass
+    - `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` -> pass
+    - `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` -> pass
+    - `python3 project-prompts/scripts/prompts_manifest.py --check` -> pass
+    - `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` -> pass
+  - Result:
+    - Verdict remains `ALIGNED_WITH_RISKS`.
+    - Next non-redundant prompt is `prompt-02-app-development-playbook` for IMP-12.
+
+- Executed next non-redundant packet: `prompt-02-app-development-playbook` (IMP-11 observability threshold calibration, manual/no router script).
+  - Why this prompt: post-IMP-10 alignment refresh identified IMP-11 as the highest-impact remaining M7 correction.
+  - Code/docs updates:
+    - calibrated regulation-query latency thresholds in `src/telemetry.py`:
+      - `sev3: 3000ms -> 4000ms`
+      - `sev2: 6000ms -> 8000ms`
+    - extended command map with threshold calibration snapshot:
+      - `docs/manifest/09_runbook.md` (`CMD-036`)
+    - updated calibration rationale and triage guidance:
+      - `docs/manifest/07_observability.md`
+      - `docs/troubleshooting.md`
+      - `docs/manifest/11_ci.md`
+    - updated decision log and M7 tracking artifacts:
+      - `docs/manifest/03_decisions.md` (ADR-0019)
+      - `docs/implementation/checklists/02_milestones.md` (M7 second outcome checked)
+      - `docs/implementation/checklists/03_improvement_bets.md` (IMP-11 checked)
+      - `docs/implementation/reports/improvement_directions.md`
+      - `docs/implementation/00_status.md`
+      - `docs/implementation/03_worklog.md`
+  - Verification:
+    - `python3 scripts/observability_cli.py summary --since-minutes 180 --events-limit 2000 --alerts-limit 1000 --as-json`
+    - `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500`
+    - `./venv/bin/python -m pytest tests/unit/infrastructure/test_telemetry_backend.py -q` -> `5 passed`
+    - `./venv/bin/black --check src/telemetry.py tests/unit/infrastructure/test_telemetry_backend.py` -> pass
+    - `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` -> pass
+    - `./venv/bin/python -m pytest -m unit -q` -> `50 passed, 28 deselected`
+    - `./venv/bin/python -m pytest -m integration -q` -> `21 passed, 1 skipped, 56 deselected`
+    - `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` -> pass
+    - `python3 project-prompts/scripts/prompts_manifest.py --check` -> pass
+    - `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` -> pass
+  - Result:
+    - IMP-11 is now complete and no longer open.
+    - Next non-redundant prompt is `prompt-03-alignment-review-gate`.
+
+- Executed next non-redundant packet: `prompt-03-alignment-review-gate` (post-IMP-10 drift refresh).
+  - Why this prompt: IMP-10 implementation was complete; one alignment rerun was required before selecting the next M7 implementation packet.
+  - Updated:
+    - `docs/implementation/checklists/07_alignment_review.md`
+    - `docs/implementation/reports/alignment_review.md`
+    - `docs/implementation/reports/improvement_directions.md`
+    - `docs/implementation/00_status.md`
+    - `docs/implementation/03_worklog.md`
+  - Evidence:
+    - `./venv/bin/python -m pytest -m unit -q` -> `49 passed, 28 deselected`
+    - `./venv/bin/python -m pytest -m integration -q` -> `21 passed, 1 skipped, 55 deselected`
+    - `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` -> pass
+    - `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` -> pass
+    - `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` -> pass
+    - `python3 project-prompts/scripts/prompts_manifest.py --check` -> pass
+    - `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` -> pass
+  - Result:
+    - Verdict remains `ALIGNED_WITH_RISKS`.
+    - Next non-redundant prompt is `prompt-02-app-development-playbook` for IMP-11.
+
+- Executed next non-redundant packet: `prompt-02-app-development-playbook` (IMP-10 formatting debt burn phase 3, manual/no router script).
+  - Why this prompt: post-IMP-09 reranking selected IMP-10 as the highest-impact immediate M7 packet.
+  - Code/config updates:
+    - reformatted and promoted bounded `src/application/*` group:
+      - `src/application/__init__.py`
+      - `src/application/dtos.py`
+      - `src/application/services/building_rights_service.py`
+      - `src/application/services/plan_upload_service.py`
+    - promoted migrated files into always-enforced format surfaces (`CMD-022`) in:
+      - `.github/workflows/ci.yml`
+      - `docs/manifest/09_runbook.md`
+    - removed migrated files from formatting debt allowlist:
+      - `scripts/quality_black_debt_allowlist.txt` (reduced from `81` to `77` lines).
+  - Docs/checklist updates:
+    - `docs/manifest/11_ci.md` (phase-3 debt-burn progress note)
+    - `docs/manifest/03_decisions.md` (ADR-0018)
+    - `docs/implementation/checklists/03_improvement_bets.md` (IMP-10 checked)
+    - `docs/implementation/checklists/02_milestones.md` (M7 first outcome checked)
+    - `docs/implementation/reports/improvement_directions.md` (IMP-10 completion + next prompt handoff)
+    - `docs/implementation/00_status.md`
+    - `docs/implementation/03_worklog.md`
+  - Verification:
+    - `./venv/bin/black src/application/__init__.py src/application/dtos.py src/application/services/building_rights_service.py src/application/services/plan_upload_service.py` -> pass
+    - `wc -l scripts/quality_black_debt_allowlist.txt` -> `77`
+    - `rg -n "^src/application/(__init__\\.py|dtos\\.py|services/building_rights_service\\.py|services/plan_upload_service\\.py)$" scripts/quality_black_debt_allowlist.txt` -> no matches
+    - `rg -n "src/application/__init__\\.py|src/application/dtos\\.py|src/application/services/building_rights_service\\.py|src/application/services/plan_upload_service\\.py|CMD-022" .github/workflows/ci.yml docs/manifest/09_runbook.md`
+    - `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` -> pass
+    - `./venv/bin/python -m pytest -m unit -q` -> `49 passed, 28 deselected`
+    - `./venv/bin/python -m pytest -m integration -q` -> `21 passed, 1 skipped, 55 deselected`
+    - `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` -> pass
+    - `python3 project-prompts/scripts/prompts_manifest.py --check` -> pass
+    - `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` -> pass
+  - Result:
+    - IMP-10 is now complete and no longer open.
+    - Next non-redundant prompt is `prompt-03-alignment-review-gate`.
+
+- Executed next non-redundant packet: `prompt-14-improvement-direction-bet-loop` (post-IMP-09 rerun).
+  - Why this prompt: alignment refresh mapped M7 corrections, and a ranking pass was required before implementation packet selection.
+  - Updated:
+    - `docs/implementation/reports/improvement_directions.md`
+    - `docs/implementation/checklists/03_improvement_bets.md`
+    - `docs/implementation/00_status.md`
+    - `docs/implementation/03_worklog.md`
+  - Result:
+    - Selected immediate bet: IMP-10 formatting debt burn phase 3.
+    - Next non-redundant prompt: `prompt-02-app-development-playbook` (IMP-10), then `prompt-03`.
+
+- Executed next non-redundant packet: `prompt-03-alignment-review-gate` (post-IMP-09 drift refresh).
+  - Why this prompt: IMP-09 implementation was complete; the chain required an alignment rerun before selecting the next bounded packet.
+  - Updated:
+    - `docs/implementation/checklists/07_alignment_review.md`
+    - `docs/implementation/reports/alignment_review.md`
+    - `docs/implementation/checklists/02_milestones.md` (M6 completed; M7 correction mapping added)
+    - `docs/implementation/reports/improvement_directions.md`
+    - `docs/implementation/00_status.md`
+    - `docs/implementation/03_worklog.md`
+  - Evidence:
+    - `./venv/bin/python -m pytest -m unit -q` -> `49 passed, 28 deselected`
+    - `./venv/bin/python -m pytest -m integration -q` -> `21 passed, 1 skipped, 55 deselected`
+    - `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` -> pass
+    - `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` -> pass
+    - `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` -> pass
+    - `python3 project-prompts/scripts/prompts_manifest.py --check` -> pass
+    - `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` -> pass
+  - Result:
+    - Verdict remains `ALIGNED_WITH_RISKS`.
+    - Next non-redundant prompt is `prompt-14-improvement-direction-bet-loop` for M7 re-ranking.
+
+- Executed next non-redundant packet: `prompt-02-app-development-playbook` (IMP-09 external dependency drill depth, manual/no router script).
+  - Why this prompt: `prompt-10` had already established stability; repeating it would be redundant, so the next value step was implementation/drill-depth follow-through.
+  - Added:
+    - `tests/integration/iplan/test_external_dependency_drills.py` (deterministic non-network iPlan failure rehearsal with degraded telemetry + alert assertions).
+  - Updated:
+    - `docs/manifest/09_runbook.md` (`CMD-034`, `CMD-035`, deterministic rehearsal path)
+    - `docs/troubleshooting.md` (explicit drill/rehearsal commands)
+    - `docs/manifest/07_observability.md` (guardrail/test coverage + command-map references)
+    - `docs/manifest/10_testing.md`
+    - `docs/implementation/checklists/02_milestones.md` (M6 third outcome checked)
+    - `docs/implementation/checklists/03_improvement_bets.md` (IMP-09 checked)
+    - `docs/implementation/reports/improvement_directions.md` (handoff updated to `prompt-03`)
+    - `docs/implementation/checklists/04_test_stabilization.md`
+    - `docs/implementation/00_status.md`
+    - `docs/implementation/03_worklog.md`
+  - Verification:
+    - `./venv/bin/python -m pytest tests/integration/iplan/test_external_dependency_drills.py -q` -> `5 passed`
+    - `./venv/bin/python -m pytest tests/unit/application/test_external_dependency_degraded_modes.py tests/unit/infrastructure/test_iplan_repository_error_signal.py tests/integration/iplan/test_external_dependency_drills.py -q` -> `9 passed`
+    - `rg -n "CMD-034|CMD-035|External dependency deterministic rehearsal" docs/manifest/09_runbook.md`
+    - `rg -n "test_external_dependency_drills.py|CMD-034|CMD-035|rehearsal" docs/troubleshooting.md docs/manifest/07_observability.md`
+  - Result:
+    - IMP-09 is now complete and no longer open.
+    - Next non-redundant prompt is `prompt-03-alignment-review-gate`.
+
+- Executed next non-redundant packet: `prompt-14-improvement-direction-bet-loop` (post-IMP-07 rerun).
+  - Why this prompt: after post-IMP-07 alignment refresh, re-ranking was needed to pick one immediate open bet and avoid prompt-loop drift.
+  - Updated:
+    - `docs/implementation/reports/improvement_directions.md`
+    - `docs/implementation/checklists/03_improvement_bets.md`
+    - `docs/implementation/checklists/02_milestones.md`
+    - `docs/implementation/00_status.md`
+    - `docs/implementation/03_worklog.md`
+  - Result:
+    - Selected immediate bet: IMP-08 observability backend evolution decision.
+    - Next prompt selected for execution: `prompt-02-app-development-playbook` (IMP-08).
+
+- Executed next non-redundant packet: `prompt-02-app-development-playbook` (IMP-08 observability backend evolution decision).
+  - Why this prompt: IMP-08 was selected by prompt-14 and had not yet been implemented.
+  - Deliverables updated:
+    - `docs/manifest/07_observability.md`
+    - `docs/manifest/03_decisions.md` (ADR-0017)
+    - `docs/implementation/checklists/03_improvement_bets.md`
+    - `docs/implementation/checklists/02_milestones.md`
+    - `docs/implementation/reports/improvement_directions.md`
+    - `docs/implementation/00_status.md`
+    - `docs/implementation/03_worklog.md`
+  - Verification:
+    - `rg -n "local-only|hosted|trigger|ADR-0017" docs/manifest/07_observability.md docs/manifest/03_decisions.md`
+    - `rg -n "IMP-08|observability backend evolution" docs/implementation/reports/improvement_directions.md docs/implementation/checklists/03_improvement_bets.md docs/implementation/checklists/02_milestones.md`
+    - `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` -> pass
+    - `./venv/bin/python -m pytest -m unit -q` -> `49 passed, 23 deselected`
+    - `./venv/bin/python -m pytest -m integration -q` -> `16 passed, 1 skipped, 55 deselected`
+    - `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` -> pass
+    - `python3 project-prompts/scripts/prompts_manifest.py --check` -> pass
+    - `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` -> pass
+  - Result:
+    - IMP-08 is now complete and no longer open.
+    - Next non-redundant prompt is `prompt-10-tests-stabilization-loop` for IMP-09 drill-depth shaping/evidence.
+
+- Executed next non-redundant packet: `prompt-03-alignment-review-gate` (post-IMP-07 drift refresh).
+  - Why this prompt: IMP-07 implementation packet completed; one alignment rerun is required before selecting the next bet to avoid stale routing.
+  - Updated:
+    - `docs/implementation/checklists/07_alignment_review.md`
+    - `docs/implementation/reports/alignment_review.md`
+    - `docs/implementation/00_status.md`
+    - `docs/implementation/03_worklog.md`
+  - Evidence:
+    - `./venv/bin/python -m pytest -m unit -q` -> `49 passed, 23 deselected`
+    - `./venv/bin/python -m pytest -m integration -q` -> `16 passed, 1 skipped, 55 deselected`
+    - `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` -> pass
+    - `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` -> pass
+    - `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` -> pass
+    - `python3 project-prompts/scripts/prompts_manifest.py --check` -> pass
+    - `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` -> pass
+  - Result:
+    - Verdict remains `ALIGNED_WITH_RISKS`.
+    - Next non-redundant prompt: `prompt-14-improvement-direction-bet-loop`.
+
+- Executed next non-redundant packet: `prompt-02-app-development-playbook` (IMP-07 formatting debt burn phase 2).
+  - Why this prompt: `prompt-14` selected IMP-07 as the highest-impact bounded next packet, and it had not yet been executed.
+  - Code/config updates:
+    - Reformatted bounded module group:
+      - `src/domain/__init__.py`
+      - `src/domain/entities/__init__.py`
+      - `src/domain/entities/analysis.py`
+      - `src/domain/entities/plan.py`
+      - `src/domain/entities/regulation.py`
+      - `src/domain/repositories/__init__.py`
+      - `src/domain/value_objects/__init__.py`
+      - `src/domain/value_objects/building_rights.py`
+      - `src/domain/value_objects/geometry.py`
+    - Promoted migrated group into always-enforced format surfaces (`CMD-022`) in:
+      - `.github/workflows/ci.yml`
+      - `docs/manifest/09_runbook.md`
+    - Regenerated formatting debt allowlist:
+      - `scripts/quality_black_debt_allowlist.txt` (reduced from 96 lines to 81 lines).
+  - Docs/checklist updates:
+    - `docs/manifest/11_ci.md` (phase-2 status and debt-burn progress)
+    - `docs/manifest/03_decisions.md` (ADR-0016)
+    - `docs/implementation/checklists/03_improvement_bets.md` (IMP-07 checked)
+    - `docs/implementation/checklists/02_milestones.md` (added M6 and marked formatting-burn outcome complete)
+    - `docs/implementation/reports/improvement_directions.md` (IMP-07 completion + next prompt handoff)
+    - `docs/implementation/00_status.md`
+    - `docs/implementation/03_worklog.md`
+  - Verification:
+    - `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` -> pass
+    - `./venv/bin/black --check src/telemetry.py src/observability/query.py src/application/services/regulation_query_service.py src/application/services/plan_search_service.py src/infrastructure/repositories/iplan_repository.py src/vectorstore/unified_pipeline.py src/domain/__init__.py src/domain/entities/__init__.py src/domain/entities/analysis.py src/domain/entities/plan.py src/domain/entities/regulation.py src/domain/repositories/__init__.py src/domain/value_objects/__init__.py src/domain/value_objects/building_rights.py src/domain/value_objects/geometry.py tests/unit/infrastructure/test_telemetry_backend.py tests/unit/infrastructure/test_observability_query.py tests/unit/application/test_external_dependency_degraded_modes.py tests/unit/infrastructure/test_iplan_repository_error_signal.py scripts/observability_cli.py scripts/check_release_semantics.py` -> pass
+    - `BASE_SHA=$(git rev-parse HEAD~1) && python3 scripts/quality_changed_python.py --base "$BASE_SHA" --head HEAD --exclude-file scripts/quality_black_debt_allowlist.txt --count` -> `2`
+    - `BASE_SHA=$(git rev-parse HEAD~1) && python3 scripts/quality_changed_python.py --base "$BASE_SHA" --head HEAD --exclude-file scripts/quality_black_debt_allowlist.txt --print0 | xargs -0 -r ./venv/bin/black --check` -> pass
+    - `wc -l scripts/quality_black_debt_allowlist.txt` -> `81`
+    - `rg -n "^src/domain/" scripts/quality_black_debt_allowlist.txt` -> no matches
+    - `./venv/bin/python -m pytest -m unit -q` -> `49 passed, 23 deselected`
+    - `./venv/bin/python -m pytest -m integration -q` -> `16 passed, 1 skipped, 55 deselected`
+    - `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` -> pass
+    - `python3 project-prompts/scripts/prompts_manifest.py --check` -> pass
+    - `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` -> pass
+  - Result:
+    - IMP-07 is now complete and no longer open.
+    - Next non-redundant prompt is `prompt-03-alignment-review-gate` once for post-IMP-07 refresh.
+
+- Executed next non-redundant packet: `prompt-14-improvement-direction-bet-loop` (post-M5 rerun).
+  - Why this prompt: after M5 closure and alignment rerun, the next required move was to re-rank opportunities for the next bounded packet.
+  - Updated:
+    - `docs/implementation/reports/improvement_directions.md`
+    - `docs/implementation/checklists/03_improvement_bets.md`
+    - `docs/implementation/00_status.md`
+    - `docs/implementation/03_worklog.md`
+  - Result:
+    - Selected immediate direction: IMP-07 formatting debt burn phase 2.
+    - Added open next-cycle bets (IMP-07, IMP-08, IMP-09).
+    - Next recommended prompt: `prompt-02-app-development-playbook` for IMP-07, then `prompt-03` once.
+
+- Executed next non-redundant packet: `prompt-03-alignment-review-gate` (post-M5 drift refresh).
+  - Why this prompt: M5 corrections 1-3 are now complete; the packet chain requires one alignment rerun before selecting the next cycle bet.
+  - Updated:
+    - `docs/implementation/checklists/07_alignment_review.md`
+    - `docs/implementation/reports/alignment_review.md`
+    - `docs/implementation/00_status.md`
+    - `docs/implementation/03_worklog.md`
+  - Evidence:
+    - `./venv/bin/python -m pytest -m unit -q` -> `49 passed, 23 deselected`
+    - `./venv/bin/python -m pytest -m integration -q` -> `16 passed, 1 skipped, 55 deselected`
+    - `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` -> pass
+    - `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` -> pass
+    - `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` -> pass
+    - `python3 project-prompts/scripts/prompts_manifest.py --check` -> pass
+    - `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` -> pass
+  - Result:
+    - Verdict remains `ALIGNED_WITH_RISKS` with updated residual risk profile.
+    - Next recommended prompt: `prompt-14-improvement-direction-bet-loop`.
+
+- Executed next non-redundant packet: `prompt-02-app-development-playbook` (M5 correction 3: reproducibility lock + dependency-doc drift automation).
+  - Why this prompt: after M5 corrections 1 and 2, the remaining open correction was reproducible environment lock + dependency/docs drift detection.
+  - Added:
+    - `requirements.lock`
+    - `scripts/check_dependency_sync.py`
+    - `docs/reference/dependencies.md`
+  - CI/runbook/docs updates:
+    - `.github/workflows/ci.yml` (`CMD-033` dependency lock/docs drift check)
+    - `docs/manifest/09_runbook.md` (`CMD-032`, `CMD-033`)
+    - `docs/manifest/11_ci.md`
+    - `docs/manifest/02_tech_stack.md`
+    - `docs/manifest/03_decisions.md` (ADR-0015)
+    - `docs/troubleshooting.md`
+    - `docs/reference/cli.md`
+    - `docs/INDEX.md`
+    - `docs/implementation/checklists/02_milestones.md` (M5 correction 3 checked)
+    - `docs/implementation/reports/improvement_directions.md` (handoff updated to prompt-03)
+    - `checkbox.md` (reproducibility/dependency drift items updated)
+  - Regression found and fixed during packet verification:
+    - installing from manifests pulled `pytest-asyncio 0.23.x`, which is incompatible with `pytest 9` and caused collection internal errors.
+    - fixed by updating `requirements-dev.txt` to `pytest-asyncio>=1,<2`.
+    - regenerated lock + dependency inventory after the fix.
+  - Verification:
+    - `test -f requirements.lock` -> pass
+    - `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` -> pass
+    - `rg -n "CMD-032|CMD-033|check_dependency_sync.py|requirements.lock" docs/manifest/09_runbook.md docs/manifest/11_ci.md .github/workflows/ci.yml`
+    - `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` -> pass
+    - `./venv/bin/black --check scripts/quality_changed_python.py scripts/check_dependency_sync.py src/application/services/regulation_query_service.py src/telemetry.py src/observability/query.py src/application/services/plan_search_service.py src/infrastructure/repositories/iplan_repository.py src/vectorstore/unified_pipeline.py tests/unit/infrastructure/test_telemetry_backend.py tests/unit/infrastructure/test_observability_query.py tests/unit/application/test_external_dependency_degraded_modes.py tests/unit/infrastructure/test_iplan_repository_error_signal.py scripts/observability_cli.py scripts/check_release_semantics.py` -> pass
+    - `./venv/bin/python -m pytest -m unit -q` -> `49 passed, 23 deselected`
+    - `./venv/bin/python -m pytest -m integration -q` -> `16 passed, 1 skipped, 55 deselected`
+  - Result:
+    - M5 corrections 1-3 are now all complete.
+    - Next packet moved to post-M5 alignment refresh (`prompt-03`), now complete.
+
+- Executed next non-redundant packet: `prompt-02-app-development-playbook` (M5 correction 2: CI quality gate breadth with bounded debt).
+  - Why this prompt: M5 correction 1 was completed and the next open correction from alignment/milestones was CI quality gate breadth; this advances packet execution without repeating prompt-03 loops.
+  - Code/workflow updates:
+    - `.github/workflows/ci.yml`
+      - `quality` job now runs repo-wide parse/syntax lint (`ruff check . --select E9,F63,F7 --exclude project-prompts`) as `CMD-021`.
+      - Added changed-file formatting gate (`CMD-030`) that computes changed Python files per PR/push base SHA and runs `black --check`.
+      - Kept maintained-surface fallback guard (`CMD-022`).
+    - Added helper script:
+      - `scripts/quality_changed_python.py` (changed-file discovery for Python paths with optional debt allowlist filtering).
+    - Added formatting debt baseline:
+      - `scripts/quality_black_debt_allowlist.txt` (tracked allowlist for phased formatting migration).
+  - Docs/checklist updates:
+    - `docs/manifest/09_runbook.md` (`CMD-021` updated; `CMD-030`, `CMD-031` added; triage sequence updated)
+    - `docs/manifest/11_ci.md` (quality job expanded + debt-burn sequencing)
+    - `docs/manifest/10_testing.md` (gap statement updated to phased format enforcement)
+    - `docs/manifest/03_decisions.md` (ADR-0014)
+    - `docs/implementation/checklists/02_milestones.md` (M5 correction 2 checked)
+    - `docs/implementation/reports/improvement_directions.md` (M5 correction progress/handoff refreshed)
+    - `checkbox.md` (stale CI wording refreshed)
+  - Verification:
+    - `rg -n "Expanded lint gate|CMD-021|CMD-022|CMD-030|quality_changed_python.py|ruff check \\.|black --check" .github/workflows/ci.yml`
+    - `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` -> pass
+    - `./venv/bin/black --check scripts/quality_changed_python.py src/telemetry.py src/observability/query.py src/application/services/regulation_query_service.py src/application/services/plan_search_service.py src/infrastructure/repositories/iplan_repository.py src/vectorstore/unified_pipeline.py tests/unit/infrastructure/test_telemetry_backend.py tests/unit/infrastructure/test_observability_query.py tests/unit/application/test_external_dependency_degraded_modes.py tests/unit/infrastructure/test_iplan_repository_error_signal.py scripts/observability_cli.py scripts/check_release_semantics.py` -> pass
+    - `BASE_SHA=$(git rev-parse HEAD~1) && python3 scripts/quality_changed_python.py --base "$BASE_SHA" --head HEAD --exclude-file scripts/quality_black_debt_allowlist.txt --count` -> `2`
+    - `BASE_SHA=$(git rev-parse HEAD~1) && python3 scripts/quality_changed_python.py --base "$BASE_SHA" --head HEAD --exclude-file scripts/quality_black_debt_allowlist.txt --print0 | xargs -0 -r ./venv/bin/black --check` -> pass
+    - `wc -l scripts/quality_black_debt_allowlist.txt` -> `96`
+    - `./venv/bin/python -m pytest -m unit -q` -> `49 passed, 23 deselected`
+    - `./venv/bin/python -m pytest -m integration -q` -> `16 passed, 1 skipped, 55 deselected`
+    - `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` -> pass
+    - `python3 project-prompts/scripts/prompts_manifest.py --check` -> pass
+    - `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` -> pass
+  - Result:
+    - M5 correction 2 is now complete in milestones.
+    - Next non-redundant packet is M5 correction 3 (`prompt-02` reproducibility lock + dependency-doc drift automation), then `prompt-03` once.
+
+- Executed next non-redundant packet: `prompt-02-app-development-playbook` (M5 correction 1: observability UX depth and richer saturation signals).
+  - Why this prompt: post-IMP-04 alignment explicitly prioritized observability UX/saturation depth as correction 1.
+  - Implemented:
+    - richer build saturation/resource snapshot fields in `src/vectorstore/unified_pipeline.py`
+    - memory/disk saturation alert routing in `src/telemetry.py`
+    - degraded reason counts and saturation percentiles in `src/observability/query.py`
+    - operator `dashboard` command in `scripts/observability_cli.py`
+  - Updated docs/checklists:
+    - `docs/manifest/07_observability.md`
+    - `docs/manifest/09_runbook.md` (`CMD-029`)
+    - `docs/reference/cli.md`
+    - `docs/implementation/checklists/02_milestones.md` (M5 correction 1 checked)
+    - `docs/manifest/03_decisions.md` (ADR-0013)
+  - Verification:
+    - `./venv/bin/ruff check src tests scripts --select E9,F63,F7` -> pass
+    - `./venv/bin/python -m pytest tests/unit/infrastructure/test_observability_query.py -q` -> pass
+    - `./venv/bin/python -m pytest tests/unit/infrastructure/test_telemetry_backend.py -q` -> pass
+    - `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` -> pass
+  - Result:
+    - M5 correction 1 is complete and command-map aligned.
+    - Next packet moved to M5 correction 2.
+
+- Executed next non-redundant packet: `prompt-03-alignment-review-gate` (post-IMP-04 drift refresh).
+  - Why this prompt: after closing IMP-04 implementation, the status/report handoff explicitly required a single alignment gate rerun before selecting the next build packet.
+  - Updated:
+    - `docs/implementation/checklists/07_alignment_review.md`
+    - `docs/implementation/reports/alignment_review.md`
+    - `docs/implementation/checklists/02_milestones.md` (added open M5 follow-up outcomes mapped from alignment corrections)
+    - `docs/implementation/00_status.md`
+    - `docs/implementation/03_worklog.md`
+  - Evidence run for this gate:
+    - `./venv/bin/python -m pytest -m unit -q` -> `48 passed, 23 deselected`
+    - `./venv/bin/python -m pytest -m integration -q` -> `16 passed, 1 skipped`
+    - `./venv/bin/ruff check src tests scripts --select E9,F63,F7` -> pass
+    - `python3 scripts/observability_cli.py summary --events-limit 500 --alerts-limit 500` -> pass
+    - `python3 project-prompts/scripts/prompts_manifest.py --check` -> pass
+    - `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` -> pass
+  - Result:
+    - Verdict remains `ALIGNED_WITH_RISKS`.
+    - IMP-04 correction is now treated as closed in alignment artifacts.
+    - New top corrections are now:
+      - observability UX/saturation depth,
+      - broader CI quality coverage,
+      - reproducibility lock + dependency-doc drift automation.
+  - Next: execute `prompt-02-app-development-playbook` for M5 correction 1 (observability UX depth), then rerun `prompt-03` once.
+
+- Selected and executed the next non-redundant packet: `prompt-10-tests-stabilization-loop`.
+  - Why this prompt: both `docs/implementation/00_status.md` and `docs/implementation/reports/improvement_directions.md` identified external dependency degraded-mode reliability as the highest remaining risk packet, and the immediate chain recommended `prompt-10` first.
+  - Command-source path evidence captured from:
+    - `.github/workflows/ci.yml`
+    - `pytest.ini`
+    - `docs/manifest/09_runbook.md`
+  - Environment/dependency evidence:
+    - `uname -a`, `sw_vers`, `./venv/bin/python --version`, `./venv/bin/pip --version`
+    - `shasum -a 256 requirements.txt requirements-dev.txt`
+  - Stage 1 baseline runs:
+    - `./venv/bin/python -m pytest -m unit -q` -> `44 passed, 23 deselected`
+    - `./venv/bin/python -m pytest -m data_contracts -q` -> `17 passed, 50 deselected`
+    - `./venv/bin/python -m pytest -m integration -q` -> `16 passed, 1 skipped, 50 deselected`
+    - `./venv/bin/python -m pytest -m e2e -q` -> `5 passed, 62 deselected`
+  - Flake-proof reruns (prompt-10 requirement):
+    - Unit suite to 3 total passes (`44 passed` each run)
+    - Data-contract suite to 3 total passes (`17 passed` each run)
+    - Historical failing tests rerun 5x each:
+      - `tests/integration/data_contracts/test_boundary_payload_contracts.py::test_chroma_metadata__required_keys_present__no_null_values`
+      - `tests/unit/domain/test_building_rights_calculator.py::test_calculate_from_zone__tama35__more_intense_than_r2`
+    - Full suite rerun:
+      - `./venv/bin/python -m pytest -q` -> `66 passed, 1 skipped`
+  - Result:
+    - No failing cluster required code changes in this packet.
+    - Optional network test skip remains explicit and correctly gated:
+      - `tests/integration/iplan/test_pydoll_live_mavat_documents__optional.py` (`RUN_NETWORK_TESTS=1`).
+    - No architecture-boundary mismatch was surfaced; no new checkbox update was required in `docs/implementation/checklists/00_architecture_coherence.md`.
+  - Deliverables updated:
+    - `docs/implementation/checklists/04_test_stabilization.md`
+    - `docs/implementation/reports/test_stabilization_final_report.md`
+    - `docs/implementation/00_status.md`
+    - `docs/implementation/03_worklog.md`
+  - Next: execute `prompt-02-app-development-playbook` for IMP-04 degraded-mode implementation follow-through, then rerun `prompt-03` once.
+
+- Executed next non-redundant packet: `prompt-02-app-development-playbook` (IMP-04 degraded-mode implementation follow-through).
+  - Why this prompt: after prompt-10 stabilization closed cleanly, the next explicit chain from the improvement plan was `prompt-02` implementation for external dependency degradation guardrails.
+  - Code updates:
+    - `src/application/services/regulation_query_service.py`
+      - LLM synthesis failures now route to deterministic fallback answers.
+      - Success telemetry is now `outcome=degraded` with `degraded_reasons=["llm_synthesis_unavailable"]` when fallback is triggered from synthesis failure.
+    - `src/application/services/plan_search_service.py`
+      - Added degraded-reason aggregation for iPlan/vision dependencies.
+      - Emits explicit degraded metadata (`degraded_reasons`, `degraded_plan_count`, `degraded_reason_count`).
+      - Added optional consumption of repository boundary error signal via duck-typed `consume_last_error()`.
+    - `src/infrastructure/repositories/iplan_repository.py`
+      - Added structured boundary error capture and `consume_last_error()` for query/image operations.
+  - Test updates:
+    - Added `tests/unit/application/test_external_dependency_degraded_modes.py`.
+    - Added `tests/unit/infrastructure/test_iplan_repository_error_signal.py`.
+    - Updated `tests/unit/application/test_regulation_query_service__fallback.py` fallback string assertion.
+  - CI/docs/runbook updates:
+    - `.github/workflows/ci.yml` (`CMD-022` format guard expanded to include new IMP-04 files)
+    - `docs/manifest/09_runbook.md` (`CMD-027`, `CMD-028` for degraded/error event triage; updated `CMD-022`)
+    - `docs/manifest/07_observability.md`
+    - `docs/troubleshooting.md`
+    - `docs/manifest/11_ci.md`
+    - `docs/manifest/03_decisions.md` (ADR-0012)
+    - `docs/implementation/checklists/02_milestones.md` (M4 IMP-04 outcome checked)
+    - `docs/implementation/checklists/03_improvement_bets.md` (IMP-04 checked)
+    - `docs/implementation/reports/improvement_directions.md` (handoff now points to `prompt-03`)
+    - `checkbox.md` (stale observability/CI statements refreshed)
+  - Verification:
+    - `./venv/bin/python -m pytest tests/unit/application/test_regulation_query_service__fallback.py -q` -> `4 passed`
+    - `./venv/bin/python -m pytest tests/unit/application/test_external_dependency_degraded_modes.py -q` -> `3 passed`
+    - `./venv/bin/python -m pytest tests/unit/infrastructure/test_iplan_repository_error_signal.py -q` -> `1 passed`
+    - `./venv/bin/ruff check src tests scripts --select E9,F63,F7` -> pass
+    - `./venv/bin/black --check src/telemetry.py src/observability/query.py src/application/services/regulation_query_service.py src/application/services/plan_search_service.py src/infrastructure/repositories/iplan_repository.py src/vectorstore/unified_pipeline.py tests/unit/infrastructure/test_telemetry_backend.py tests/unit/infrastructure/test_observability_query.py tests/unit/application/test_external_dependency_degraded_modes.py tests/unit/infrastructure/test_iplan_repository_error_signal.py scripts/observability_cli.py scripts/check_release_semantics.py` -> pass
+    - `./venv/bin/python -m pytest -m unit -q` -> `48 passed, 23 deselected`
+    - `./venv/bin/python -m pytest -m integration -q` -> `16 passed, 1 skipped`
+    - `python3 scripts/observability_cli.py events --outcome degraded --since-minutes 120 --limit 5` -> `No matching events`
+    - `python3 scripts/observability_cli.py events --outcome error --since-minutes 120 --limit 5` -> `No matching events`
+    - `python3 project-prompts/scripts/prompts_manifest.py --check` -> pass (exit 0)
+    - `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` -> pass
+    - `rg -n "degraded_reasons|iplan_|vision_service_unavailable|llm_synthesis_unavailable" src/application/services/regulation_query_service.py src/application/services/plan_search_service.py`
+    - `rg -n "CMD-027|CMD-028|degraded|external dependency" docs/manifest/09_runbook.md docs/manifest/07_observability.md docs/troubleshooting.md`
+  - Result:
+    - IMP-04 is now implemented and marked complete in active checklists.
+    - External dependency degraded paths are explicit, deterministic, and triage-ready.
+  - Next: run `prompt-03-alignment-review-gate` once to refresh post-IMP-04 alignment and select the next packet.
+
+## 2026-02-08
+- Ran prompt routing against current repo state and generated execution plan.
+  - Command: `python3 project-prompts/scripts/prompt_router.py select --target-root . --phase auto --output docs/implementation/reports/prompt_execution_plan.md`
+  - Result: primary prompt `prompt-02-app-development-playbook`, immediate sequence `prompt-01`, `prompt-04`, `prompt-07`.
+  - Next: execute docs-first shape packet deliverables.
+
+- Executed prompt packet deliverables for `prompt-02` + required `prompt-01`, `prompt-04`, and `prompt-07` outputs.
+  - Added docs system lock file and manifest baseline.
+  - Added PRD, acceptance checklist, assumptions register, project plan, milestones, epics, architecture coherence checklist/report, and root audit checklist.
+  - Next: rerun router to detect remaining required prompts.
+
+- Reran routing after baseline updates.
+  - Command: `python3 project-prompts/scripts/prompt_router.py select --target-root . --phase auto --format json`
+  - Result: selected `prompt-03-alignment-review-gate`.
+  - Next: execute alignment gate artifacts.
+
+- Executed alignment review gate deliverables.
+  - Added `docs/implementation/checklists/07_alignment_review.md` and `docs/implementation/reports/alignment_review.md`.
+  - Marked verdict `ALIGNED_WITH_RISKS` and mapped top corrections into milestone packet.
+  - Next: implement M1 P0 outcomes (CI baseline + release discipline).
+
+- Verified prompt-pack integrity commands.
+  - Command: `python3 project-prompts/scripts/prompts_manifest.py --check`
+  - Command: `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts`
+  - Result: checks passed.
+  - Next: keep command-map parity as CI is introduced.
+
+- Attempted runtime verification with unit marker suite.
+  - Command: `./venv/bin/python -m pytest -m unit`
+  - Result: blocked during collection due to missing dependency `pydoll` (`ModuleNotFoundError` in `src/data_management/pydoll_fetcher.py` import path).
+  - Evidence: `./venv/bin/python -m pip show pydoll-python` -> package not installed.
+  - Next: install missing dependency or make pydoll import optional for non-network unit paths.
+
+- Resolved missing dependency and reran verification.
+  - Command: `./venv/bin/pip install pydoll-python`
+  - Command: `./venv/bin/python -m pytest -m unit`
+  - Result: pass (`37 passed, 23 deselected`).
+  - Next: keep CI dependency setup explicit so this does not regress.
+
+- Executed prompt-11 documentation/release-discipline packet.
+  - Added `CHANGELOG.md` and Diataxis docs tree under `docs/getting_started`, `docs/tutorials`, `docs/how_to`, `docs/reference`, `docs/explanation`.
+  - Added release checklist: `docs/implementation/checklists/06_release_readiness.md`.
+  - Updated `docs/INDEX.md` with full navigation + docs bet (`Now/Not now`).
+  - Next: implement CI workflow and release automation mapped by new reference docs.
+
+- Executed bounded prompt-09 test refactor packet.
+  - Added:
+    - `docs/implementation/reports/test_landscape.md`
+    - `docs/implementation/reports/test_architecture_plan.md`
+    - `docs/implementation/checklists/03_test_refactor.md`
+  - Decision: no large test tree move was needed; existing structure already matches target pyramid and flow grouping.
+  - Verification:
+    - `/usr/bin/time -lp ./venv/bin/python -m pytest -m unit -q` -> `37 passed`
+    - `/usr/bin/time -lp ./venv/bin/python -m pytest -q` -> `59 passed, 1 skipped`
+  - Next: enforce these checks through CI once workflows are added.
+
+- Refreshed prompt-07 audit output after release-doc and test packet updates.
+  - Updated `checkbox.md` to reflect current state (release docs now present, CI/observability still top gaps).
+  - Next: implement the remaining P0 CI workflow outcome.
+
+- Executed recurring prompt-03 alignment gate rerun for phase-5 signoff context.
+  - Command: `python3 project-prompts/scripts/prompt_router.py select --target-root . --phase auto --format json`
+  - Result: router requested pre-release re-run of `prompt-03`; checklist/report updated with rerun note.
+  - Next: proceed to CI workflow implementation packet (M1) as highest remaining actionable gap.
+
+- Executed another prompt-03 phase-5 rerun as requested.
+  - Command: `python3 project-prompts/scripts/prompt_router.py select --target-root . --phase auto --format json`
+  - Result: same recommendation (`prompt-03-alignment-review-gate`) with no new missing required artifacts.
+  - Next: no new prompt IDs required; move to CI implementation packet if continuing execution.
+
+- Executed prompt-03 rerun again on latest request.
+  - Command: `python3 project-prompts/scripts/prompt_router.py select --target-root . --phase auto --format json`
+  - Result: unchanged recommendation (`prompt-03` only), `missing_required_artifacts` remains empty.
+  - Next: no additional not-yet-run prompts needed; actionable remaining work is CI implementation (M1).
+
+- Executed prompt-03 rerun once more on latest request.
+  - Command: `python3 project-prompts/scripts/prompt_router.py select --target-root . --phase auto --format json`
+  - Result: unchanged recommendation (`prompt-03` only), `missing_required_artifacts` remains empty.
+  - Next: no additional prompt IDs required; remaining work is implementation (CI/observability packets).
+
+- Executed prompt-03 rerun again from latest router output.
+  - Command: `python3 project-prompts/scripts/prompt_router.py select --target-root . --phase auto --format json`
+  - Result: unchanged recommendation (`prompt-03` only), still no additional not-yet-run required prompt IDs.
+  - Next: begin CI baseline implementation packet when transitioning from prompt reruns to code execution work.
+
+- Confirmed prompt recommendation remains unchanged on latest check.
+  - Command: `python3 project-prompts/scripts/prompt_router.py select --target-root . --phase auto --format json`
+  - Result: `prompt-03` only (`generated_at: 2026-02-08T22:19:55+00:00`), `missing_required_artifacts` still empty.
+  - Next: no additional prompt IDs required; proceed to M1 implementation work.
+
+- Executed prompt-03 rerun again via routed execution plan command.
+  - Command: `python3 project-prompts/scripts/prompt_router.py select --target-root . --phase auto --output docs/implementation/reports/prompt_execution_plan.md`
+  - Result: `prompt-03` only (`Generated: 2026-02-08T22:20:45+00:00`), `missing_required_artifacts` remains empty.
+  - Next: no additional required prompts are pending; continue with M1 CI implementation packet.
+
+- Verified no additional required prompt IDs after rerun.
+  - Command: `python3 project-prompts/scripts/prompt_router.py select --target-root . --phase auto --format json`
+  - Result: `prompt-03` remains sole recommendation (`generated_at: 2026-02-08T22:21:23+00:00`), `missing_required_artifacts: []`.
+  - Next: proceed to implementation packet work (CI/observability) rather than further prompt reruns.
+
+- Ran prompt-00 manually after updating prompt library (router script removed upstream).
+  - Method: prompt-first scoring from `project-prompts/prompt-00-prompt-routing-plan.md` (no `.py` routing script).
+  - Output: refreshed `docs/implementation/reports/prompt_execution_plan.md` with >=8 candidates and selected `prompt-02-app-development-playbook` as the immediate packet.
+  - Next: execute `prompt-02` M1 reliability packet.
+
+- Executed `prompt-02` M1 reliability packet (CI baseline + release/command-map sync).
+  - Added/updated:
+    - `.github/workflows/ci.yml`
+    - `docs/manifest/11_ci.md`
+    - `docs/manifest/09_runbook.md`
+    - `docs/reference/release_workflow.md`
+    - `docs/implementation/checklists/02_milestones.md`
+    - `docs/manifest/03_decisions.md`
+  - Verification:
+    - `./venv/bin/python -m pytest -m unit -q` -> `37 passed`
+    - `./venv/bin/python -m pytest -m integration -q` -> `16 passed, 1 skipped`
+    - `./venv/bin/python -m pytest -m e2e -q` -> `5 passed`
+    - `./venv/bin/python -m pytest -m data_contracts -q` -> `17 passed`
+    - `python3 project-prompts/scripts/prompts_manifest.py --check` -> pass
+    - `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` -> pass
+  - Next: move to M2 observability/architecture packet and run `prompt-03` once after M2 packet completion for updated alignment verdict.
+
+- Selected and executed a non-redundant next prompt: `prompt-04-architecture-coherence-loop`.
+  - Why this prompt: M2 had an explicit open architecture-drift milestone item; running `prompt-03` again would not close that implementation-facing gap.
+  - Updated deliverables:
+    - `docs/manifest/01_architecture.md`
+    - `docs/manifest/04_api_contracts.md`
+    - `docs/manifest/05_data_model.md`
+    - `docs/ARCHITECTURE.md`
+    - `docs/HOW_IT_WORKS.md`
+    - `docs/implementation/checklists/00_architecture_coherence.md`
+    - `docs/implementation/reports/architecture_coherence_report.md`
+  - Verification:
+    - `test -f app.py && test -f scripts/data_cli.py && test -f scripts/build_vectordb_cli.py`
+    - `rg -n "^markers =|unit:|integration:|e2e:|data_contracts:" pytest.ini`
+    - `test -f .github/workflows/ci.yml && rg -n "pytest -m unit|pytest -m integration|pytest -m e2e|pytest -m data_contracts" .github/workflows/ci.yml`
+    - `python3 project-prompts/scripts/prompts_manifest.py --check`
+    - `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts`
+  - Result: architecture coherence verdict remains `GO_WITH_RISKS`; legacy-doc drift item closed, observability and release-tag workflow remain open.
+  - Next: run `prompt-02` M2 observability instrumentation packet, then run `prompt-03` once for updated alignment verdict.
+
+- Selected and executed next non-redundant prompt: `prompt-02-app-development-playbook` (M2 observability packet).
+  - Why this prompt: after closing architecture-drift docs with `prompt-04`, the remaining M2 outcome required code-level instrumentation (query/build workflows), which `prompt-02` is designed to implement.
+  - Code updates:
+    - `src/telemetry.py` (structured event + JSONL metric helpers)
+    - `src/application/services/regulation_query_service.py` (`OBS_EVENT` start/success/error with `request_id`, latency, outcome)
+    - `src/application/services/plan_search_service.py` (matching structured observability events)
+    - `src/vectorstore/unified_pipeline.py` (`run_id` correlation + build outcome events + metrics sink append)
+    - `src/application/dtos.py` (`RegulationQuery.request_id`)
+  - Docs/checklist updates:
+    - `docs/manifest/07_observability.md`
+    - `docs/manifest/09_runbook.md` (`CMD-015` metrics sink inspection)
+    - `docs/implementation/checklists/02_milestones.md` (M2 observability outcome checked)
+    - `docs/implementation/checklists/00_architecture_coherence.md`
+    - `docs/implementation/reports/architecture_coherence_report.md`
+  - Verification:
+    - `./venv/bin/python -m pytest tests/unit/application/test_regulation_query_service__fallback.py -q` -> `4 passed`
+    - `./venv/bin/python -m pytest -m unit -q` -> `37 passed`
+    - `rg -n "OBS_EVENT|emit_observability_event|workflow_metrics.jsonl|request_id" src/application/services/regulation_query_service.py src/application/services/plan_search_service.py src/vectorstore/unified_pipeline.py src/telemetry.py`
+    - `python3 project-prompts/scripts/prompts_manifest.py --check` -> pass
+    - `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` -> pass
+  - Result: M2 observability outcome is now partially implemented and marked complete; remaining ops gaps are release-tag workflow and dashboard/alert backend.
+  - Next: run `prompt-03` once to refresh post-M2 alignment verdict.
 
 ## 2026-02-06
-
 - Baseline: `./venv/bin/python -m pytest -q` was green after refactor (53 tests).
   - Next: add required documentation system + flake-proof reruns.
 
 - Bug fix (pipeline): `VectorDBLoader._parse_regulation_type()` referenced non-existent `RegulationType.*` members.
   - Change: map iPlan subtype metadata to existing coarse `RegulationType` enum values.
-  - Files: `/Users/nirtzur/Documents/projects/GISArchAgent/src/data_pipeline/core/loader.py`
+  - Files: `src/data_pipeline/core/loader.py`
   - Next: validate with unit mapping tests + full suite.
 
 - Bug fix (domain): `BuildingRightsCalculator.calculate_from_zone()` used substring checks (`'A' in zone_upper`) that misclassified `TAMA35` and `C1`.
   - Change: normalize zone code and prefer explicit prefixes (`R1/R2/R3/C1/TAMA35`).
-  - Files: `/Users/nirtzur/Documents/projects/GISArchAgent/src/domain/value_objects/building_rights.py`
+  - Files: `src/domain/value_objects/building_rights.py`
   - Next: run targeted unit tests 5x + unit suite.
 
 - Verification (non-flake proof):
   - Unit suite `3x`: `./venv/bin/python -m pytest -m unit`
-  - Unit contracts: `./venv/bin/python -m pytest -m \"unit and data_contracts\"`
+  - Unit contracts: `./venv/bin/python -m pytest -m "unit and data_contracts"`
   - Data contracts `3x`: `./venv/bin/python -m pytest -m data_contracts`
   - Integration suite `3x`: `./venv/bin/python -m pytest -m integration`
   - E2E suite: `./venv/bin/python -m pytest -m e2e`
@@ -26,3 +1168,704 @@
     - `tests/unit/domain/test_building_rights_calculator.py::test_calculate_from_zone__tama35__more_intense_than_r2`
   - Full suite: `./venv/bin/python -m pytest`
   - Next: none (optional CI follow-up).
+
+- Executed `prompt-03-alignment-review-gate` manually with fresh post-M2 evidence (no router script loop).
+  - Updated:
+    - `docs/implementation/checklists/07_alignment_review.md`
+    - `docs/implementation/reports/alignment_review.md`
+  - Result: verdict remains `ALIGNED_WITH_RISKS`; top open drift moved to observability backend depth, CI quality-gate depth, and M3 docs cleanup.
+  - Next: execute highest-impact correction as a non-redundant packet.
+
+- Executed next non-redundant prompt packet: `prompt-02-app-development-playbook` (release-tag automation follow-up).
+  - Why this prompt: alignment correction required implementation (workflow + docs mapping), not another gate rerun.
+  - Added:
+    - `.github/workflows/release.yml` (tag trigger `v*`, marker+prompt integrity gates, GitHub release publish step)
+  - Updated:
+    - `docs/reference/release_workflow.md`
+    - `docs/manifest/11_ci.md`
+    - `docs/manifest/09_runbook.md` (added `CMD-016`..`CMD-018`)
+    - `docs/implementation/checklists/02_milestones.md`
+    - `docs/manifest/03_decisions.md` (ADR-0007)
+    - `docs/implementation/checklists/00_architecture_coherence.md`
+    - `docs/implementation/reports/architecture_coherence_report.md`
+    - `docs/manifest/07_observability.md`
+    - `checkbox.md`
+  - Verification:
+    - `./venv/bin/python -m pytest -m unit -q` -> `37 passed`
+    - `./venv/bin/python -m pytest -m integration -q` -> `16 passed, 1 skipped`
+    - `./venv/bin/python -m pytest -m e2e -q` -> `5 passed`
+    - `./venv/bin/python -m pytest -m data_contracts -q` -> `17 passed`
+    - `python3 project-prompts/scripts/prompts_manifest.py --check` -> pass
+    - `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` -> pass
+    - `rg -n "tags:|v\\*|pytest -m unit|pytest -m integration|pytest -m e2e|pytest -m data_contracts|prompts_manifest.py|system_integrity.py|action-gh-release" .github/workflows/release.yml`
+  - Result: release-tag automation gap closed; next best prompt is shaping+execution for observability backend/alerts.
+
+- Executed next non-redundant prompt: `prompt-14-improvement-direction-bet-loop`.
+  - Why this prompt: alignment and architecture reports converged on open operational risks, and prompt-14 is the required discovery-to-packet bridge before the next implementation packet.
+  - Added:
+    - `docs/implementation/reports/improvement_directions.md`
+    - `docs/implementation/checklists/03_improvement_bets.md`
+  - Updated:
+    - `docs/implementation/checklists/02_milestones.md` (added M4 operational maturity outcomes and tightened M3 docs cleanup ACs)
+    - `docs/implementation/00_status.md`
+  - Ranked top opportunities:
+    - IMP-01 observability backend + alert routing (Now)
+    - IMP-02 CI quality-gate hardening + release semantics (Next)
+    - IMP-03 docs navigation and stale-claim cleanup (Next)
+    - IMP-04 external dependency degraded-mode guardrails (Not now)
+  - Verification:
+    - `test -f docs/implementation/reports/improvement_directions.md && test -f docs/implementation/checklists/03_improvement_bets.md`
+    - `rg -n "IMP-01|Prompt chain|Now \\(appetite|Next \\(appetite|Not now \\(appetite" docs/implementation/reports/improvement_directions.md docs/implementation/checklists/03_improvement_bets.md`
+    - `python3 project-prompts/scripts/prompts_manifest.py --check` -> pass
+    - `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` -> pass
+  - Next: execute Packet A with `prompt-02-app-development-playbook` (IMP-01 observability backend + alert routing), then run `prompt-03` once.
+
+- Executed next non-redundant prompt: `prompt-02-app-development-playbook` for Packet A (IMP-01 observability backend + alert routing).
+  - Why this prompt: `prompt-14` selected IMP-01 as highest-impact `Now` packet and required implementation (not another planning rerun).
+  - Code updates:
+    - `src/telemetry.py`
+      - Added local backend event sink (`events_backend.jsonl`) and alert sink (`alerts.jsonl`).
+      - Added rule-based `evaluate_alert()` + `route_alert()` severity/owner routing.
+      - Added alert thresholds for `regulation_query`, `plan_search`, and `build` operations.
+    - `src/vectorstore/unified_pipeline.py`
+      - Added build `saturation_ratio_1m` signal to structured events and workflow metrics.
+    - `tests/unit/infrastructure/test_telemetry_backend.py`
+      - Added unit tests for backend event persistence and alert routing thresholds.
+  - Docs/checklist updates:
+    - `docs/manifest/07_observability.md`
+    - `docs/manifest/09_runbook.md` (added `CMD-019`, `CMD-020`)
+    - `docs/implementation/checklists/03_improvement_bets.md` (IMP-01 checked)
+    - `docs/implementation/checklists/02_milestones.md` (M4 observability outcome checked)
+    - `docs/manifest/03_decisions.md` (ADR-0008)
+    - `docs/implementation/00_status.md`
+  - Verification:
+    - `./venv/bin/python -m pytest tests/unit/infrastructure/test_telemetry_backend.py -q` -> `3 passed`
+    - `./venv/bin/python -m pytest -m unit -q` -> `40 passed`
+    - `./venv/bin/python -m pytest -m integration -q` -> `16 passed, 1 skipped`
+    - `python3 project-prompts/scripts/prompts_manifest.py --check` -> pass
+    - `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` -> pass
+    - `rg -n "events_backend|alerts.jsonl|saturation_ratio_1m|OBS_ALERT|evaluate_alert|route_alert" src/telemetry.py src/vectorstore/unified_pipeline.py`
+  - Result: IMP-01 Packet A completed; next best prompt is `prompt-03` once for alignment refresh, then Packet B (`prompt-02`) for CI quality-gate hardening.
+
+- Executed required post-IMP-01 drift gate: `prompt-03-alignment-review-gate`.
+  - Updated:
+    - `docs/implementation/checklists/07_alignment_review.md`
+    - `docs/implementation/reports/alignment_review.md`
+  - Result: verdict remains `ALIGNED_WITH_RISKS`; IMP-01 is now treated as closed, with next priorities shifted to docs cleanup and CI/observability depth.
+  - Next: execute Packet B implementation (`prompt-02`).
+
+- Executed next non-redundant prompt packet: `prompt-02-app-development-playbook` (IMP-02 CI quality-gate hardening + release semantics).
+  - Why this prompt: improvement bets identified IMP-02 as next highest-impact implementation packet after IMP-01 closure.
+  - Added:
+    - `scripts/check_release_semantics.py`
+  - Updated:
+    - `.github/workflows/ci.yml` (new `quality` job with incremental `ruff` + bounded `black --check` guard)
+    - `.github/workflows/release.yml` (tag/changelog semantic validation step)
+    - `docs/manifest/11_ci.md`
+    - `docs/manifest/09_runbook.md` (added `CMD-021`, `CMD-022`, `CMD-023`)
+    - `docs/reference/release_workflow.md`
+    - `docs/implementation/checklists/06_release_readiness.md`
+    - `docs/implementation/checklists/03_improvement_bets.md` (IMP-02 checked)
+    - `docs/implementation/checklists/02_milestones.md` (M4 CI/semantic outcome checked)
+    - `docs/implementation/reports/improvement_directions.md`
+    - `docs/manifest/03_decisions.md` (ADR-0009)
+    - `docs/implementation/00_status.md`
+  - Verification:
+    - `./venv/bin/ruff check src tests scripts --select E9,F63,F7` -> pass
+    - `./venv/bin/black --check src/telemetry.py src/vectorstore/unified_pipeline.py tests/unit/infrastructure/test_telemetry_backend.py scripts/check_release_semantics.py` -> pass
+    - `./venv/bin/python scripts/check_release_semantics.py --tag v0.1.0 --changelog CHANGELOG.md` -> pass
+    - `./venv/bin/python -m pytest tests/unit/infrastructure/test_telemetry_backend.py -q` -> `3 passed`
+    - `./venv/bin/python -m pytest -m unit -q` -> `40 passed`
+    - `./venv/bin/python -m pytest -m integration -q` -> `16 passed, 1 skipped`
+    - `python3 project-prompts/scripts/prompts_manifest.py --check` -> pass
+    - `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` -> pass
+  - Result: IMP-02 is complete with enforceable incremental quality and release semantics checks.
+  - Next: execute Packet C via `prompt-11`, then run `prompt-03` once.
+
+- Executed next non-redundant prompt packet: `prompt-11-docs-diataxis-release` (IMP-03 docs navigation and stale-claim cleanup).
+  - Why this prompt: improvement bets and alignment mapping marked Packet C as the next required docs-only closure before further operational-depth work.
+  - Updated:
+    - `docs/INDEX.md` (canonical navigation refresh, legacy deep-dive scope clarified, stale CI/release wording removed)
+    - `docs/README.md` (rewritten as canonical docs-home pointer with explicit source-of-truth precedence)
+    - `docs/manifest/10_testing.md` (stale CI wording replaced with current incremental quality posture)
+    - `docs/implementation/checklists/02_milestones.md` (M3 outcome checked, verify commands hardened)
+    - `docs/implementation/checklists/03_improvement_bets.md` (IMP-03 checked)
+    - `docs/implementation/reports/improvement_directions.md`
+    - `checkbox.md` (legacy-doc and docs-drift status refreshed)
+    - `docs/implementation/00_status.md`
+  - Verification:
+    - `rg -n "CI is not yet wired|release automation still missing|CI workflows still missing|until CI/release automation exists" docs/INDEX.md docs/README.md docs/manifest/10_testing.md` -> no matches
+    - `rg -n "Getting Started|Reference|Engineering Docs" docs/INDEX.md docs/README.md`
+    - `rg --no-filename -o "docs/[A-Za-z0-9_./-]+\\.md" docs/INDEX.md docs/README.md | sort -u | xargs -I{} test -f "{}"` -> all linked docs paths exist
+    - `python3 project-prompts/scripts/prompts_manifest.py --check` -> pass
+    - `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` -> pass
+  - Result: IMP-03 and M3 docs cleanup are now complete.
+
+- Executed post-IMP-03 drift refresh: `prompt-03-alignment-review-gate`.
+  - Updated:
+    - `docs/implementation/checklists/07_alignment_review.md`
+    - `docs/implementation/reports/alignment_review.md`
+  - Result: verdict remains `ALIGNED_WITH_RISKS`; top remaining corrections shifted to observability UX depth, broader CI quality coverage, and external dependency degraded-mode guardrails.
+  - Next: execute `prompt-02` for observability-depth follow-up packet.
+
+- Executed next non-redundant prompt packet: `prompt-02-app-development-playbook` (observability-depth follow-up for IMP-01).
+  - Why this prompt: after IMP-03 closure, top remaining operational correction was observability query/dashboard depth; this packet adds a practical query UX baseline without re-running prior gates.
+  - Added:
+    - `src/observability/query.py` (JSONL read/filter/summarize helpers)
+    - `src/observability/__init__.py`
+    - `scripts/observability_cli.py` (`summary`, `events`, `alerts` commands)
+    - `tests/unit/infrastructure/test_observability_query.py`
+  - Updated:
+    - `.github/workflows/ci.yml` (`CMD-022` format guard now includes new observability files)
+    - `docs/manifest/07_observability.md`
+    - `docs/manifest/09_runbook.md` (added `CMD-024`, `CMD-025`, `CMD-026`)
+    - `docs/manifest/11_ci.md`
+    - `docs/reference/cli.md`
+    - `docs/how_to/run_end_to_end.md`
+    - `docs/implementation/checklists/02_milestones.md`
+    - `docs/implementation/checklists/03_improvement_bets.md`
+    - `docs/implementation/reports/improvement_directions.md`
+    - `docs/manifest/03_decisions.md` (ADR-0011)
+    - `docs/implementation/00_status.md`
+  - Verification:
+    - `python3 scripts/observability_cli.py summary --events-limit 200 --alerts-limit 200` -> pass
+    - `python3 scripts/observability_cli.py events --operation build --since-minutes 60 --limit 5` -> pass (`No matching events` when no recent build events)
+    - `python3 scripts/observability_cli.py alerts --since-minutes 60 --limit 5` -> pass
+    - `./venv/bin/black --check src/telemetry.py src/observability/query.py src/vectorstore/unified_pipeline.py tests/unit/infrastructure/test_telemetry_backend.py tests/unit/infrastructure/test_observability_query.py scripts/observability_cli.py scripts/check_release_semantics.py` -> pass
+    - `./venv/bin/ruff check src tests scripts --select E9,F63,F7` -> pass
+    - `./venv/bin/python -m pytest tests/unit/infrastructure/test_observability_query.py -q` -> `4 passed`
+    - `./venv/bin/python -m pytest tests/unit/infrastructure/test_telemetry_backend.py -q` -> `3 passed`
+    - `./venv/bin/python -m pytest -m unit -q` -> `44 passed`
+    - `./venv/bin/python -m pytest -m integration -q` -> `16 passed, 1 skipped`
+    - `python3 project-prompts/scripts/prompts_manifest.py --check` -> pass
+    - `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` -> pass
+  - Result: observability query UX baseline is now implemented; remaining high-risk packet is external dependency degraded-mode guardrails.
+  - Next: execute `prompt-10-tests-stabilization-loop` for degraded-mode guardrails, then `prompt-02` integration packet.
+
+## 2026-02-09
+- Executed next non-redundant prompt packet: `prompt-02-app-development-playbook` (`IMP-17` memory-pressure signal completeness).
+  - Why this prompt: post-`COR-03` alignment gate routed highest corrective priority to `IMP-17` and required code+docs updates, not another planning pass.
+  - Code updates:
+    - `src/vectorstore/unified_pipeline.py`
+      - added explicit memory probe fallback chain:
+        - primary: `SC_AVPHYS_PAGES` (`sysconf_sc_avphys_pages`)
+        - macOS fallback: `memory_pressure -Q` (`memory_pressure_q`)
+      - added observability payload semantics:
+        - `memory_used_ratio_source`
+        - `memory_used_ratio_unavailable_reason`
+    - `src/observability/query.py`
+      - added `memory_signal_context` summary block (status, sample counts, source/reason counts).
+    - `scripts/observability_cli.py`
+      - surfaced memory-signal context in `summary` and `dashboard` outputs.
+    - `tests/unit/vectorstore/test_unified_pipeline_saturation_snapshot.py`
+      - added probe fallback/unit parsing coverage for saturation snapshot logic.
+    - `tests/unit/infrastructure/test_observability_query.py`
+      - added explicit-unavailable memory signal summary coverage.
+  - Docs/checklist updates:
+    - `docs/manifest/07_observability.md`
+    - `docs/troubleshooting.md`
+    - `docs/manifest/09_runbook.md`
+    - `docs/manifest/03_decisions.md` (`ADR-0026`)
+    - `docs/implementation/checklists/03_improvement_bets.md` (`IMP-17` checked)
+    - `docs/implementation/checklists/02_milestones.md` (M9 memory-signal outcome checked)
+  - Verification:
+    - `./venv/bin/python -m pytest tests/unit/infrastructure/test_telemetry_backend.py tests/unit/infrastructure/test_observability_query.py tests/unit/vectorstore/test_unified_pipeline_saturation_snapshot.py -q` -> `13 passed, 1 warning`
+    - `(python3 scripts/build_vectordb_cli.py build --max-plans 1 --no-vision || true) && python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500`
+      - build degraded (`HTTPError`) but emitted telemetry with `memory_used_ratio=0.52`, `memory_signal_latest_source=memory_pressure_q`.
+    - `python3 scripts/observability_cli.py summary --since-minutes 180 --events-limit 2000 --alerts-limit 1000 --as-json`
+      - `memory_signal_context.status=available`.
+  - Result: `IMP-17` complete; memory signal gap is now explicit and operationally actionable.
+
+- Executed required post-`IMP-17` drift gate: `prompt-03-alignment-review-gate`.
+  - Updated:
+    - `docs/implementation/checklists/07_alignment_review.md`
+    - `docs/implementation/reports/alignment_review.md`
+    - `docs/implementation/00_status.md`
+  - Result:
+    - verdict remains `ALIGNED_WITH_RISKS`.
+    - `IMP-17` is now treated as closed in mapping.
+    - highest next packet is `IMP-18` formatting debt burn phase 5.
+  - Verification:
+    - `./venv/bin/python -m pytest -m unit -q` -> `54 passed, 30 deselected`
+    - `./venv/bin/python -m pytest -m integration -q` -> `23 passed, 1 skipped, 60 deselected`
+    - `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` -> pass
+    - `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` -> `events=312`, `alerts=15`, `memory_used_ratio_p95=0.52`
+    - `python3 scripts/observability_cli.py summary --since-minutes 180 --events-limit 2000 --alerts-limit 1000 --as-json` -> `events_total=312`, `alerts_total=15`
+    - `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` -> pass
+    - `python3 project-prompts/scripts/prompts_manifest.py --check && python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` -> pass
+
+## 2026-02-09
+- Executed next non-redundant prompt packet: `prompt-02-app-development-playbook` (`IMP-18` formatting debt burn phase 5).
+  - Why this prompt: post-`IMP-17` alignment gate routed `IMP-18` as the highest-impact remaining implementation correction.
+  - Code updates:
+    - reformatted bounded infrastructure batch:
+      - `src/infrastructure/__init__.py`
+      - `src/infrastructure/factory.py`
+      - `src/infrastructure/repositories/chroma_repository.py`
+      - `src/infrastructure/services/cache_service.py`
+      - `src/infrastructure/services/document_service.py`
+      - `src/infrastructure/services/llm_service.py`
+      - `src/infrastructure/services/vision_service.py`
+  - CI/docs updates:
+    - removed migrated files from `scripts/quality_black_debt_allowlist.txt`.
+    - expanded maintained-surface formatting guard (`CMD-022`) in:
+      - `.github/workflows/ci.yml`
+      - `docs/manifest/09_runbook.md`
+    - updated CI debt-burn status in `docs/manifest/11_ci.md`.
+    - synchronized tracking/docs:
+      - `docs/implementation/checklists/02_milestones.md` (`IMP-18` outcome checked)
+      - `docs/implementation/checklists/03_improvement_bets.md` (`IMP-18` checked)
+      - `docs/manifest/03_decisions.md` (`ADR-0027`)
+      - `docs/implementation/reports/improvement_directions.md`
+  - Verification:
+    - `./venv/bin/black src/infrastructure/__init__.py src/infrastructure/factory.py src/infrastructure/repositories/chroma_repository.py src/infrastructure/services/cache_service.py src/infrastructure/services/document_service.py src/infrastructure/services/llm_service.py src/infrastructure/services/vision_service.py` -> pass
+    - `wc -l scripts/quality_black_debt_allowlist.txt` -> `66`
+    - `rg -n "^src/infrastructure/(__init__\\.py|factory\\.py|repositories/chroma_repository\\.py|services/cache_service\\.py|services/document_service\\.py|services/llm_service\\.py|services/vision_service\\.py)$" scripts/quality_black_debt_allowlist.txt` -> no matches
+  - Result: `IMP-18` complete; phased formatting debt baseline reduced from `73` to `66`.
+
+- Executed required post-`IMP-18` drift gate: `prompt-03-alignment-review-gate`.
+  - Updated:
+    - `docs/implementation/checklists/07_alignment_review.md`
+    - `docs/implementation/reports/alignment_review.md`
+    - `docs/implementation/00_status.md`
+    - `docs/implementation/reports/improvement_directions.md`
+  - Result:
+    - verdict remains `ALIGNED_WITH_RISKS`.
+    - `IMP-18` is now treated as closed in mapping.
+    - highest next packet is docs-focused `OPP-01` (artifact freshness cadence policy) via `prompt-11`.
+  - Verification:
+    - `./venv/bin/python -m pytest -m unit -q` -> `54 passed, 30 deselected`
+    - `./venv/bin/python -m pytest -m integration -q` -> `23 passed, 1 skipped, 60 deselected`
+    - `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` -> pass
+    - `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` -> `events=310`, `alerts=14`, `memory_used_ratio_p95=0.52`
+    - `python3 scripts/observability_cli.py summary --since-minutes 180 --events-limit 2000 --alerts-limit 1000 --as-json` -> `events_total=310`, `alerts_total=14`
+    - `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` -> pass
+    - `python3 project-prompts/scripts/prompts_manifest.py --check && python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` -> pass
+
+- Executed next non-redundant prompt packet: `prompt-11-docs-diataxis-release` (`OPP-01` artifact freshness cadence policy).
+  - Why this prompt: post-`IMP-18` alignment gate routed `OPP-01` as highest-impact docs/ops correction.
+  - Docs updates:
+    - codified artifact freshness ownership/cadence/trigger policy:
+      - `docs/artifacts/README.md`
+    - added canonical freshness audit command:
+      - `docs/manifest/09_runbook.md` (`CMD-039`)
+    - synchronized alignment tracking:
+      - `docs/implementation/checklists/08_artifact_feature_alignment.md` (`OPP-01` checked)
+      - `docs/implementation/reports/artifact_feature_alignment.md`
+      - `docs/manifest/03_decisions.md` (`ADR-0028`)
+  - Verification:
+    - `rg -n "Refresh Cadence Policy|Primary owner|Logging requirements|CMD-039" docs/artifacts/README.md docs/manifest/09_runbook.md`
+    - `python3 -c "import json,datetime,pathlib; items=json.loads(pathlib.Path('docs/artifacts/index.json').read_text(encoding='utf-8')).get('artifacts', []); cutoff=(datetime.datetime.now(datetime.timezone.utc)-datetime.timedelta(days=30)).isoformat(); stale=[i.get('id','unknown') for i in items if (not isinstance(i.get('retrieved_at'), str)) or (i.get('retrieved_at') < cutoff)]; print(f'artifacts_total={len(items)} stale_total={len(stale)}'); print('stale_ids=' + ','.join(stale) if stale else 'stale_ids=')"` -> `artifacts_total=5`, `stale_total=0`
+  - Result: `OPP-01` closed; artifact freshness discipline is now command-map aligned.
+
+- Executed required post-`OPP-01` drift gate: `prompt-03-alignment-review-gate`.
+  - Updated:
+    - `docs/implementation/checklists/07_alignment_review.md`
+    - `docs/implementation/reports/alignment_review.md`
+    - `docs/implementation/00_status.md`
+    - `docs/implementation/reports/improvement_directions.md`
+  - Result:
+    - verdict remains `ALIGNED_WITH_RISKS`.
+    - `OPP-01` closure remains validated.
+    - highest next packet routed to `IMP-19` evidence-cadence ledger hardening (`prompt-11`).
+
+- Executed next non-redundant prompt packet: `prompt-11-docs-diataxis-release` (`IMP-19` evidence cadence ledger hardening).
+  - Why this prompt: post-`OPP-01` alignment gate identified distributed cadence evidence as the highest remaining correction.
+  - Docs updates:
+    - added canonical checklisted cadence ledger:
+      - `docs/implementation/checklists/09_evidence_cadence_ledger.md`
+    - updated runbook + observability recording requirements to use ledger as source of truth:
+      - `docs/manifest/09_runbook.md`
+      - `docs/manifest/07_observability.md`
+    - synchronized tracking/docs:
+      - `docs/implementation/checklists/02_milestones.md` (M9 evidence-cadence outcome checked)
+      - `docs/implementation/checklists/03_improvement_bets.md` (`IMP-19` checked)
+      - `docs/manifest/03_decisions.md` (`ADR-0029`)
+      - `docs/INDEX.md` (added checklist links)
+  - Verification:
+    - `test -f docs/implementation/checklists/09_evidence_cadence_ledger.md` -> pass
+    - `rg -n "CMD-036|CMD-029|CMD-038|CMD-039|IMP-19 bootstrap entry" docs/implementation/checklists/09_evidence_cadence_ledger.md docs/manifest/09_runbook.md docs/manifest/07_observability.md`
+    - `python3 scripts/observability_cli.py summary --since-minutes 180 --events-limit 2000 --alerts-limit 1000 --as-json` -> `events_total=304`, `alerts_total=13`, `memory_signal_context.status=available`
+    - `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` -> `events=304`, `alerts=13`, `memory_used_ratio_p95=0.52`
+    - `(python3 scripts/build_vectordb_cli.py build --max-plans 1 --no-vision || true) && python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` -> build degraded (`HTTPError`) but emitted `build` telemetry and saturation evidence.
+    - `python3 -c "import json,datetime,pathlib; items=json.loads(pathlib.Path('docs/artifacts/index.json').read_text(encoding='utf-8')).get('artifacts', []); cutoff=(datetime.datetime.now(datetime.timezone.utc)-datetime.timedelta(days=30)).isoformat(); stale=[i.get('id','unknown') for i in items if (not isinstance(i.get('retrieved_at'), str)) or (i.get('retrieved_at') < cutoff)]; print(f'artifacts_total={len(items)} stale_total={len(stale)}'); print('stale_ids=' + ','.join(stale) if stale else 'stale_ids=')"` -> `artifacts_total=5`, `stale_total=0`
+  - Result: `IMP-19` closed; recurring cadence evidence is now centralized and auditable.
+
+- Executed required post-`IMP-19` drift gate: `prompt-03-alignment-review-gate`.
+  - Updated:
+    - `docs/implementation/checklists/07_alignment_review.md`
+    - `docs/implementation/reports/alignment_review.md`
+    - `docs/implementation/00_status.md`
+    - `docs/implementation/reports/improvement_directions.md`
+  - Result:
+    - verdict remains `ALIGNED_WITH_RISKS`.
+    - `IMP-19` closure remains validated.
+    - highest next packet is now `OPP-02` external dependency health snapshot bundle via `prompt-02`.
+  - Verification:
+    - `./venv/bin/python -m pytest -m unit -q` -> `54 passed, 30 deselected`
+    - `./venv/bin/python -m pytest -m integration -q` -> `23 passed, 1 skipped, 60 deselected`
+    - `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` -> pass
+    - `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` -> `events=304`, `alerts=13`, `memory_used_ratio_p95=0.52`
+    - `python3 scripts/observability_cli.py summary --since-minutes 180 --events-limit 2000 --alerts-limit 1000 --as-json` -> `events_total=304`, `alerts_total=13`
+    - `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` -> pass
+    - `python3 project-prompts/scripts/prompts_manifest.py --check && python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` -> pass
+
+- Executed next non-redundant prompt packet: `prompt-02-app-development-playbook` (`OPP-02` external dependency health snapshot bundle).
+  - Why this prompt: post-`IMP-19` alignment gate routed `OPP-02` as highest remaining correction and explicitly required `prompt-02` implementation.
+  - Code/docs updates:
+    - extended quick status utility with one-shot external dependency snapshot bundle:
+      - `scripts/quick_status.py` (`external` mode + optional deterministic drill execution)
+    - added targeted unit coverage:
+      - `tests/unit/scripts/test_quick_status_external_snapshot.py`
+    - updated runbook + command map:
+      - `docs/manifest/09_runbook.md` (`CMD-040`)
+    - updated triage/reference docs:
+      - `docs/troubleshooting.md`
+      - `docs/reference/cli.md`
+    - synchronized tracking/docs:
+      - `docs/implementation/checklists/08_artifact_feature_alignment.md` (`OPP-02` checked)
+      - `docs/implementation/checklists/02_milestones.md` (external snapshot outcome checked)
+      - `docs/implementation/reports/artifact_feature_alignment.md`
+      - `docs/manifest/03_decisions.md` (`ADR-0030`)
+  - Verification:
+    - `./venv/bin/python -m pytest tests/unit/scripts/test_quick_status_external_snapshot.py -q` -> `3 passed`
+    - `python3 scripts/quick_status.py external --since-minutes 180 --events-limit 1000 --alerts-limit 500 --run-drills` -> `status=WARNING`; deterministic drills `PASS/PASS/PASS`
+    - `./venv/bin/python -m pytest tests/integration/iplan/test_external_dependency_drills.py -q` -> `5 passed`
+    - `./venv/bin/python -m pytest tests/integration/data_contracts/test_boundary_payload_contracts.py tests/integration/iplan/test_iplan_sample_data_quality.py -q` -> `7 passed`
+    - `./venv/bin/ruff check scripts/quick_status.py tests/unit/scripts/test_quick_status_external_snapshot.py --select E9,F63,F7` -> pass
+  - Result: `OPP-02` closed with a canonical single-command boundary snapshot path (`CMD-040`).
+
+- Executed required post-`OPP-02` drift gate: `prompt-03-alignment-review-gate`.
+  - Updated:
+    - `docs/implementation/checklists/07_alignment_review.md`
+    - `docs/implementation/reports/alignment_review.md`
+    - `docs/implementation/00_status.md`
+    - `docs/implementation/reports/improvement_directions.md`
+  - Result:
+    - verdict remains `ALIGNED_WITH_RISKS`.
+    - `OPP-02` closure remains validated.
+    - highest next packet is now `OPP-03` onboarding artifact-link coverage via `prompt-11`.
+  - Verification:
+    - `./venv/bin/python -m pytest -m unit -q` -> `57 passed, 30 deselected`
+    - `./venv/bin/python -m pytest -m integration -q` -> `23 passed, 1 skipped, 63 deselected`
+    - `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` -> pass
+    - `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` -> `events=294`, `alerts=12`, `memory_used_ratio_p95=0.52`
+    - `python3 scripts/observability_cli.py summary --since-minutes 180 --events-limit 2000 --alerts-limit 1000 --as-json` -> `events_total=294`, `alerts_total=12`
+    - `python3 scripts/quick_status.py external --since-minutes 180 --events-limit 1000 --alerts-limit 500 --run-drills` -> `status=WARNING`; deterministic drills `PASS/PASS/PASS`
+    - `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` -> pass
+    - `python3 project-prompts/scripts/prompts_manifest.py --check && python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` -> pass
+
+- Executed next non-redundant prompt packet: `prompt-11-docs-diataxis-release` (`OPP-03` onboarding artifact-link coverage).
+  - Why this prompt: post-`OPP-02` alignment gate routed `OPP-03` as the highest remaining correction and explicitly required docs onboarding linkage.
+  - Docs updates:
+    - added explicit boundary artifact-link notes in:
+      - `docs/README.md`
+      - `docs/INDEX.md`
+      - `docs/reference/configuration.md`
+      - `docs/artifacts/README.md`
+  - Tracking/docs updates:
+    - `docs/implementation/checklists/08_artifact_feature_alignment.md` (`OPP-03` checked)
+    - `docs/implementation/reports/artifact_feature_alignment.md`
+    - `docs/implementation/checklists/02_milestones.md` (onboarding artifact-link outcome checked)
+    - `docs/manifest/03_decisions.md` (`ADR-0031`)
+  - Verification:
+    - `rg -n "artifact:ART-EXT-001|artifact:ART-EXT-002|artifact:ART-EXT-003|artifact:ART-EXT-004|artifact:ART-EXT-005" docs/README.md docs/INDEX.md docs/reference/configuration.md docs/artifacts/README.md`
+    - `rg -n "External dependency boundaries|External Boundary Artifacts|Boundary Onboarding Map" docs/README.md docs/INDEX.md docs/reference/configuration.md docs/artifacts/README.md`
+  - Result: `OPP-03` closed; onboarding dependency boundaries are now artifact-linked from primary docs entrypoints.
+
+- Executed required post-`OPP-03` drift gate: `prompt-03-alignment-review-gate`.
+  - Updated:
+    - `docs/implementation/checklists/07_alignment_review.md`
+    - `docs/implementation/reports/alignment_review.md`
+    - `docs/implementation/00_status.md`
+    - `docs/implementation/reports/improvement_directions.md`
+  - Result:
+    - verdict remains `ALIGNED_WITH_RISKS`.
+    - `OPP-03` closure remains validated.
+    - highest next packet is now `prompt-02` for `CMD-040` warning/cadence hardening.
+  - Verification:
+    - `./venv/bin/python -m pytest -m unit -q` -> `57 passed, 30 deselected`
+    - `./venv/bin/python -m pytest -m integration -q` -> `23 passed, 1 skipped, 63 deselected`
+    - `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` -> pass
+    - `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` -> `events=295`, `alerts=12`, `regulation_query p95=3502.91ms`, `build p95=44985.39ms`, `memory_used_ratio_p95=0.52`
+    - `python3 scripts/observability_cli.py summary --since-minutes 180 --events-limit 2000 --alerts-limit 1000 --as-json` -> `events_total=295`, `alerts_total=12`
+    - `python3 scripts/quick_status.py external --since-minutes 180 --events-limit 1000 --alerts-limit 500 --run-drills` -> `status=WARNING`; deterministic drills `PASS/PASS/PASS`
+    - `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` -> pass
+    - `python3 project-prompts/scripts/prompts_manifest.py --check && python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` -> pass
+
+- Executed next non-redundant prompt packet: `prompt-02-app-development-playbook` (`CMD-040` warning/cadence hardening).
+  - Why this prompt: post-`OPP-03` alignment gate routed `CMD-040` cadence capture + warning-interpretation specificity as the highest remaining correction.
+  - Code/docs updates:
+    - hardened `CMD-040` warning semantics in:
+      - `scripts/quick_status.py`
+        - added `warning_context` classification:
+          - `boundary_degraded_signals_present`
+          - `historical_runtime_window_noise`
+          - `runtime_errors_or_alerts_unconfirmed`
+        - added context-specific follow-up guidance in snapshot verdict output.
+    - added warning-context unit coverage:
+      - `tests/unit/scripts/test_quick_status_external_snapshot.py`
+    - enforced recurring cadence capture of `CMD-040` and warning-context policy in:
+      - `docs/implementation/checklists/09_evidence_cadence_ledger.md`
+      - `docs/manifest/09_runbook.md`
+      - `docs/manifest/07_observability.md`
+      - `docs/troubleshooting.md`
+      - `docs/reference/cli.md`
+    - synchronized decision tracking:
+      - `docs/manifest/03_decisions.md` (`ADR-0032`)
+  - Verification:
+    - `./venv/bin/python -m pytest tests/unit/scripts/test_quick_status_external_snapshot.py -q` -> `5 passed`
+    - `./venv/bin/ruff check scripts/quick_status.py tests/unit/scripts/test_quick_status_external_snapshot.py --select E9,F63,F7` -> pass
+    - `(python3 scripts/build_vectordb_cli.py build --max-plans 1 --no-vision || true) && python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` -> build degraded (`HTTPError`) but emitted `build` telemetry and saturation evidence.
+    - `python3 scripts/observability_cli.py summary --since-minutes 180 --events-limit 2000 --alerts-limit 1000 --as-json` -> `events_total=286`, `alerts_total=12`, `memory_signal_context.status=available`
+    - `python3 scripts/quick_status.py external --since-minutes 180 --events-limit 1000 --alerts-limit 500 --run-drills` -> `status=WARNING`, `warning_context=historical_runtime_window_noise`, deterministic drills `PASS/PASS/PASS`
+    - `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` -> pass
+    - `python3 project-prompts/scripts/prompts_manifest.py --check && python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` -> pass
+  - Result: `CMD-040` warning/cadence hardening is complete with explicit warning-context semantics and enforced ledger policy.
+
+- Executed required post-`CMD-040` hardening drift gate: `prompt-03-alignment-review-gate`.
+  - Updated:
+    - `docs/implementation/checklists/07_alignment_review.md`
+    - `docs/implementation/reports/alignment_review.md`
+    - `docs/implementation/00_status.md`
+    - `docs/implementation/reports/improvement_directions.md`
+  - Result:
+    - verdict remains `ALIGNED_WITH_RISKS`.
+    - `CMD-040` cadence and warning-interpretation corrections are validated.
+    - highest next packet is now `prompt-11` for onboarding artifact-link guardrail command-map coverage.
+  - Verification:
+    - `./venv/bin/python -m pytest -m unit -q` -> `59 passed, 30 deselected`
+    - `./venv/bin/python -m pytest -m integration -q` -> `23 passed, 1 skipped, 65 deselected`
+    - `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` -> pass
+    - `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` -> `events=286`, `alerts=12`, `regulation_query p95=3502.91ms`, `build p95=44985.39ms`, `memory_used_ratio_p95=0.59`
+    - `python3 scripts/observability_cli.py summary --since-minutes 180 --events-limit 2000 --alerts-limit 1000 --as-json` -> `events_total=286`, `alerts_total=12`
+    - `python3 scripts/quick_status.py external --since-minutes 180 --events-limit 1000 --alerts-limit 500 --run-drills` -> `status=WARNING`, `warning_context=historical_runtime_window_noise`, deterministic drills `PASS/PASS/PASS`
+    - `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` -> pass
+    - `python3 project-prompts/scripts/prompts_manifest.py --check && python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` -> pass
+
+- Executed next non-redundant prompt packet: `prompt-11-docs-diataxis-release` (onboarding citation guardrail + narrowed-window confirmation hardening).
+  - Why this prompt: post-`CMD-040` alignment gate routed missing onboarding artifact-link guardrail command-map coverage as the top remaining docs correction.
+  - Docs updates:
+    - added canonical onboarding citation guardrail command:
+      - `docs/manifest/09_runbook.md` (`CMD-041`)
+    - wired guardrail usage into docs entrypoints:
+      - `docs/reference/cli.md`
+      - `docs/README.md`
+      - `docs/INDEX.md`
+    - added decision record:
+      - `docs/manifest/03_decisions.md` (`ADR-0033`)
+    - hardened historical-noise escalation discipline:
+      - `docs/implementation/checklists/09_evidence_cadence_ledger.md`
+      - `docs/manifest/09_runbook.md`
+      - `docs/troubleshooting.md`
+      - includes narrowed-window `CMD-040` rerun evidence plus `CMD-025`/`CMD-028` inspection requirements.
+  - Verification:
+    - `for file in docs/README.md docs/INDEX.md docs/reference/configuration.md docs/artifacts/README.md; do for id in artifact:ART-EXT-001 artifact:ART-EXT-002 artifact:ART-EXT-003 artifact:ART-EXT-004 artifact:ART-EXT-005; do rg -q "$id" "$file" || { echo "$file missing $id"; exit 1; }; done; done; echo "onboarding_artifact_links_ok files=4 ids=5"` -> `onboarding_artifact_links_ok files=4 ids=5`
+    - `python3 scripts/quick_status.py external --since-minutes 60 --events-limit 1000 --alerts-limit 500 --run-drills` -> `status=WARNING`, `warning_context=historical_runtime_window_noise`, deterministic drills `PASS/PASS/PASS`
+    - `python3 scripts/observability_cli.py alerts --since-minutes 60 --limit 50`
+    - `python3 scripts/observability_cli.py events --outcome error --since-minutes 60 --limit 100`
+  - Result: onboarding citation guardrail and narrowed-window warning confirmation discipline are now command-map enforced and auditable.
+
+- Executed required post-`CMD-041` drift gate: `prompt-03-alignment-review-gate`.
+  - Updated:
+    - `docs/implementation/checklists/07_alignment_review.md`
+    - `docs/implementation/reports/alignment_review.md`
+    - `docs/implementation/checklists/02_milestones.md` (`M10` mapping)
+    - `docs/implementation/00_status.md`
+    - `docs/implementation/reports/improvement_directions.md`
+  - Result:
+    - verdict remains `ALIGNED_WITH_RISKS`.
+    - onboarding citation guardrail and narrowed-window confirmation corrections are validated.
+    - highest next packet is now `prompt-02` for warning-follow-up regression coverage and output warning cleanup.
+  - Verification:
+    - `./venv/bin/python -m pytest -m unit -q` -> `59 passed, 30 deselected`
+    - `./venv/bin/python -m pytest -m integration -q` -> `23 passed, 1 skipped, 65 deselected`
+    - `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` -> pass
+    - `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` -> `events=286`, `alerts=11`, `regulation_query p95=3502.91ms`, `build p95=44985.39ms`, `memory_used_ratio_p95=0.59`
+    - `python3 scripts/observability_cli.py summary --since-minutes 180 --events-limit 2000 --alerts-limit 1000 --as-json` -> `events_total=286`, `alerts_total=11`
+    - `python3 scripts/quick_status.py external --since-minutes 180 --events-limit 1000 --alerts-limit 500 --run-drills` -> `status=WARNING`, `warning_context=historical_runtime_window_noise`, deterministic drills `PASS/PASS/PASS`
+    - `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` -> pass
+    - `python3 project-prompts/scripts/prompts_manifest.py --check && python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` -> pass
+
+- Executed next non-redundant prompt packet: `prompt-02-app-development-playbook` (warning-follow-up regression coverage + `CMD-040` output warning cleanup).
+  - Why this prompt: post-`CMD-041` alignment gate routed remaining code-level drift to non-boundary warning rendering coverage and startup warning-noise removal.
+  - Code/test updates:
+    - added rendered-output regression tests for non-boundary warning branches:
+      - `tests/unit/scripts/test_quick_status_external_snapshot.py`
+    - removed pydantic protected-namespace startup warning in snapshot command path:
+      - `src/config.py` (`SettingsConfigDict(..., protected_namespaces=("settings_",))`)
+    - synchronized decision + milestone tracking:
+      - `docs/manifest/03_decisions.md` (`ADR-0034`)
+      - `docs/implementation/checklists/02_milestones.md` (`M10` outcomes checked)
+  - Verification:
+    - `./venv/bin/python -m pytest tests/unit/scripts/test_quick_status_external_snapshot.py -q` -> `7 passed`
+    - `./venv/bin/ruff check src/config.py tests/unit/scripts/test_quick_status_external_snapshot.py --select E9,F63,F7` -> pass
+    - `./venv/bin/black --check src/config.py tests/unit/scripts/test_quick_status_external_snapshot.py` -> pass
+    - `python3 scripts/quick_status.py external --since-minutes 60 --events-limit 200 --alerts-limit 200 --run-drills` -> no startup warning noise; `status=WARNING`, `warning_context=historical_runtime_window_noise`, deterministic drills `PASS/PASS/PASS`
+    - `if python3 scripts/quick_status.py external --since-minutes 60 --events-limit 200 --alerts-limit 200 --run-drills 2>&1 | rg -n "protected namespace|UserWarning"; then echo "warning_noise_detected"; else echo "warning_noise_absent"; fi` -> `warning_noise_absent`
+  - Result: remaining code-level warning-rendering and output-noise corrections are closed.
+
+- Executed required post-packet drift gate: `prompt-03-alignment-review-gate`.
+  - Updated:
+    - `docs/implementation/checklists/07_alignment_review.md`
+    - `docs/implementation/reports/alignment_review.md`
+    - `docs/implementation/checklists/02_milestones.md` (M11 mapping)
+    - `docs/implementation/00_status.md`
+    - `docs/implementation/reports/improvement_directions.md`
+  - Result:
+    - verdict remains `ALIGNED_WITH_RISKS`.
+    - M10 corrections are fully closed.
+    - highest remaining drift is docs-only release-readiness wiring for `CMD-041` (`M11`).
+  - Verification:
+    - `./venv/bin/python -m pytest -m unit -q` -> `61 passed, 30 deselected`
+    - `./venv/bin/python -m pytest -m integration -q` -> `23 passed, 1 skipped, 67 deselected`
+    - `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` -> pass
+    - `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` -> `events=266`, `alerts=9`, `regulation_query p95=3570.85ms`, `build p95=44985.39ms`, `memory_used_ratio_p95=0.59`
+    - `python3 scripts/observability_cli.py summary --since-minutes 180 --events-limit 2000 --alerts-limit 1000 --as-json` -> `events_total=266`, `alerts_total=9`
+    - `python3 scripts/quick_status.py external --since-minutes 180 --events-limit 1000 --alerts-limit 500 --run-drills` -> `status=WARNING`, `warning_context=historical_runtime_window_noise`, deterministic drills `PASS/PASS/PASS`
+    - `for file in docs/README.md docs/INDEX.md docs/reference/configuration.md docs/artifacts/README.md; do for id in artifact:ART-EXT-001 artifact:ART-EXT-002 artifact:ART-EXT-003 artifact:ART-EXT-004 artifact:ART-EXT-005; do rg -q "$id" "$file" || { echo "$file missing $id"; exit 1; }; done; done; echo "onboarding_artifact_links_ok files=4 ids=5"` -> `onboarding_artifact_links_ok files=4 ids=5`
+    - `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` -> pass
+    - `python3 project-prompts/scripts/prompts_manifest.py --check && python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` -> pass
+
+- Executed next non-redundant prompt packet: `prompt-02-app-development-playbook` (`IMP-21` timeout-noise boundary triage tightening).
+  - Why this prompt: post-M12 routing still had one open reliability correction and current warning windows were dominated by recurring `build` timeout sev1 signals.
+  - Code/docs updates:
+    - tightened `CMD-040` warning semantics in `scripts/quick_status.py`:
+      - new warning context: `historical_build_timeout_sev1_noise`
+      - added `warning_noise_profile` counters in warning output
+      - follow-up guidance now routes build-timeout dominant windows to narrowed `CMD-040` + `CMD-026`/`CMD-028`
+    - expanded regression coverage:
+      - `tests/unit/scripts/test_quick_status_external_snapshot.py` (new context + diagnostics tests, snapshot rendering assertions)
+    - synchronized runbook/observability/troubleshooting/CLI docs:
+      - `docs/troubleshooting.md`
+      - `docs/manifest/07_observability.md`
+      - `docs/manifest/09_runbook.md`
+      - `docs/reference/cli.md`
+    - synchronized tracking:
+      - `docs/implementation/checklists/02_milestones.md` (M12 timeout-noise outcome checked)
+      - `docs/implementation/checklists/03_improvement_bets.md` (`IMP-21` checked)
+      - `docs/implementation/reports/improvement_directions.md` (new execution update)
+  - Verification:
+    - `./venv/bin/python -m pytest tests/unit/scripts/test_quick_status_external_snapshot.py -q` -> `11 passed`
+    - `./venv/bin/ruff check scripts/quick_status.py tests/unit/scripts/test_quick_status_external_snapshot.py --select E9,F63,F7` -> pass
+    - `python3 scripts/quick_status.py external --since-minutes 180 --events-limit 1000 --alerts-limit 500 --run-drills` -> `status=WARNING`, `warning_context=historical_build_timeout_sev1_noise`, `warning_noise_profile: build_timeout_error_events=4 non_build_error_events=0 build_timeout_sev1_alerts=4 non_build_sev1_alerts=0`, deterministic drills `PASS/PASS/PASS`
+    - `rg -n "historical_build_timeout_sev1_noise|warning_noise_profile|CMD-026|CMD-028" scripts/quick_status.py docs/troubleshooting.md docs/manifest/07_observability.md docs/manifest/09_runbook.md docs/reference/cli.md`
+  - Result: first-pass operator flow now explicitly distinguishes recurring build-timeout sev1 historical noise from boundary-degraded escalation paths.
+
+- Executed required post-`IMP-21` drift gate: `prompt-03-alignment-review-gate`.
+  - Updated:
+    - `docs/implementation/checklists/07_alignment_review.md`
+    - `docs/implementation/reports/alignment_review.md`
+    - `docs/implementation/00_status.md`
+    - `docs/implementation/reports/improvement_directions.md`
+  - Result:
+    - verdict remains `ALIGNED_WITH_RISKS`.
+    - M12 implementation corrections are now closed (`CMD-041` automation + timeout-noise triage tightening).
+    - next non-redundant packet is `prompt-14-improvement-direction-bet-loop` for `IMP-22` convergence guardrail closure.
+
+- Executed next non-redundant prompt packet: `prompt-14-improvement-direction-bet-loop` (`IMP-22` convergence guardrail closure).
+  - Why this prompt: M12 had one remaining process-level risk, repeated rerank loops without explicit stop conditions.
+  - Routing updates:
+    - added explicit rerank convergence guardrails in `docs/implementation/reports/improvement_directions.md`:
+      - unresolved-outcome delta check before repeating an immediate route,
+      - repeat-loop stop condition when the same route appears across consecutive reranks without outcome closure,
+      - forced divergence path (`prompt-03` then re-rank excluding prior route until unresolved outcomes change).
+    - synchronized tracking surfaces:
+      - `docs/implementation/checklists/03_improvement_bets.md` (`IMP-22` checked)
+      - `docs/implementation/checklists/02_milestones.md` (M12 convergence-guardrail outcome checked)
+  - Verification:
+    - `rg -n "convergence guardrail|repeat-loop|unresolved-outcome delta|IMP-22" docs/implementation/reports/improvement_directions.md docs/implementation/checklists/03_improvement_bets.md docs/implementation/checklists/02_milestones.md`
+  - Result: post-M12 routing now has explicit bounded convergence semantics and no open M12 outcomes.
+
+- Executed required post-`IMP-22` drift gate: `prompt-03-alignment-review-gate`.
+  - Updated:
+    - `docs/implementation/checklists/07_alignment_review.md`
+    - `docs/implementation/reports/alignment_review.md`
+    - `docs/implementation/00_status.md`
+  - Result:
+    - verdict remains `ALIGNED_WITH_RISKS`.
+    - M12 is fully closed (`IMP-20`, `IMP-21`, `IMP-22`).
+    - next routing focus shifts from implementation packets to cadence/evidence follow-through.
+
+- Executed next non-redundant prompt packet: `prompt-11-docs-diataxis-release` (release-readiness `CMD-041` wiring).
+  - Why this prompt: post-M10 alignment routed docs-only drift to release-readiness surfaces that still lacked explicit `CMD-041` sign-off wiring.
+  - Docs updates:
+    - added required `CMD-041` guardrail step + expected success output in:
+      - `docs/implementation/checklists/06_release_readiness.md`
+    - mapped `CMD-041` as required pre-tag manual guardrail in:
+      - `docs/reference/release_workflow.md`
+    - synchronized CI/runbook release-path docs with `CMD-041` linkage:
+      - `docs/manifest/11_ci.md`
+      - `docs/manifest/09_runbook.md`
+    - synchronized decision + milestone tracking:
+      - `docs/manifest/03_decisions.md` (`ADR-0035`)
+      - `docs/implementation/checklists/02_milestones.md` (`M11` checked; `M12` opened)
+  - Verification:
+    - `rg -n "CMD-041|onboarding artifact-link|citation guardrail" docs/implementation/checklists/06_release_readiness.md docs/reference/release_workflow.md docs/manifest/11_ci.md docs/manifest/09_runbook.md`
+    - `for file in docs/README.md docs/INDEX.md docs/reference/configuration.md docs/artifacts/README.md; do for id in artifact:ART-EXT-001 artifact:ART-EXT-002 artifact:ART-EXT-003 artifact:ART-EXT-004 artifact:ART-EXT-005; do rg -q "$id" "$file" || { echo "$file missing $id"; exit 1; }; done; done; echo "onboarding_artifact_links_ok files=4 ids=5"` -> `onboarding_artifact_links_ok files=4 ids=5`
+  - Result: release-readiness guardrail docs are now wired and explicit; previous docs drift is closed.
+
+- Executed required post-packet drift gate: `prompt-03-alignment-review-gate`.
+  - Updated:
+    - `docs/implementation/checklists/07_alignment_review.md`
+    - `docs/implementation/reports/alignment_review.md`
+    - `docs/implementation/checklists/02_milestones.md` (`M12` mapping)
+    - `docs/implementation/00_status.md`
+    - `docs/implementation/reports/improvement_directions.md`
+  - Result:
+    - verdict remains `ALIGNED_WITH_RISKS`.
+    - M11 is fully closed.
+    - highest next packet is now post-M11 re-ranking (`prompt-14`) before selecting the next M12 implementation correction.
+  - Verification:
+    - `./venv/bin/python -m pytest -m unit -q` -> `61 passed, 30 deselected`
+    - `./venv/bin/python -m pytest -m integration -q` -> `23 passed, 1 skipped, 67 deselected`
+    - `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` -> pass
+    - `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` -> `events=276`, `alerts=9`, `regulation_query p95=3502.91ms`, `build p95=44985.39ms`, `memory_used_ratio_p95=0.59`
+    - `python3 scripts/observability_cli.py summary --since-minutes 180 --events-limit 2000 --alerts-limit 1000 --as-json` -> `events_total=276`, `alerts_total=9`
+    - `python3 scripts/quick_status.py external --since-minutes 180 --events-limit 1000 --alerts-limit 500 --run-drills` -> `status=WARNING`, `warning_context=historical_runtime_window_noise`, deterministic drills `PASS/PASS/PASS`
+    - `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` -> pass
+    - `python3 project-prompts/scripts/prompts_manifest.py --check && python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` -> pass
+
+- Executed next non-redundant prompt packet: `prompt-11-docs-diataxis-release` (post-M12 cadence-ledger follow-through).
+  - Why this prompt: the only remaining open correction after M12 closure was missing narrowed-window cadence evidence for `historical_build_timeout_sev1_noise`.
+  - Docs updates:
+    - added targeted cadence entry in:
+      - `docs/implementation/checklists/09_evidence_cadence_ledger.md`
+    - expanded ledger template requirement for build-timeout warning context:
+      - `historical_build_timeout_sev1_noise` now requires narrowed-window `CMD-040` + `CMD-026`/`CMD-028` evidence.
+    - synced alignment routing state:
+      - `docs/implementation/checklists/07_alignment_review.md`
+      - `docs/implementation/reports/alignment_review.md`
+      - `docs/implementation/reports/improvement_directions.md`
+      - `docs/implementation/00_status.md`
+  - Verification:
+    - `python3 scripts/quick_status.py external --since-minutes 180 --events-limit 1000 --alerts-limit 500 --run-drills` -> `status=WARNING`, `warning_context=historical_build_timeout_sev1_noise`, `warning_noise_profile: build_timeout_error_events=4 non_build_error_events=0 build_timeout_sev1_alerts=4 non_build_sev1_alerts=0`, deterministic drills `PASS/PASS/PASS`
+    - `python3 scripts/quick_status.py external --since-minutes 60 --events-limit 1000 --alerts-limit 500 --run-drills` -> `status=HEALTHY`, `events=60`, `alerts=1`, deterministic drills `PASS/PASS/PASS`
+    - `python3 scripts/observability_cli.py events --operation build --since-minutes 60 --limit 100` -> `No matching events.`
+    - `python3 scripts/observability_cli.py events --outcome error --since-minutes 60 --limit 100` -> `No matching events.`
+    - `python3 scripts/observability_cli.py alerts --since-minutes 60 --limit 100` -> single `sev3 regulation_query` record
+    - `python3 scripts/observability_cli.py summary --since-minutes 180 --events-limit 2000 --alerts-limit 1000 --as-json` -> `events_total=223`, `alerts_total=8`
+    - `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` -> `events=223`, `alerts=8`, `regulation_query p95=3706.13ms`, `build p95=44985.39ms`, `memory_used_ratio_p95=0.59`
+    - `python3 -c "import json,datetime,pathlib; items=json.loads(pathlib.Path('docs/artifacts/index.json').read_text(encoding='utf-8')).get('artifacts', []); cutoff=(datetime.datetime.now(datetime.timezone.utc)-datetime.timedelta(days=30)).isoformat(); stale=[i.get('id','unknown') for i in items if (not isinstance(i.get('retrieved_at'), str)) or (i.get('retrieved_at') < cutoff)]; print(f'artifacts_total={len(items)} stale_total={len(stale)}'); print('stale_ids=' + ','.join(stale) if stale else 'stale_ids=')"` -> `artifacts_total=5`, `stale_total=0`
+  - Result: cadence follow-through correction is closed; next non-redundant packet is `prompt-03-alignment-review-gate`.
+
+- Executed required post-cadence drift gate: `prompt-03-alignment-review-gate`.
+  - Updated:
+    - `docs/implementation/checklists/07_alignment_review.md`
+    - `docs/implementation/reports/alignment_review.md`
+    - `docs/implementation/reports/improvement_directions.md`
+    - `docs/implementation/00_status.md`
+  - Result:
+    - verdict remains `ALIGNED_WITH_RISKS`.
+    - no M12 implementation packets remain open and route convergence stayed stable.
+    - next routing is conditional only (`prompt-11` if drift), not a forced implementation loop.
+  - Verification:
+    - `./venv/bin/python -m pytest -m unit -q` -> `65 passed, 30 deselected`
+    - `./venv/bin/python -m pytest -m integration -q` -> `23 passed, 1 skipped, 71 deselected`
+    - `./venv/bin/ruff check . --select E9,F63,F7 --exclude project-prompts` -> pass
+    - `python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` -> `events=232`, `alerts=7`, `regulation_query p95=3467.34ms`, `build p95=43434.35ms`, `memory_used_ratio_p95=0.59`
+    - `python3 scripts/observability_cli.py summary --since-minutes 180 --events-limit 2000 --alerts-limit 1000 --as-json` -> `events_total=232`, `alerts_total=7`
+    - `python3 scripts/quick_status.py external --since-minutes 180 --events-limit 1000 --alerts-limit 500 --run-drills` -> `status=WARNING`, `warning_context=historical_build_timeout_sev1_noise`, `warning_noise_profile: build_timeout_error_events=3 non_build_error_events=0 build_timeout_sev1_alerts=3 non_build_sev1_alerts=0`, deterministic drills `PASS/PASS/PASS`
+    - `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` -> pass
+    - `python3 project-prompts/scripts/prompts_manifest.py --check` -> pass
+    - `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` -> pass

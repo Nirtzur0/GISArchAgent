@@ -6,17 +6,17 @@ from src.domain.entities.analysis import (
     VisionAnalysis,
     ComplianceReport,
     ComplianceRequirement,
-    ComplianceStatus
+    ComplianceStatus,
 )
 
 __all__ = [
-    'Plan',
-    'PlanStatus',
-    'ZoneType',
-    'Regulation',
-    'RegulationType',
-    'VisionAnalysis',
-    'ComplianceReport',
-    'ComplianceRequirement',
-    'ComplianceStatus',
+    "Plan",
+    "PlanStatus",
+    "ZoneType",
+    "Regulation",
+    "RegulationType",
+    "VisionAnalysis",
+    "ComplianceReport",
+    "ComplianceRequirement",
+    "ComplianceStatus",
 ]

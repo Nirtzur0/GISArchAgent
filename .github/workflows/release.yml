@@ -1,0 +1,117 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release-validation:
+    name: Release Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Verify release artifacts (CMD-018)
+        run: |
+          test -f CHANGELOG.md
+          test -f docs/implementation/checklists/06_release_readiness.md
+          test -f docs/reference/release_workflow.md
+
+      - name: Onboarding artifact-link citation guardrail (CMD-041)
+        run: |
+          python3 - <<'PY'
+          import pathlib
+          import sys
+
+          files = [
+              "docs/README.md",
+              "docs/INDEX.md",
+              "docs/reference/configuration.md",
+              "docs/artifacts/README.md",
+          ]
+          artifact_ids = [
+              "artifact:ART-EXT-001",
+              "artifact:ART-EXT-002",
+              "artifact:ART-EXT-003",
+              "artifact:ART-EXT-004",
+              "artifact:ART-EXT-005",
+          ]
+
+          missing = []
+          for file_path in files:
+              text = pathlib.Path(file_path).read_text(encoding="utf-8")
+              for artifact_id in artifact_ids:
+                  if artifact_id not in text:
+                      missing.append(f"{file_path} missing {artifact_id}")
+
+          if missing:
+              print("\n".join(missing))
+              sys.exit(1)
+
+          print("onboarding_artifact_links_ok files=4 ids=5")
+          PY
+
+      - name: Validate release tag/changelog coherence (CMD-023)
+        if: startsWith(github.ref, 'refs/tags/')
+        run: python3 scripts/check_release_semantics.py --tag "${{ github.ref_name }}" --changelog CHANGELOG.md
+
+      - name: Unit suite (CMD-004)
+        run: python -m pytest -m unit
+
+      - name: Integration suite (CMD-005)
+        run: python -m pytest -m integration
+
+      - name: E2E smoke suite (CMD-006)
+        run: python -m pytest -m e2e
+
+      - name: Data contract suite (CMD-007)
+        run: python -m pytest -m data_contracts
+
+      - name: Prompt manifest integrity (CMD-016)
+        run: python3 project-prompts/scripts/prompts_manifest.py --check
+
+      - name: Prompt system integrity (CMD-017)
+        run: python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts
+
+  publish-github-release:
+    name: Publish GitHub Release
+    needs: release-validation
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true

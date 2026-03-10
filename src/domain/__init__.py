@@ -11,13 +11,13 @@ from src.domain.value_objects.building_rights import BuildingRights
 from src.domain.value_objects.geometry import Geometry
 
 __all__ = [
-    'Plan',
-    'PlanStatus',
-    'ZoneType',
-    'Regulation',
-    'RegulationType',
-    'VisionAnalysis',
-    'ComplianceReport',
-    'BuildingRights',
-    'Geometry',
+    "Plan",
+    "PlanStatus",
+    "ZoneType",
+    "Regulation",
+    "RegulationType",
+    "VisionAnalysis",
+    "ComplianceReport",
+    "BuildingRights",
+    "Geometry",
 ]

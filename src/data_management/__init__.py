@@ -10,11 +10,11 @@ from .fetchers import DataFetcherFactory, IPlanFetcher, IPlanPydollFetcher
 from .pydoll_fetcher import PydollFetcher, IPlanPydollSource, SyncIPlanPydollSource
 
 __all__ = [
-    'DataStore',
-    'DataFetcherFactory',
-    'IPlanFetcher',
-    'IPlanPydollFetcher',
-    'PydollFetcher',
-    'IPlanPydollSource',
-    'SyncIPlanPydollSource',
+    "DataStore",
+    "DataFetcherFactory",
+    "IPlanFetcher",
+    "IPlanPydollFetcher",
+    "PydollFetcher",
+    "IPlanPydollSource",
+    "SyncIPlanPydollSource",
 ]

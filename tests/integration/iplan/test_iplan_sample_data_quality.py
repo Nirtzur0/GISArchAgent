@@ -1,3 +1,5 @@
+import re
+
 import pytest
 
 from src.infrastructure.factory import ApplicationFactory
@@ -52,3 +54,25 @@ def test_iplan_like_diversity__multiple_municipalities(repo):
                 municipalities.add(v.strip())
 
     assert len(municipalities) >= 2
+
+
+def test_iplan_endpoint_family__plan_number_pattern_on_iplan_sources(repo):
+    results = repo.search("תכנית", limit=30)
+    assert results
+
+    pattern = re.compile(r"^\d{3}-\d{7}$")
+    iplan_like_records = []
+
+    for r in results:
+        md = r.metadata or {}
+        source = str(md.get("source", "")).lower()
+        if "iplan" in source:
+            iplan_like_records.append(md)
+
+    assert (
+        iplan_like_records
+    ), "Expected iPlan-family records in integration sample data."
+    assert any(
+        isinstance(md.get("plan_number"), str) and pattern.match(md["plan_number"])
+        for md in iplan_like_records
+    ), "Expected at least one iPlan-family record with canonical plan number pattern NNN-NNNNNNN."

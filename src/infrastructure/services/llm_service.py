@@ -1,77 +1,106 @@
-"""
-LLM Service for answer synthesis using Gemini.
-"""
+"""OpenAI-compatible LLM service for answer synthesis."""
+
+from __future__ import annotations
 
 import logging
-from typing import Optional
-from google import genai
-from google.genai import types
+from typing import Any
+
+import requests
+
 
 logger = logging.getLogger(__name__)
 
 
-class GeminiLLMService:
-    """Service for generating answers using Gemini."""
-    
-    def __init__(self, api_key: str, model: str = "gemini-2.5-flash"):
-        """
-        Initialize Gemini LLM service.
-        
-        Args:
-            api_key: Google AI API key
-            model: Gemini model name
-        """
-        self.api_key = api_key
+class OpenAICompatibleLLMService:
+    """Generate answers through an OpenAI-compatible chat-completions API."""
+
+    def __init__(
+        self,
+        api_key: str | None,
+        base_url: str,
+        model: str = "gpt-4o-mini",
+        timeout_seconds: int = 90,
+    ) -> None:
+        self.api_key = api_key or "chatmock-local"
+        self.base_url = base_url.rstrip("/")
         self.model_name = model
-        self.client = genai.Client(api_key=api_key)
-        logger.info(f"Gemini LLM service initialized: {model}")
-    
+        self.timeout_seconds = timeout_seconds
+        logger.info(
+            "OpenAI-compatible LLM service initialized",
+            extra={"model": model, "base_url": self.base_url},
+        )
+
     def generate_answer(self, question: str, context: str) -> str:
-        """
-        Generate answer based on question and context.
-        
-        Args:
-            question: User's question
-            context: Relevant regulations/context
-            
-        Returns:
-            Generated answer
-        """
+        """Generate an answer from the supplied context."""
         try:
-            prompt = self._build_prompt(question, context)
-            
-            response = self.client.models.generate_content(
-                model=self.model_name,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    temperature=0.1,
-                    max_output_tokens=1000,
-                )
+            response = self._chat(
+                system_prompt=(
+                    "You are an expert in Israeli planning and zoning regulations. "
+                    "Answer only from the supplied context. If the context is insufficient, "
+                    "say so clearly and stay concise."
+                ),
+                user_prompt=(
+                    "Context:\n"
+                    f"{context}\n\n"
+                    "Question:\n"
+                    f"{question}\n\n"
+                    "Return a clear answer with direct references to the relevant regulation titles."
+                ),
+                temperature=0.1,
+                max_tokens=1000,
             )
-            
-            if response and response.text:
-                return response.text.strip()
-            
-            return "Unable to generate answer from available regulations."
-            
-        except Exception as e:
-            logger.error(f"Error generating answer: {e}")
-            return f"Error processing query: {str(e)}"
-    
-    def _build_prompt(self, question: str, context: str) -> str:
-        """Build prompt for answer generation."""
-        return f"""You are an expert in Israeli planning and zoning regulations. Answer the user's question based on the provided regulations.
+        except Exception as exc:
+            logger.error("Error generating answer: %s", exc)
+            return f"Error processing query: {exc}"
 
-Regulations Context:
-{context}
+        content = self._extract_content(response)
+        if content:
+            return content.strip()
+        return "Unable to generate answer from available regulations."
 
-User Question: {question}
+    def _chat(
+        self,
+        *,
+        system_prompt: str,
+        user_prompt: str,
+        temperature: float,
+        max_tokens: int,
+    ) -> dict[str, Any]:
+        payload = {
+            "model": self.model_name,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+        }
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+        response = requests.post(
+            f"{self.base_url}/chat/completions",
+            headers=headers,
+            json=payload,
+            timeout=self.timeout_seconds,
+        )
+        response.raise_for_status()
+        return response.json()
 
-Instructions:
-- Answer in a clear, professional manner
-- Support your answer with specific regulation references
-- If the regulations don't contain relevant information, say so
-- Use Hebrew terms when appropriate but explain them
-- Be concise but thorough
+    @staticmethod
+    def _extract_content(payload: dict[str, Any]) -> str:
+        choices = payload.get("choices") or []
+        if not choices:
+            return ""
+        message = choices[0].get("message") or {}
+        content = message.get("content", "")
+        if isinstance(content, list):
+            return "\n".join(
+                str(part.get("text", "")) for part in content if isinstance(part, dict)
+            )
+        return str(content)
 
-Answer:"""
+
+# Backwards-compatible alias for modules that still import the legacy name.
+GeminiLLMService = OpenAICompatibleLLMService

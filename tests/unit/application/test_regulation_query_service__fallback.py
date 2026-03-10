@@ -38,7 +38,7 @@ def test_query__no_llm__returns_fallback_answer_when_results_exist():
     assert result.total_found == 2
     assert len(result.regulations) == 2
     assert isinstance(result.answer, str)
-    assert "LLM synthesis is not configured" in result.answer
+    assert "LLM synthesis is unavailable" in result.answer
 
 
 def test_query__with_llm__uses_llm_answer():

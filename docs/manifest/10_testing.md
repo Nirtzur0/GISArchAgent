@@ -1,54 +1,60 @@
-# Testing Manifest
+# Testing Strategy
 
-## Test Runner
-
-- Runner: `pytest`
-- Config: `/Users/nirtzur/Documents/projects/GISArchAgent/pytest.ini`
+## Test Pyramid
+- Unit tests: pure logic and deterministic behavior.
+- Integration tests: boundary contracts (repository wiring, persistence behavior).
+- E2E tests: Streamlit smoke and end-to-end sanity.
+- Data contract tests: required fields, range/completeness/shape checks.
 
 ## Marker Taxonomy
+Canonical marker declarations live in `pytest.ini`.
+Primary markers used for execution:
+- `unit`
+- `integration`
+- `e2e`
+- `data_contracts`
 
-Pyramid level:
-- `unit`: pure logic only (no real DB/network/browser automation).
-- `integration`: real boundary contracts (Chroma persistence, repository wiring).
-- `e2e`: critical flow smoke checks (Streamlit scripts + end-to-end output sanity).
+Boundary markers include `db`, `ui`, `network`, and `slow`.
 
-Cross-cutting:
-- `data_contracts`: range + completeness checks (required fields, missingness, ranges, allowed categories, uniqueness).
+## Command Mapping
+Canonical command IDs are defined in `docs/manifest/09_runbook.md`:
+- full suite: `CMD-003`
+- unit: `CMD-004`
+- integration: `CMD-005`
+- e2e: `CMD-006`
+- contracts: `CMD-007`
+- deterministic external dependency rehearsal bundle: `CMD-035`
+- optional live-network rehearsal (bounded manual drill): `CMD-037`
 
-Boundaries:
-- `db`: touches real persistence boundary.
-- `ui`: executes Streamlit scripts.
-- `network`: requires real network access (should be rare; prefer skipping in CI).
-- `slow`: explicitly slow tests.
+## Critical Flow Coverage Expectations
+- Regulation query path:
+  - happy path and no-LLM fallback path.
+- Plan search path:
+  - repository boundary behavior and error containment.
+  - deterministic non-network drill coverage for iPlan boundary failures (`tests/integration/iplan/test_external_dependency_drills.py`).
+- Vector DB/data boundaries:
+  - persistence/contract checks and integrity invariants.
 
-## Test Command Map
+## Current Gaps
+- CI quality gates now include repo-wide parse/syntax lint checks; formatting enforcement is still phased (changed-file + maintained-surface guard, not full-repo yet).
+- Performance/load checks are not yet formalized.
+- Golden-file strategy for output interpretation is limited.
 
-Preferred (works in this repo’s current local setup):
+## Optional Live-Network Rehearsal Policy
+- Objective: keep a real-provider smoke path available without coupling merge/release reliability to network volatility.
+- Default lane (CI + routine local): run deterministic rehearsal path (`CMD-035`) and keep live-network test skipped.
+- Live lane (manual only): run `CMD-037` on bounded cadence:
+  - at most once per calendar week during normal operation,
+  - additionally after dependency/runtime changes affecting pydoll/browser automation,
+  - additionally after incidents where deterministic drills are green but provider regressions are still suspected.
+- Guardrails:
+  - `RUN_NETWORK_TESTS=1` is required to opt in.
+  - CI execution is blocked unless `RUN_NETWORK_ALLOW_CI=1` is explicitly set for a dedicated rehearsal workflow.
+  - rehearsal runtime is bounded by `RUN_NETWORK_REHEARSAL_MAX_ATTEMPTS` and `RUN_NETWORK_REHEARSAL_TIMEOUT_SECONDS` (defaults: 2 attempts, 45s timeout).
+- Expected outcomes:
+  - pass if artifacts are returned and validated,
+  - skip when provider is throttled/unavailable, optional dependency is missing, or bounded timeout is exceeded.
 
-- All: `./venv/bin/python -m pytest`
-- Unit: `./venv/bin/python -m pytest -m unit`
-- Integration: `./venv/bin/python -m pytest -m integration`
-- E2E: `./venv/bin/python -m pytest -m e2e`
-- Data contracts: `./venv/bin/python -m pytest -m data_contracts`
-
-Generic (if your environment has `python` on PATH and deps installed):
-
-- All: `python -m pytest`
-- Unit: `python -m pytest -m unit`
-- Integration: `python -m pytest -m integration`
-- E2E: `python -m pytest -m e2e`
-- Data contracts: `python -m pytest -m data_contracts`
-
-## Environment Requirements
-
-Unit tests:
-- No external services.
-- Deterministic by design (no sleeps, no real network).
-
-Integration tests:
-- Requires local filesystem for Chroma persistence.
-- No real network.
-
-E2E tests:
-- Uses Streamlit’s `AppTest` to execute scripts in-process.
-- Requires Streamlit + UI dependencies importable (folium/pyproj/pandas/etc).
+## Policy
+- Any code change affecting runtime behavior should update relevant tests or explicitly justify why no test change is needed.
+- For boundary-heavy changes, prioritize contract/integration tests over only unit changes.
