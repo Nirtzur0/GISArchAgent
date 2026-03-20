@@ -3,6 +3,10 @@ import chromadb
 from chromadb.config import Settings
 
 from src.infrastructure.factory import ApplicationFactory
+from src.infrastructure.repositories.chroma_repository import ChromaRegulationRepository
+from src.infrastructure.repositories.embedding_functions import (
+    DeterministicHashEmbeddingFunction,
+)
 
 from tests.helpers.assertions import assert_required_fields, assert_unique
 
@@ -79,3 +83,34 @@ def test_search_results__ids_unique_within_page(repo):
     assert results
 
     assert_unique([r.id for r in results], context="repo.search:ids")
+
+
+def test_search__reopened_repository__still_has_query_embedding(vectorstore_path):
+    factory = ApplicationFactory(chroma_persist_dir=str(vectorstore_path))
+    repo = factory.get_regulation_repository()
+    assert repo.search("parking", limit=5)
+
+    reopened = ChromaRegulationRepository(persist_directory=str(vectorstore_path))
+    reopened_results = reopened.search("parking", limit=5)
+
+    assert reopened_results
+
+
+def test_search__reopened_repository__matches_existing_embedding_dimension(tmp_path):
+    vectorstore_path = tmp_path / "vectorstore"
+    seeded = ChromaRegulationRepository(
+        persist_directory=str(vectorstore_path),
+        embedding_function=DeterministicHashEmbeddingFunction(dim=384),
+    )
+    factory = ApplicationFactory(chroma_persist_dir=str(vectorstore_path))
+    initializer = factory.get_regulation_repository()
+
+    # Seed an existing 384-dim collection before reopening through the default path.
+    if seeded.get_statistics()["total_regulations"] == 0:
+        from src.vectorstore.initializer import VectorDBInitializer
+
+        assert VectorDBInitializer(seeded).initialize_with_samples()
+
+    reopened = ChromaRegulationRepository(persist_directory=str(vectorstore_path))
+
+    assert reopened.search("parking", limit=5)

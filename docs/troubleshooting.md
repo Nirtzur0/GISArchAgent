@@ -9,6 +9,25 @@ Fix:
 ./venv/bin/pip install pydoll-python
 ```
 
+## Scraper status stays `unvalidated`
+Likely causes:
+- no bounded live scraper probe has been run in the current API process,
+- the process restarted and the in-memory probe cache was cleared.
+
+What changed:
+- `/api/health`, `/api/system/status`, `/api/workspace/overview`, and `/api/operations/overview` are intentionally passive and will not launch a live probe on page load.
+- dependency availability (`scraping.available`) is separate from probe success (`scraping.runtime_ready`).
+
+Validation command:
+```bash
+curl -s "http://127.0.0.1:8001/api/data/fetcher-health?probe_limit=1&timeout_seconds=20"
+```
+
+What to expect:
+- `status=ready` and `runtime_ready=true` after a successful bounded probe,
+- `status=timeout|error|skipped|unavailable` with `detail`, `last_probe_at`, and `last_probe_duration_ms` when validation does not succeed,
+- the passive health/overview endpoints reflect the latest cached probe result after this call.
+
 ## App fails to start after setup
 Likely causes:
 - incomplete dependency install,
@@ -176,3 +195,4 @@ Guardrails:
 RUN_NETWORK_TESTS=1 RUN_NETWORK_ALLOW_CI=1 RUN_NETWORK_REHEARSAL_MAX_ATTEMPTS=1 RUN_NETWORK_REHEARSAL_TIMEOUT_SECONDS=45 ./venv/bin/python -m pytest tests/integration/iplan/test_pydoll_live_mavat_documents__optional.py -q
 ```
 - Skip outcomes are acceptable for provider throttling, missing optional dependency, or bounded timeout.
+- When the bounded rehearsal skips after running, inspect the emitted status/detail/timestamp in the skip reason to distinguish timeout/block/wrong-page style failures from a simple empty artifact list.

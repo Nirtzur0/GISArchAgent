@@ -9,21 +9,22 @@ We are building GISArchAgent for planning and architecture practitioners so they
 - Replace legal or statutory review by licensed experts.
 - Operate as a multi-tenant hosted SaaS product.
 - Mirror all iPlan datasets/documents at full historical depth.
-- Guarantee uptime/performance of external providers (iPlan ArcGIS, Gemini APIs).
+- Guarantee uptime/performance of external providers (iPlan ArcGIS, OpenAI-compatible APIs).
 
 ### Success Metrics
 - A clean clone can reach a running UI via repo-native commands (`./setup.sh`, `./run_webapp.sh`).
 - Core verification commands pass locally (`./venv/bin/python -m pytest` and marker subsets from `pytest.ini`).
 - Three primary workflows are usable end-to-end:
-  - regulation query in the Streamlit app,
-  - plan search/analysis in the Streamlit pages,
+  - plan search and dossier selection in the React workspace,
+  - regulation query against the selected plan context in the React workspace,
   - vector DB maintenance through CLI scripts.
 - Engineering docs remain coherent with repo entrypoints and boundaries (status/checklists/manifest docs kept in sync).
 
 ### Constraints
 - Python runtime baseline: `>=3.10` (`pytest.ini`).
+- Node.js runtime baseline: `>=20` for the React/Vite frontend.
 - Local-first persistence under `data/` (gitignored except `.gitkeep`).
-- Optional external integrations: Gemini APIs and iPlan ArcGIS endpoints.
+- Optional external integrations: OpenAI-compatible provider APIs and iPlan ArcGIS endpoints.
 - Secrets must stay outside git (`.env` ignored by `.gitignore`).
 
 ### Do Not Break Invariants
@@ -34,9 +35,9 @@ We are building GISArchAgent for planning and architecture practitioners so they
 
 ### Primary User Journeys
 1. New user setup and first query:
-   - run `./setup.sh`, then `./run_webapp.sh`, then ask a regulation question in `app.py`.
+   - run `./setup.sh`, then `./run_webapp.sh`, then select a plan and ask a regulation question in the React workspace.
 2. Planner performs plan search:
-   - use UI flow (`pages/2_...Plan_Analyzer.py`) backed by `PlanSearchService`.
+   - use the React workspace backed by local data search and optional live iPlan lookup.
 3. Data operator maintains local data store:
    - run `python3 scripts/data_cli.py status/search/export`.
 4. Data operator refreshes vector DB:
@@ -50,7 +51,7 @@ We are building GISArchAgent for planning and architecture practitioners so they
 - Contributors extending the data pipeline, UI flows, and integration boundaries.
 
 ## Key Workflows
-- Regulation retrieval and answer synthesis: UI -> `RegulationQueryService` -> `IRegulationRepository` (Chroma) -> optional Gemini LLM.
-- Plan search and optional vision analysis: UI -> `PlanSearchService` -> `IPlanRepository` (iPlan ArcGIS) -> optional Gemini Vision + cache.
+- Regulation retrieval and answer synthesis: React UI -> FastAPI -> `RegulationQueryService` -> `IRegulationRepository` (Chroma) -> optional OpenAI-compatible LLM.
+- Plan search and optional vision analysis: React UI -> FastAPI -> `PlanSearchService` -> `IPlanRepository` (iPlan ArcGIS) -> optional OpenAI-compatible vision + cache.
 - Data ingestion/build flow: CLI -> unified pipeline (`src/vectorstore/unified_pipeline.py`) -> persisted vector DB.
 - Testing and change validation: `pytest` marker suites + docs status/checklist updates.

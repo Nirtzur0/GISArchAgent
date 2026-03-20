@@ -79,6 +79,14 @@ class DataStore:
         metadata["count_saved"] = n
         metadata["count_total"] = n
 
+        fetched_at = metadata.get("fetched_at")
+        if fetched_at and not metadata.get("last_updated"):
+            metadata["last_updated"] = fetched_at
+
+        source = metadata.get("source")
+        if isinstance(source, str) and source.lower().startswith("iplan arcgis rest api"):
+            metadata["source"] = "iPlan ArcGIS REST API"
+
         # If total fetched is absent or obviously wrong, set a sane lower bound.
         # We do not reduce it if it is higher than what's saved (common when you
         # fetched more but chose to persist only a subset).
@@ -194,13 +202,13 @@ class DataStore:
         for feature in features:
             attrs = feature.get("attributes", {})
 
-            district = attrs.get("district_name", "Unknown")
+            district = attrs.get("district_name") or "Unknown district"
             districts[district] = districts.get(district, 0) + 1
 
-            city = attrs.get("plan_county_name", "Unknown")
+            city = attrs.get("plan_county_name") or "Unknown city"
             cities[city] = cities.get(city, 0) + 1
 
-            status = attrs.get("station_desc", "Unknown")
+            status = attrs.get("station_desc") or "Unknown status"
             statuses[status] = statuses.get(status, 0) + 1
 
         return {

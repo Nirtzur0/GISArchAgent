@@ -4,8 +4,8 @@
 
 | ID | Command | Purpose | Source Evidence |
 | --- | --- | --- | --- |
-| CMD-001 | `./setup.sh` | Create venv, install dependencies, prepare `.env`, initialize local data/vector baseline. | `setup.sh` |
-| CMD-002 | `./run_webapp.sh` | Launch Streamlit application entrypoint. | `run_webapp.sh` |
+| CMD-001 | `./setup.sh` | Create venv, install Python and frontend dependencies, prepare `.env`, and create local data directories. | `setup.sh` |
+| CMD-002 | `./run_webapp.sh` | Launch the canonical local FastAPI + React development stack. | `run_webapp.sh` |
 | CMD-003 | `./venv/bin/python -m pytest` | Run full test suite. | `README.md`, `tests/README.md` |
 | CMD-004 | `./venv/bin/python -m pytest -m unit` | Run unit tests only. | `README.md`, `tests/README.md`, `pytest.ini` |
 | CMD-005 | `./venv/bin/python -m pytest -m integration` | Run integration tests only. | `tests/README.md`, `pytest.ini` |
@@ -43,14 +43,15 @@
 | CMD-037 | `RUN_NETWORK_TESTS=1 RUN_NETWORK_REHEARSAL_MAX_ATTEMPTS=2 RUN_NETWORK_REHEARSAL_TIMEOUT_SECONDS=45 ./venv/bin/python -m pytest tests/integration/iplan/test_pydoll_live_mavat_documents__optional.py -q` | Run bounded opt-in live-network MAVAT rehearsal (manual drill; keep out of default CI). | `tests/integration/iplan/test_pydoll_live_mavat_documents__optional.py`, `docs/manifest/10_testing.md`, `docs/troubleshooting.md` |
 | CMD-038 | `(python3 scripts/build_vectordb_cli.py build --max-plans 1 --no-vision || true) && python3 scripts/observability_cli.py dashboard --since-minutes 180 --events-limit 1000 --alerts-limit 500` | Capture build-window saturation snapshot evidence even when external provider calls fail; record build operation latency/outcome plus saturation fields for triage windows. | `scripts/build_vectordb_cli.py`, `scripts/observability_cli.py`, `src/vectorstore/unified_pipeline.py` |
 | CMD-039 | `python3 -c "import json,datetime,pathlib; items=json.loads(pathlib.Path('docs/artifacts/index.json').read_text(encoding='utf-8')).get('artifacts', []); cutoff=(datetime.datetime.now(datetime.timezone.utc)-datetime.timedelta(days=30)).isoformat(); stale=[i.get('id','unknown') for i in items if (not isinstance(i.get('retrieved_at'), str)) or (i.get('retrieved_at') < cutoff)]; print(f'artifacts_total={len(items)} stale_total={len(stale)}'); print('stale_ids=' + ','.join(stale) if stale else 'stale_ids=')"` | Audit artifact freshness against 30-day staleness policy and produce stale-ID summary for recurring cadence ledger records. | `docs/artifacts/index.json`, `docs/artifacts/README.md`, `docs/implementation/checklists/09_evidence_cadence_ledger.md` |
-| CMD-040 | `python3 scripts/quick_status.py external --since-minutes 180 --events-limit 1000 --alerts-limit 500 --run-drills` | One-shot external dependency health snapshot bundle (iPlan/MAVAT/Gemini boundary configuration, recent observability signals, deterministic drill outcomes, explicit `warning_context` semantics, and warning-noise profile counters for first-pass triage). | `scripts/quick_status.py`, `tests/unit/scripts/test_quick_status_external_snapshot.py`, `tests/integration/iplan/test_external_dependency_drills.py`, `docs/troubleshooting.md` |
+| CMD-040 | `python3 scripts/quick_status.py external --since-minutes 180 --events-limit 1000 --alerts-limit 500 --run-drills` | One-shot external dependency health snapshot bundle (iPlan/MAVAT/OpenAI-compatible boundary configuration, recent observability signals, deterministic drill outcomes, explicit `warning_context` semantics, and warning-noise profile counters for first-pass triage). | `scripts/quick_status.py`, `tests/unit/scripts/test_quick_status_external_snapshot.py`, `tests/integration/iplan/test_external_dependency_drills.py`, `docs/troubleshooting.md` |
 | CMD-041 | `for file in docs/README.md docs/INDEX.md docs/reference/configuration.md docs/artifacts/README.md; do for id in artifact:ART-EXT-001 artifact:ART-EXT-002 artifact:ART-EXT-003 artifact:ART-EXT-004 artifact:ART-EXT-005; do rg -q "$id" "$file" || { echo "$file missing $id"; exit 1; }; done; done; echo "onboarding_artifact_links_ok files=4 ids=5"` | Guardrail check that onboarding/reference boundary docs still carry required `artifact:ART-EXT-*` citations. | `docs/README.md`, `docs/INDEX.md`, `docs/reference/configuration.md`, `docs/artifacts/README.md` |
+| CMD-042 | `cd frontend && npm run test:e2e` | Run the canonical React workspace browser smoke against the FastAPI test stack. | `frontend/tests/app.spec.ts`, `frontend/playwright.config.ts`, `scripts/run_test_stack.sh` |
 
 ## Incident Triage Quick Path
 1. App not starting:
    - run `CMD-001`, then `CMD-002`.
 2. Query/search quality or runtime failures:
-   - run `CMD-004`, `CMD-005`, `CMD-006`, `CMD-007`.
+   - run `CMD-004`, `CMD-005`, `CMD-006`, `CMD-007`, `CMD-042`.
 3. Vector DB issues:
    - run `CMD-008`, then `CMD-009` or `CMD-010`.
 4. Data-store integrity concerns:
@@ -106,6 +107,7 @@
 - Use `docs/implementation/checklists/09_evidence_cadence_ledger.md` as the canonical recurring evidence ledger for `CMD-036`/`CMD-029`/`CMD-038`/`CMD-039`/`CMD-040`.
 - Use `CMD-040` as the canonical single-command external dependency boundary snapshot bundle.
 - Use `CMD-041` as the canonical onboarding/reference artifact-link citation guardrail.
+- Use `CMD-042` as the canonical browser smoke for the maintained React workspace.
 - Prompt routing is now prompt-first/manual via `project-prompts/prompt-00-prompt-routing-plan.md` (router script removed from latest prompt library).
 
 ## CMD-036 Recalibration Cadence

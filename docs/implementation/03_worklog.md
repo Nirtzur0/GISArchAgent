@@ -1,5 +1,169 @@
 # Worklog
 
+## 2026-03-20
+- Executed bounded README refinement and product-shot packet.
+  - Why this packet: the README was accurate but still read more like an internal engineering summary than a production front door, and it lacked real product evidence.
+  - Updated:
+    - `README.md`
+    - `output/playwright/readme-workspace.png`
+    - `output/playwright/readme-investigation.png`
+    - `output/playwright/readme-operations.png`
+    - `docs/implementation/00_status.md`
+    - `docs/implementation/03_worklog.md`
+  - Evidence:
+    - `python3 project-prompts/scripts/prompts_manifest.py --check`
+    - `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack`
+    - `./run_webapp.sh`
+    - `cd frontend && npm run build`
+    - live Playwright capture against `/`, `/map`, and `/data`
+  - Result:
+    - the README now opens with the maintained product path, a shorter quickstart, and clearer workflow framing.
+    - the repo front door now includes real screenshots for Workspace, Investigation, and Operations.
+    - deeper detail is pushed back into linked docs instead of crowding the main onboarding path.
+
+## 2026-03-13
+- Executed bounded live-UI hardening packet using Playwright MCP against the maintained React app.
+  - Why this packet: the routed UI largely worked, but the real browser still exposed truthfulness and presentation defects that tests had not made explicit: a missing favicon, inconsistent health labels between pages, stale source metadata wording, missing freshness timestamps, and layout overflow on long metadata values.
+  - Updated:
+    - `frontend/index.html`
+    - `frontend/public/favicon.svg`
+    - `frontend/src/main.tsx`
+    - `frontend/src/redesign/model.ts`
+    - `frontend/src/redesign/components.tsx`
+    - `frontend/src/redesign/pages/WorkspacePage.tsx`
+    - `frontend/src/redesign/pages/OperationsPage.tsx`
+    - `frontend/src/styles.redesign.css`
+    - `src/api/app.py`
+    - `src/infrastructure/factory.py`
+    - `src/data_management/data_store.py`
+    - `tests/unit/data_management/test_data_store_normalization.py`
+    - `tests/integration/api/test_fastapi_endpoints.py`
+    - `frontend/tests/app.spec.ts`
+    - `docs/implementation/00_status.md`
+    - `docs/implementation/03_worklog.md`
+  - Evidence:
+    - `./venv/bin/python -m pytest tests/unit/data_management/test_data_store_normalization.py tests/integration/api/test_fastapi_endpoints.py -q`
+    - `cd frontend && npm run build`
+    - `cd frontend && npm run test:e2e -- app.spec.ts`
+    - Playwright MCP live verification on `/` and `/data`
+  - Result:
+    - browser console is clean of app errors and router warnings in the maintained UI.
+    - workspace metrics and Operations health now describe the same backend state consistently.
+    - workspace first-load behavior now shows explicit loading copy instead of transient `Unknown` hero metrics while overview data is resolving.
+    - the mobile shell now uses compact horizontal route navigation so workspace content starts materially higher on the page.
+    - stale inventory metadata is normalized before it reaches the UI, so the app no longer advertises `fetch_webpage tool` wording or hides available freshness timestamps.
+    - long endpoint/source values now wrap cleanly instead of breaking the Operations grid.
+
+- Executed bounded canonical-local runtime readiness packet.
+  - Why this packet: the repo’s stated success criteria required `./run_webapp.sh` to be the reliable front door, but the maintained FastAPI + React path still had hardcoded port assumptions, a misleading provider default, and a live iPlan path that degraded too slowly for normal use.
+  - Updated:
+    - `scripts/dev_stack_ports.py`
+    - `run_webapp.sh`
+    - `scripts/run_test_stack.sh`
+    - `src/config.py`
+    - `src/infrastructure/services/llm_service.py`
+    - `src/infrastructure/services/vision_service.py`
+    - `src/infrastructure/factory.py`
+    - `src/application/dtos.py`
+    - `src/application/services/plan_search_service.py`
+    - `src/api/app.py`
+    - `frontend/vite.config.ts`
+    - `frontend/vite.config.js`
+    - `frontend/src/types.ts`
+    - `frontend/src/redesign/components.tsx`
+    - `frontend/src/redesign/model.ts`
+    - `frontend/src/redesign/pages/WorkspacePage.tsx`
+    - `frontend/src/redesign/pages/OperationsPage.tsx`
+    - `frontend/tests/app.spec.ts`
+    - `tests/integration/api/test_fastapi_endpoints.py`
+    - `tests/unit/scripts/test_dev_stack_ports.py`
+    - `.env.example`
+    - `README.md`
+    - `docs/RUN_GUIDE.md`
+    - `docs/reference/configuration.md`
+    - `docs/manifest/08_deployment.md`
+    - `docs/manifest/09_runbook.md`
+    - `.github/workflows/ci.yml`
+    - `docs/implementation/00_status.md`
+    - `docs/implementation/03_worklog.md`
+  - Evidence to run after edits:
+    - `python3 project-prompts/scripts/prompts_manifest.py --check`
+    - `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts`
+    - `./venv/bin/python -m pytest tests/integration/api/test_fastapi_endpoints.py -q`
+    - `./venv/bin/python -m pytest tests/unit/application/test_external_dependency_degraded_modes.py tests/unit/infrastructure/test_iplan_repository_error_signal.py tests/integration/iplan/test_external_dependency_drills.py tests/unit/scripts/test_dev_stack_ports.py -q`
+    - `./venv/bin/python -m pytest -m e2e -q`
+    - `cd frontend && npm run build`
+    - `cd frontend && npm run test:e2e`
+    - `./run_webapp.sh`
+  - Result:
+    - the launcher now resolves occupied ports and keeps the frontend pointed at the actual backend it started.
+    - provider configuration is now explicit opt-in, which keeps clean local runs honest and retrieval-first.
+    - live iPlan failures now surface as bounded degraded warnings instead of long hanging searches.
+    - the maintained React browser smoke is now part of the documented and automated verification path.
+
+## 2026-03-11
+- Executed bounded planner UX redesign and Figma handoff packet.
+  - Why this packet: the current React product exposed real capability, but the planner workflow hierarchy was weaker than the product value deserved and the design review needed a Figma-backed handoff instead of markdown-only critique.
+  - Updated:
+    - `frontend/src/App.tsx`
+    - `frontend/src/AppRedesign.tsx`
+    - `frontend/src/redesign/model.ts`
+    - `frontend/src/redesign/components.tsx`
+    - `frontend/src/redesign/tracking.ts`
+    - `frontend/src/redesign/pages/WorkspacePage.tsx`
+    - `frontend/src/redesign/pages/InvestigationPage.tsx`
+    - `frontend/src/redesign/pages/FeasibilityPage.tsx`
+    - `frontend/src/redesign/pages/OperationsPage.tsx`
+    - `frontend/src/FigmaHandoff.tsx`
+    - `frontend/src/lib/api.ts`
+    - `frontend/src/main.tsx`
+    - `frontend/src/types.ts`
+    - `frontend/src/styles.redesign.css`
+    - `src/api/app.py`
+    - `src/telemetry.py`
+    - `frontend/public/figma/*`
+    - `frontend/tests/app.spec.ts`
+    - `tests/integration/api/test_fastapi_endpoints.py`
+    - `tests/unit/infrastructure/test_telemetry_backend.py`
+    - `docs/implementation/reports/dashboard_ux_audit_redesign.md`
+    - `docs/implementation/checklists/10_dashboard_redesign.md`
+    - `docs/implementation/checklists/02_milestones.md`
+    - `docs/implementation/checklists/03_improvement_bets.md`
+    - `docs/implementation/reports/improvement_directions.md`
+    - `docs/implementation/00_status.md`
+    - `docs/implementation/03_worklog.md`
+  - Figma artifacts:
+    - file: `https://www.figma.com/design/d6ExX1CAGJtmV6HzA1j73D`
+    - redesign workspace capture: `node 1:2`
+    - current-state workspace capture: `node 2:2`
+    - structured `/figma-handoff` board capture: `node 3:2`
+  - Evidence:
+    - `./venv/bin/python -m pytest tests/unit/infrastructure/test_telemetry_backend.py -q`
+    - `./venv/bin/python -m pytest tests/integration/api/test_fastapi_endpoints.py -q`
+    - `cd frontend && npm run build`
+    - `cd frontend && npm run test:e2e`
+  - Result:
+    - the app now reads as Workspace / Investigation / Feasibility / Operations instead of four visually disconnected tools.
+    - additive backend overview/event APIs now support the calmer shell without schema-breaking changes.
+    - design review, implementation planning, browser-tested frontend output, and the canonical Figma packet are now synchronized.
+
+- Executed bounded docs refresh for front-door onboarding and teaching material.
+  - Why this packet: `README.md` and explanation pages were stale relative to the implemented React + FastAPI stack, which made the main onboarding path inaccurate.
+  - Updated:
+    - `README.md`
+    - `docs/explanation/problem_landscape_and_solution.md`
+    - `docs/INDEX.md`
+    - `docs/explanation/architecture.md`
+    - `docs/implementation/00_status.md`
+    - `docs/implementation/03_worklog.md`
+  - Evidence to run after edits:
+    - `./venv/bin/python -m pytest tests/integration/api/test_fastapi_endpoints.py -q`
+    - `cd frontend && npm run build`
+    - `cd frontend && npm run test:e2e`
+  - Result:
+    - current onboarding now describes the actual maintained stack: FastAPI + React, local DataStore + Chroma, bounded scraping, and OpenAI-compatible provider wiring.
+    - teaching material now explains the problem landscape, repo architecture, heuristics, and current runtime limitations without routing new readers into the legacy Streamlit path.
+
 ## 2026-02-09
 - Executed next non-redundant packet: `prompt-03-alignment-review-gate` (post-docs drift convergence checkpoint, manual/no router script).
   - Why this prompt: `docs/implementation/00_status.md` and `docs/implementation/checklists/07_alignment_review.md` marked this as the required next checkpoint after `prompt-11`.
@@ -1869,3 +2033,36 @@
     - `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md` -> pass
     - `python3 project-prompts/scripts/prompts_manifest.py --check` -> pass
     - `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts` -> pass
+
+- 2026-03-11: repo realignment implementation packet
+  - Restored deterministic degraded-mode answers for regulation queries and committed the missing `pytest.ini` marker config.
+  - Switched the repo-native bootstrap/run path to the actual FastAPI + React stack with `.env.example`, updated getting-started docs, and regenerated dependency lock/doc artifacts.
+  - Integrated live iPlan search into the React workspace as an explicit alternate source while keeping local catalog search as the default stable path.
+  - Removed shipped `/figma-handoff` routing, deleted the dead frontend handoff/style files, removed the dead `src/vectorstore/manager.py` surface, and cut the stub `export` CLI command.
+  - Verification:
+    - `./venv/bin/python -m pytest tests/unit/application/test_regulation_query_service__fallback.py tests/unit/application/test_external_dependency_degraded_modes.py -q` -> `7 passed`
+    - `./venv/bin/python -m pytest tests/integration/api/test_fastapi_endpoints.py -q` -> `11 passed`
+    - `./venv/bin/python -m pytest -m unit -q` -> `66 passed, 41 deselected`
+    - `./venv/bin/python -m pytest tests/integration/iplan/test_external_dependency_drills.py -q` -> `5 passed`
+    - `cd frontend && npm run build` -> pass
+    - `cd frontend && npm run test:e2e` -> `5 passed`
+
+- 2026-03-11: scraper reliability and truthful health implementation packet
+  - Replaced capability-only scraper readiness with cached bounded probe semantics in `src/api/app.py`.
+  - Added MAVAT scrape outcome classification + retained diagnostics in `src/data_management/pydoll_fetcher.py`; switched the raw JS click fallback to `WebElement.execute_script()`.
+  - Updated the React operations surface so `Validate scraper` explicitly runs `/api/data/fetcher-health`, then refreshes the cached shell/overview surfaces.
+  - Added narrow regression coverage:
+    - `tests/unit/data_management/test_pydoll_fetcher_status.py`
+    - expanded `tests/integration/api/test_fastapi_endpoints.py`
+    - updated `frontend/tests/app.spec.ts`
+    - updated `tests/integration/iplan/test_pydoll_live_mavat_documents__optional.py` to preserve classified diagnostics when the bounded run returns no artifacts
+  - Synced:
+    - `docs/troubleshooting.md`
+    - `docs/manifest/04_api_contracts.md`
+    - `docs/manifest/10_testing.md`
+    - `docs/implementation/00_status.md`
+  - Verification:
+    - `./venv/bin/python -m pytest tests/unit/data_management/test_mavat_artifact_type_guessing.py tests/unit/data_management/test_pydoll_fetcher_status.py tests/integration/api/test_fastapi_endpoints.py -q` -> `23 passed`
+    - `cd frontend && npm run build` -> pass
+    - `cd frontend && npm run test:e2e -- --grep "data ops supports vector search and regulation authoring"` -> `1 passed`
+    - `RUN_NETWORK_TESTS=1 RUN_NETWORK_REHEARSAL_MAX_ATTEMPTS=1 RUN_NETWORK_REHEARSAL_TIMEOUT_SECONDS=45 ./venv/bin/python -m pytest tests/integration/iplan/test_pydoll_live_mavat_documents__optional.py -q -rs` -> `1 skipped` (bounded live MAVAT path still timed out against upstream)

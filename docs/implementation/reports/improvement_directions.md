@@ -1157,3 +1157,29 @@
   - `prompt-14-improvement-direction-bet-loop` (refresh next-cycle ranking and pick a non-redundant bounded packet).
 - Follow-up:
   - execute the selected implementation/docs packet (`prompt-02` or `prompt-11`) from the rerank output.
+
+## 2026-03-11 Update (Planner UX redesign packet)
+- Trigger: direct user request for a Figma-backed planner UX audit, redesign, and implementation-ready handoff.
+- New direction added:
+  - `IMP-23 - Planner UX Redesign and Design-System Handoff`
+- Why it is worth doing now:
+  - the current React product is useful but visually fragmented
+  - planner workflow hierarchy was weaker than the product value deserved
+  - route-level consistency and state-surface quality were clear UX leverage points
+- Implemented in this packet:
+  - planner-first route redesign across `/`, `/map`, `/analyzer`, and `/data`
+  - new stylesheet and app shell aligned to Workspace / Investigation / Feasibility / Operations
+  - updated Playwright coverage to the redesigned hierarchy
+  - dedicated packet artifacts:
+    - `docs/implementation/reports/dashboard_ux_audit_redesign.md`
+    - `docs/implementation/checklists/10_dashboard_redesign.md`
+- Figma artifacts completed:
+  - file: `https://www.figma.com/design/d6ExX1CAGJtmV6HzA1j73D`
+  - direct redesign workspace capture (`node 1:2`)
+  - direct current-state workspace capture (`node 2:2`)
+  - structured `/figma-handoff` board capture (`node 3:2`)
+- Remaining truth:
+  - packet deliverables are complete
+  - later cleanup can extract more frontend components if this redesign becomes the new baseline for additional work
+- Recommended immediate next prompt:
+  - none required for code delivery; run `prompt-03` only if prompt-pack routing discipline is being resumed

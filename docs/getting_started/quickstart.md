@@ -12,11 +12,12 @@ Start the app locally, run one core query flow, and validate test health.
 ```bash
 ./run_webapp.sh
 ```
-Open `http://localhost:8501`.
+Open `http://127.0.0.1:5173`.
 
 ## 3) Try core workflow
-- In the app, use the query assistant on the main page.
-- Optionally navigate to plan analyzer/data management pages.
+- In the workspace, search local plans and select one.
+- Ask a regulation question against the selected plan context.
+- Optionally navigate to the map, analyzer, and data pages.
 
 ## 4) Validate tests
 ```bash
@@ -29,7 +30,7 @@ python3 scripts/quick_status.py
 ```
 
 ## Interpreting success
-- App starts without import errors.
-- Query UI is interactive and returns a result.
+- Backend and frontend both start without import errors.
+- Workspace UI is interactive and returns a result.
 - Unit marker suite passes.
 - Vector DB status command prints a non-crashing status report.

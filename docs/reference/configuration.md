@@ -7,14 +7,30 @@
 ## Key configuration fields
 | Name | Default | Purpose |
 | --- | --- | --- |
-| `gemini_api_key` | `None` | Optional direct Gemini API for vision/LLM services |
-| `google_api_key` | `None` | Fallback key path |
+| `openai_base_url` | `""` | Optional OpenAI-compatible API base URL used by synthesis and upload analysis |
 | `openai_api_key` | `None` | Optional provider key |
+| `openai_model` | `gpt-4o-mini` | Text synthesis model name |
+| `openai_vision_model` | `gpt-4o-mini` | Vision analysis model name |
 | `anthropic_api_key` | `None` | Optional provider key |
+| `google_api_key` | `None` | Legacy compatibility field |
+| `gemini_api_key` | `None` | Legacy compatibility field |
 | `chroma_persist_directory` | `./data/vectorstore` | Local vector DB path |
 | `iplan_base_url` | iPlan URL | iPlan system base |
 | `iplan_api_url` | iPlan ArcGIS URL | API endpoint base |
 | `log_level` | `INFO` | Runtime logging level |
+
+Canonical provider env surface:
+
+```bash
+OPENAI_BASE_URL=
+OPENAI_API_KEY=
+OPENAI_MODEL=gpt-4o-mini
+OPENAI_VISION_MODEL=gpt-4o-mini
+```
+
+Set `OPENAI_BASE_URL` only when you have a real OpenAI-compatible API endpoint. When it is left blank, the app stays in retrieval-only mode and disables upload analysis explicitly.
+
+Legacy fields remain readable for compatibility, but new setup and docs should use the `OPENAI_*` variables.
 
 ## External dependency boundaries (artifact-linked)
 Use these IDs when documenting or changing boundary assumptions:

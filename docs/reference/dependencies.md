@@ -11,10 +11,6 @@ Do not edit manually.
 ## Runtime Requirements (`requirements.txt`)
 | Package | Spec |
 | --- | --- |
-| `streamlit` | `streamlit>=1.52,<2` |
-| `streamlit-folium` | `streamlit-folium>=0.25,<1` |
-| `folium` | `folium>=0.20,<1` |
-| `plotly` | `plotly>=6,<7` |
 | `pandas` | `pandas>=2.2,<3` |
 | `python-dotenv` | `python-dotenv>=1,<2` |
 | `tenacity` | `tenacity>=8,<9` |
@@ -36,15 +32,9 @@ Do not edit manually.
 | `pyproj` | `pyproj>=3.6,<4` |
 | `fastapi` | `fastapi>=0.126,<1` |
 | `uvicorn` | `uvicorn>=0.27,<1` |
+| `python-multipart` | `python-multipart>=0.0.9,<1` |
 | `pydantic` | `pydantic>=2.6,<3` |
 | `pydantic-settings` | `pydantic-settings>=2.1,<3` |
-| `langchain` | `langchain>=1.2,<2` |
-| `langchain-core` | `langchain-core>=1.2,<2` |
-| `langchain-openai` | `langchain-openai>=1.1,<2` |
-| `langchain-chroma` | `langchain-chroma>=1.1,<2` |
-| `langchain-text-splitters` | `langchain-text-splitters>=1.1,<2` |
-| `langgraph` | `langgraph>=0.0.20` |
-| `langsmith` | `langsmith>=0.5,<1` |
 
 ## Development Requirements (`requirements-dev.txt`)
 | Package | Spec |
@@ -55,8 +45,8 @@ Do not edit manually.
 | `ruff` | `ruff>=0.2,<1` |
 
 ## Lock Coverage
-- Direct requirements covered by lockfile: `38/38`
-- Total locked package entries: `199`
+- Direct requirements covered by lockfile: `28/28`
+- Total locked package entries: `189`
 
 ## Lockfile Fingerprint
-- `sha256(requirements.lock)`: `addaba672b7a0df72299b21e317ead09f3aa954c6da9613cfae52633306e6e7f`
+- `sha256(requirements.lock)`: `c19dbb63d3a971b4fa3d2f6632beaf6c3198653f3c3e9346beb4c224cccfd383`

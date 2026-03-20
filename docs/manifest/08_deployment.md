@@ -2,7 +2,7 @@
 
 ## Current Deployment Shape
 - Primary mode: local developer/operator deployment.
-- Runtime process: Streamlit app (`app.py`) in a Python virtual environment.
+- Runtime process: FastAPI backend plus React/Vite frontend launched via `./run_webapp.sh`.
 - Data persistence: local filesystem under `data/`.
 
 ## Environments
@@ -11,12 +11,13 @@
 
 ## Build and Startup
 - Environment bootstrap: `./setup.sh`.
-- App launch: `./run_webapp.sh` (or `streamlit run app.py`).
+- App launch: `./run_webapp.sh`.
+- Alternate local run: FastAPI on `8000` plus `frontend` Vite dev server on `5173`, with automatic port reassignment when those defaults are occupied.
 - Vector DB maintenance: `scripts/build_vectordb_cli.py`.
 
 ## Trust Boundaries
 - Outbound calls to iPlan ArcGIS.
-- Optional outbound calls to Gemini APIs.
+- Optional outbound calls to OpenAI-compatible APIs.
 - Local data and vector persistence.
 
 ## Release Shape (Current)
@@ -26,7 +27,7 @@
 ## Deployment Risks
 - External dependency availability and SSL compatibility.
 - Local environment drift across contributors (dependency and browser setup).
-- Missing CI gate before changes are merged.
+- Hosted deployment profile is still undefined in repo artifacts.
 
 ## Follow-up Outcomes
 - Define CI workflow and release discipline artifacts.

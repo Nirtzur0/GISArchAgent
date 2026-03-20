@@ -36,6 +36,7 @@ Quick Links: [Getting Started](getting_started/installation.md) | [Tutorials](tu
 
 ## Explanation
 - Architecture explanation: `docs/explanation/architecture.md`
+- Problem landscape and solution: `docs/explanation/problem_landscape_and_solution.md`
 - Design decisions overview: `docs/explanation/design_decisions.md`
 
 ## Operational
@@ -43,7 +44,7 @@ Quick Links: [Getting Started](getting_started/installation.md) | [Tutorials](tu
 - Glossary: `docs/glossary.md`
 - Changelog: `CHANGELOG.md`
 - Contributing: `CONTRIBUTING.md`
-- License: `LICENSE`
+- License: TODO - no `LICENSE` file is currently committed
 
 ## External Boundary Artifacts (Onboarding)
 Use artifact-linked boundary notes when touching provider/runtime assumptions:

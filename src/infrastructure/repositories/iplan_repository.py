@@ -8,7 +8,7 @@ import logging
 import ssl
 import requests
 from typing import List, Optional, Dict, Any
-from datetime import datetime
+from datetime import datetime, UTC
 from urllib3.exceptions import InsecureRequestWarning
 import urllib3
 
@@ -67,7 +67,7 @@ class IPlanGISRepository(IPlanRepository):
 
     def _record_error(self, operation: str, error: Exception) -> None:
         self._last_error = {
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
             "operation": operation,
             "error_class": type(error).__name__,
             "message": str(error),

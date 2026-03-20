@@ -35,6 +35,11 @@ class DeterministicHashEmbeddingFunction:
         # Stable identifier used by Chroma to detect embedding-function conflicts.
         return "gisarch_deterministic_hash_v1"
 
+    @staticmethod
+    def is_legacy() -> bool:
+        # Chroma's custom embedding compatibility layer still probes this hook.
+        return True
+
     def get_config(self) -> dict:
         return {"dim": self.dim}
 

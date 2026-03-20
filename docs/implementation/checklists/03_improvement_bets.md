@@ -248,3 +248,18 @@
   - Target files/areas: `docs/implementation/reports/improvement_directions.md`, `docs/implementation/checklists/03_improvement_bets.md`, `docs/implementation/checklists/02_milestones.md`
   - Acceptance signal: rerank notes include bounded repeat-loop stop condition and explicit unresolved-outcome delta check before reusing the same immediate packet route.
   - Suggested prompt chain: `prompt-14` -> `prompt-03`
+
+## Post-M12 Next-Cycle Bets (user-requested planner UX redesign)
+### IMP-23 - Planner UX Redesign and Design-System Handoff
+- [x] Outcome: planner-first UX redesign is implemented in the frontend and paired with a Figma-backed audit/handoff packet.
+  - Owner type: maintainer
+  - Effort: M/L
+  - Target files/areas: `frontend/src/AppRedesign.tsx`, `frontend/src/styles.redesign.css`, `frontend/tests/app.spec.ts`, `docs/implementation/reports/dashboard_ux_audit_redesign.md`, `docs/implementation/checklists/10_dashboard_redesign.md`, Figma file `GISArchAgent - Planner UX Redesign`
+  - Acceptance signal: redesigned planner-first routes are shipped, browser verification passes, the report/checklist exist, and the Figma file contains baseline plus redesign captures.
+  - Verification:
+    - `cd frontend && npm run build`
+    - `cd frontend && npm run test:e2e`
+    - `test -f docs/implementation/reports/dashboard_ux_audit_redesign.md`
+    - `test -f docs/implementation/checklists/10_dashboard_redesign.md`
+    - open `https://www.figma.com/design/d6ExX1CAGJtmV6HzA1j73D` and confirm current-state, redesign, and handoff frames are present
+  - Suggested prompt chain: `prompt-06` -> `prompt-02` -> `prompt-03`

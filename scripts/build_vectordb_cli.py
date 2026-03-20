@@ -1,17 +1,10 @@
 #!/usr/bin/env python3
-"""
-Vector database builder CLI - Integrated with existing infrastructure.
+"""Vector database builder CLI."""
 
-Provides command-line access to build and maintain the vector database using
-the unified pipeline which integrates with src.data_pipeline and src.infrastructure.
-
-Usage:
-    python scripts/build_vectordb_cli.py --max-plans 100
-    python scripts/build_vectordb_cli.py --status
-    python scripts/build_vectordb_cli.py --rebuild
-"""
-
+import importlib
+import os
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 # Add project root to path
@@ -20,7 +13,16 @@ sys.path.insert(0, str(project_root))
 
 import click
 import logging
-from datetime import datetime
+
+from src.config import settings
+
+
+@dataclass(frozen=True)
+class PrerequisiteCheck:
+    name: str
+    ok: bool
+    detail: str
+    required: bool = True
 
 
 def setup_logging(verbose: bool = False):
@@ -37,6 +39,115 @@ def setup_logging(verbose: bool = False):
 def cli():
     """Vector database builder CLI."""
     pass
+
+
+def check_python_module(
+    module_name: str,
+    *,
+    label: str | None = None,
+    required: bool = True,
+) -> PrerequisiteCheck:
+    """Verify an importable Python module."""
+    try:
+        importlib.import_module(module_name)
+    except Exception as exc:
+        status = "required" if required else "optional"
+        return PrerequisiteCheck(
+            name=label or module_name,
+            ok=False,
+            detail=f"{status} module unavailable ({exc})",
+            required=required,
+        )
+
+    return PrerequisiteCheck(
+        name=label or module_name,
+        ok=True,
+        detail="module import OK",
+        required=required,
+    )
+
+
+def check_provider_configuration(base_url: str | None = None) -> PrerequisiteCheck:
+    """Report whether the optional OpenAI-compatible provider is configured."""
+    resolved_base_url = settings.openai_base_url.strip()
+    if base_url is not None:
+        resolved_base_url = base_url.strip()
+
+    if not resolved_base_url:
+        return PrerequisiteCheck(
+            name="OpenAI-compatible provider",
+            ok=False,
+            detail=(
+                "not configured; vision extraction will be skipped unless "
+                "OPENAI_BASE_URL is set or you run with --no-vision"
+            ),
+            required=False,
+        )
+
+    api_key_present = bool(settings.openai_api_key or os.getenv("OPENAI_API_KEY"))
+    key_note = "API key present" if api_key_present else "API key optional/absent"
+    return PrerequisiteCheck(
+        name="OpenAI-compatible provider",
+        ok=True,
+        detail=f"configured at {resolved_base_url} ({key_note})",
+        required=False,
+    )
+
+
+def check_pydoll_runtime() -> PrerequisiteCheck:
+    """Launch a bounded browser session to validate the scraper runtime."""
+    try:
+        import asyncio
+        from pydoll.browser.chromium import Chrome
+
+        async def _run():
+            browser = Chrome()
+            tab = await browser.start(headless=True)
+            await tab.go_to("https://www.google.com", timeout=60)
+            await browser.stop()
+
+        asyncio.run(_run())
+    except Exception as exc:
+        return PrerequisiteCheck(
+            name="Pydoll browser runtime",
+            ok=False,
+            detail=str(exc),
+            required=True,
+        )
+
+    return PrerequisiteCheck(
+        name="Pydoll browser runtime",
+        ok=True,
+        detail="Chrome launched successfully",
+        required=True,
+    )
+
+
+def collect_prerequisite_checks() -> list[PrerequisiteCheck]:
+    """Collect required and optional runtime checks for the unified pipeline."""
+    return [
+        check_pydoll_runtime(),
+        check_python_module("chromadb", label="ChromaDB"),
+        check_python_module("fitz", label="PyMuPDF", required=False),
+        check_python_module("pypdf", label="pypdf", required=False),
+        check_python_module("PIL", label="Pillow", required=False),
+        check_provider_configuration(),
+    ]
+
+
+def summarize_prerequisite_checks(
+    checks: list[PrerequisiteCheck],
+) -> tuple[bool, list[str]]:
+    """Render human-readable prerequisite results and overall status."""
+    lines: list[str] = []
+    required_failures = [check for check in checks if check.required and not check.ok]
+
+    for check in checks:
+        icon = "✅" if check.ok else ("❌" if check.required else "⚠️")
+        requirement = "required" if check.required else "optional"
+        lines.append(f"  {icon} {check.name} ({requirement}): {check.detail}")
+
+    return (not required_failures, lines)
 
 
 @cli.command()
@@ -124,68 +235,23 @@ def build(max_plans, rebuild, headless, no_documents, no_vision, verbose):
 
 
 @cli.command()
-@click.option('--output', '-o', type=click.Path(), help='Output file for export')
-@click.option('--format', '-f', type=click.Choice(['json', 'csv']), default='json')
-def export(output, format):
-    """Export vector database data."""
-    from src.data_management import DataStore
-    
-    data_store = DataStore()
-    
-    if output:
-        output_path = Path(output)
-        print(f"Exporting to {output_path}...")
-        # TODO: Implement export functionality
-        print("✅ Export complete!")
-    else:
-        print("Error: --output required")
-
-
-@cli.command()
 def check():
     """Check prerequisites and setup."""
     print("="*70)
     print("🔍 Checking Prerequisites")
     print("="*70)
     print()
-    
-    all_ok = True
-    
-    # Check browser automation
-    print("🧪 Checking Pydoll (CDP browser)...")
-    try:
-        import asyncio
-        from pydoll.browser.chromium import Chrome
 
-        async def _run():
-            browser = Chrome()
-            tab = await browser.start(headless=True)
-            await tab.go_to("https://www.google.com", timeout=60)
-            await browser.stop()
+    all_ok, lines = summarize_prerequisite_checks(collect_prerequisite_checks())
+    for line in lines:
+        print(line)
 
-        asyncio.run(_run())
-        print("  ✅ Pydoll OK (Chrome launched)")
-    except Exception as e:
-        print(f"  ❌ Pydoll error: {e}")
-        all_ok = False
-    
-    # Check dependencies
-    print("\n🧪 Checking Python packages...")
-    packages = ['chromadb', 'google.generativeai', 'streamlit']
-    for pkg in packages:
-        try:
-            __import__(pkg)
-            print(f"  ✅ {pkg}")
-        except ImportError:
-            print(f"  ❌ {pkg} - Install with: pip install {pkg}")
-            all_ok = False
-    
     print()
     if all_ok:
-        print("✅ All checks passed!")
+        print("✅ Required checks passed.")
     else:
-        print("❌ Some checks failed. Please install missing components.")
-    
+        print("❌ Required checks failed. Fix the items above before running a full build.")
+
     return 0 if all_ok else 1
 
 

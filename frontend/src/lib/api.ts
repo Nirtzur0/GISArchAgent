@@ -2,10 +2,13 @@ import type {
   BuildingRightsResult,
   DataSearchResponse,
   HealthProbe,
+  LivePlanSearchResponse,
+  OperationsOverview,
   RegulationResult,
   SystemStatus,
   UploadAnalysis,
-  VectorDbStatus
+  VectorDbStatus,
+  WorkspaceOverview
 } from "../types";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
@@ -30,6 +33,38 @@ export async function getSystemStatus(): Promise<SystemStatus> {
 
 export async function getHealth(): Promise<HealthProbe> {
   return parseResponse<HealthProbe>(await fetch(`${API_BASE}/api/health`));
+}
+
+export async function getWorkspaceOverview(planNumber?: string): Promise<WorkspaceOverview> {
+  const query = new URLSearchParams();
+  if (planNumber) {
+    query.set("plan_number", planNumber);
+  }
+  const suffix = query.toString() ? `?${query}` : "";
+  return parseResponse<WorkspaceOverview>(
+    await fetch(`${API_BASE}/api/workspace/overview${suffix}`)
+  );
+}
+
+export async function getOperationsOverview(): Promise<OperationsOverview> {
+  return parseResponse<OperationsOverview>(await fetch(`${API_BASE}/api/operations/overview`));
+}
+
+export async function postUiEvent(payload: {
+  event_name: string;
+  route?: string;
+  plan_number?: string;
+  status?: string;
+  context?: Record<string, unknown>;
+}) {
+  return parseResponse<{ ok: boolean; event_id: string; received_at: string }>(
+    await fetch(`${API_BASE}/api/ui/events`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      keepalive: true,
+    })
+  );
 }
 
 export async function queryRegulations(
@@ -60,6 +95,24 @@ export async function searchData(params: Record<string, string>): Promise<DataSe
   });
   query.set("limit", "250");
   return parseResponse<DataSearchResponse>(await fetch(`${API_BASE}/api/data/search?${query}`));
+}
+
+export async function searchLivePlans(params: {
+  location?: string;
+  keyword?: string;
+  status?: string;
+  includeVisionAnalysis?: boolean;
+  maxResults?: number;
+}): Promise<LivePlanSearchResponse> {
+  const query = new URLSearchParams();
+  if (params.location) query.set("location", params.location);
+  if (params.keyword) query.set("keyword", params.keyword);
+  if (params.status) query.set("status", params.status);
+  query.set("include_vision_analysis", String(Boolean(params.includeVisionAnalysis)));
+  query.set("max_results", String(params.maxResults ?? 8));
+  return parseResponse<LivePlanSearchResponse>(
+    await fetch(`${API_BASE}/api/plans/search?${query}`)
+  );
 }
 
 export async function calculateRights(payload: {
@@ -162,5 +215,7 @@ export async function fetchFreshData(payload: {
 }
 
 export async function getFetcherHealth() {
-  return parseResponse<any>(await fetch(`${API_BASE}/api/data/fetcher-health`));
+  return parseResponse<NonNullable<HealthProbe["scraping"]>>(
+    await fetch(`${API_BASE}/api/data/fetcher-health`)
+  );
 }

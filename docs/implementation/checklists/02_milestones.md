@@ -433,3 +433,31 @@
   - Files: `docs/implementation/reports/improvement_directions.md`
   - Docs: `docs/implementation/checklists/03_improvement_bets.md`, `docs/implementation/checklists/07_alignment_review.md`, `docs/implementation/reports/alignment_review.md`
   - Alternatives: continue ad-hoc reranking without explicit convergence stop conditions.
+
+## M13 - Planner UX Redesign and Frontend Systemization
+- [x] Outcome: planner-first route redesign ships without changing the current route or backend API contract.
+  - AC: `/`, `/map`, `/analyzer`, and `/data` remain intact while the shell and route composition shift to Workspace / Investigation / Feasibility / Operations.
+  - Verify:
+    - `cd frontend && npm run build`
+    - `cd frontend && npm run test:e2e`
+  - Files: `frontend/src/App.tsx`, `frontend/src/AppRedesign.tsx`, `frontend/src/main.tsx`, `frontend/src/styles.redesign.css`
+  - Docs: `docs/implementation/reports/dashboard_ux_audit_redesign.md`, `docs/implementation/checklists/10_dashboard_redesign.md`
+  - Alternatives: deeper route restructure or backend contract changes.
+
+- [x] Outcome: implementation-aware UX audit and redesign handoff are recorded in dedicated packet artifacts.
+  - AC: a single report uses the requested 17-section structure and a paired checklist tracks acceptance and verification.
+  - Verify:
+    - `test -f docs/implementation/reports/dashboard_ux_audit_redesign.md`
+    - `test -f docs/implementation/checklists/10_dashboard_redesign.md`
+    - `rg -n "^# [0-9]+\\." docs/implementation/reports/dashboard_ux_audit_redesign.md`
+  - Files: `docs/implementation/reports/dashboard_ux_audit_redesign.md`, `docs/implementation/checklists/10_dashboard_redesign.md`
+  - Docs: `docs/implementation/00_status.md`, `docs/implementation/03_worklog.md`
+  - Alternatives: split the audit, redesign, and handoff across separate ad-hoc notes.
+
+- [x] Outcome: Figma capture file contains current-state and redesigned route frames for review and implementation handoff.
+  - AC: the file `GISArchAgent - Planner UX Redesign` exists and includes both baseline evidence captures and redesigned route captures.
+  - Verify:
+    - open `https://www.figma.com/design/d6ExX1CAGJtmV6HzA1j73D` and confirm current-state, redesign, and handoff frames are present
+  - Files: Figma file `GISArchAgent - Planner UX Redesign`
+  - Docs: `docs/implementation/00_status.md`, `docs/implementation/03_worklog.md`, `docs/implementation/checklists/10_dashboard_redesign.md`
+  - Alternatives: keep evidence only in markdown and local screenshots.

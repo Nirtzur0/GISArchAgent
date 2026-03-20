@@ -17,10 +17,10 @@ Commands:
 - `status [-v]`
 - `build [--max-plans N] [--rebuild] [--headless] [--no-documents] [--no-vision] [-v]`
 - `check`
-- `export --output <path> --format [json|csv]`
 
-## Wrapper
-- `python3 build_vectordb.py ...` forwards arguments to `scripts/build_vectordb_cli.py`.
+Notes:
+- `check` validates the maintained unified-pipeline prerequisites: Pydoll/Chrome runtime, ChromaDB importability, optional document-processing packages, and optional OpenAI-compatible provider configuration.
+- Missing provider config is reported as an optional limitation rather than a hard failure so `build --no-vision` remains a valid local path.
 
 ## Quick Status Utility
 Entrypoint: `python3 scripts/quick_status.py`

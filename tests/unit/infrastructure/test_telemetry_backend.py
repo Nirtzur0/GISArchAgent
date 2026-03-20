@@ -3,7 +3,7 @@ import logging
 
 import pytest
 
-from src.telemetry import emit_observability_event
+from src.telemetry import emit_observability_event, persist_ui_event
 
 pytestmark = [pytest.mark.unit]
 
@@ -147,3 +147,28 @@ def test_emit_observability_event__routes_memory_disk_saturation_alert(
     assert alerts[0]["severity"] == "sev2"
     assert "memory_used_ratio>=0.95" in alerts[0]["reasons"]
     assert "disk_free_ratio_cache_dir<=0.10" in alerts[0]["reasons"]
+
+
+def test_persist_ui_event__writes_backend_event_without_alert(monkeypatch, tmp_path):
+    events_path = tmp_path / "events.jsonl"
+    alerts_path = tmp_path / "alerts.jsonl"
+
+    monkeypatch.setenv("OBS_BACKEND_ENABLED", "1")
+    monkeypatch.setenv("OBS_EVENTS_SINK_PATH", str(events_path))
+    monkeypatch.setenv("OBS_ALERTS_SINK_PATH", str(alerts_path))
+
+    logger = logging.getLogger("tests.telemetry.ui")
+    payload = persist_ui_event(
+        logger,
+        event_name="workspace_plan_selected",
+        route="/",
+        plan_number="101-0001",
+        context={"source": "test"},
+    )
+
+    rows = _read_jsonl(events_path)
+    assert payload["kind"] == "ui_event"
+    assert rows[-1]["kind"] == "ui_event"
+    assert rows[-1]["operation"] == "workspace_plan_selected"
+    assert rows[-1]["route"] == "/"
+    assert not alerts_path.exists()

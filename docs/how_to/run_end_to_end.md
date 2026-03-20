@@ -19,6 +19,7 @@ Execute the core local workflow with repo-native commands.
 ./venv/bin/python -m pytest -m unit
 ./venv/bin/python -m pytest -m integration
 ./venv/bin/python -m pytest -m e2e
+cd frontend && npm run test:e2e
 ```
 
 4. Inspect data/vector status:
@@ -35,6 +36,7 @@ python3 scripts/observability_cli.py alerts --since-minutes 60 --limit 20
 
 ## Expected outcomes
 - Marker suites complete without fatal errors.
+- `pytest -m e2e` covers the maintained FastAPI smoke path, and Playwright covers the maintained React browser flow.
 - App loads and primary pages are reachable.
 - Status commands produce structured output.
 - Observability summary prints event/alert counts and latency p95 by operation.

@@ -1,5 +1,189 @@
 # Implementation Status
 
+Date: 2026-03-20
+
+## Objective Check
+- Objective: maintain a reliable local-first GIS planning assistant with coherent architecture, testability, and operational discipline.
+- This step advances objective by: tightening the front-door README so it reflects the maintained React product clearly, adding live product screenshots from the actual app, and shortening onboarding to the real setup and run path.
+- Risks of misalignment: the README now depends on committed screenshot artifacts under `output/playwright/`, so future visual refreshes should update those images when the shell changes materially.
+
+## Packet Metadata
+- Intensity mode: Standard
+- Entry mode: Existing Repo
+- Cycle stage: Docs front-door refinement
+- Scope state: bounded
+
+## Progress
+- Completed:
+  - refined `README.md` into a shorter production-facing front door with tighter positioning, slimmer quickstart, and route-based workflow framing.
+  - captured real product screenshots for Workspace, Investigation, and Operations from the maintained React app.
+  - kept README claims aligned with the supported `FastAPI + React` runtime and current launcher/provider behavior.
+  - synced implementation status and worklog for this docs packet.
+- Evidence:
+  - `python3 project-prompts/scripts/prompts_manifest.py --check`
+  - `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack`
+  - `./run_webapp.sh`
+  - `cd frontend && npm run build`
+  - live Playwright capture against `http://127.0.0.1:5173/`, `/map`, and `/data`
+- Result:
+  - the repo front door now reads like a product surface instead of an internal notes page.
+  - README now includes real UI evidence rather than placeholder descriptions.
+  - deep detail remains available through linked docs instead of competing with onboarding.
+
+## Previous Status
+
+Date: 2026-03-13
+
+## Objective Check
+- Objective: maintain a reliable local-first GIS planning assistant with coherent architecture, testability, and operational discipline.
+- This step advances objective by: using a live Playwright browser pass against the maintained React UI, fixing backend/frontend status drift, normalizing stale local inventory metadata, removing browser-console/runtime noise, and tightening shared layout behavior so the canonical UI reads consistently under real data.
+- Risks of misalignment: some sample records still legitimately lack municipality fields, so isolated `Unknown city` labels remain truthful data gaps rather than presentation bugs.
+
+## Packet Metadata
+- Intensity mode: Standard
+- Entry mode: Existing Repo
+- Cycle stage: UI runtime hardening
+- Scope state: bounded
+
+## Progress
+- Completed:
+  - inspected the live routed UI with Playwright MCP across Workspace, Investigation, Feasibility, and Operations instead of relying only on component assumptions.
+  - added a real frontend favicon to remove the persistent browser `404`.
+  - normalized status labels across sidebar chips, hero metrics, Operations cards, and shareable briefs so the same subsystem no longer reads as `warning`, `healthy`, and raw lowercase strings in different places.
+  - fixed workspace vector-health mapping to use the backend health surface instead of the lower-level warning status field.
+  - replaced misleading first-load `Unknown`/`—` workspace hero placeholders with explicit loading copy while overview data is still in flight.
+  - compacted the mobile shell so navigation becomes horizontally scannable and the planner content appears earlier instead of forcing users through a full desktop-style sidebar stack.
+  - normalized DataStore metadata on load so stale source text and missing `last_updated` fields no longer degrade the Operations surface.
+  - fixed shared card/detail wrapping so long metadata values like source endpoints no longer overflow the layout.
+  - enabled React Router future flags to remove avoidable browser-console warnings in the maintained dev UI.
+  - added backend, frontend, data-normalization, and mobile-shell regression coverage for the repaired surfaces.
+- Evidence:
+  - `./venv/bin/python -m pytest tests/unit/data_management/test_data_store_normalization.py tests/integration/api/test_fastapi_endpoints.py -q`
+  - `cd frontend && npm run build`
+  - `cd frontend && npm run test:e2e -- app.spec.ts`
+  - live Playwright MCP verification against `http://127.0.0.1:5173/` and `http://127.0.0.1:5173/data`
+- Result:
+  - the maintained UI now renders without app-console errors.
+  - Workspace and Operations now agree on vector/provider/scraper health labels.
+  - workspace first-load behavior now shows truthful loading state instead of transient unknown metrics.
+  - the mobile shell now reaches the actual planner workflow faster and keeps route navigation usable without consuming the whole first screen.
+  - Operations metadata now shows a real updated timestamp and normalized source text instead of stale backend wording.
+  - long endpoint/source values no longer visually break the card grid.
+
+## Objective Check
+- Objective: maintain a reliable local-first GIS planning assistant with coherent architecture, testability, and operational discipline.
+- This step advances objective by: making the canonical FastAPI + React launcher resilient to local port conflicts, turning provider configuration into an explicit opt-in instead of a misleading default, bounding live iPlan search latency, and aligning the main runbook/CI path with the maintained frontend.
+- Risks of misalignment: several legacy Streamlit-era docs still exist outside the main onboarding path and should be treated as historical until a broader docs sweep removes or rewrites them.
+
+## Packet Metadata
+- Intensity mode: Standard
+- Entry mode: Existing Repo
+- Cycle stage: Runtime readiness hardening
+- Scope state: bounded
+
+## Progress
+- Completed:
+  - added deterministic local port resolution for the canonical launcher and wired the frontend to the resolved backend URL.
+  - updated test-stack startup so frontend browser smoke can run in CI without requiring a pre-created local `venv`.
+  - changed OpenAI-compatible provider defaults to opt-in/unconfigured, while preserving retrieval-only regulation answers and explicit upload disablement.
+  - bounded live iPlan search with timeout + warning payloads instead of long silent hangs.
+  - updated React runtime status surfaces to distinguish optional provider state from an actually blocked provider.
+  - added regression coverage for port resolution, provider defaults, live-search timeout handling, and live-search warning rendering.
+  - aligned the main README, run guide, deployment note, runbook, and CI workflow with the maintained FastAPI + React path.
+- Evidence:
+  - `python3 project-prompts/scripts/prompts_manifest.py --check`
+  - `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack --root project-prompts`
+  - `./venv/bin/python -m pytest tests/integration/api/test_fastapi_endpoints.py -q`
+  - `./venv/bin/python -m pytest tests/unit/application/test_external_dependency_degraded_modes.py tests/unit/infrastructure/test_iplan_repository_error_signal.py tests/integration/iplan/test_external_dependency_drills.py tests/unit/scripts/test_dev_stack_ports.py -q`
+  - `./venv/bin/python -m pytest -m e2e -q`
+  - `cd frontend && npm run build`
+  - `cd frontend && npm run test:e2e`
+  - `./run_webapp.sh` on a machine where `127.0.0.1:8000` was already occupied by a non-repo process
+- Result:
+  - the canonical launcher now adapts to occupied default ports instead of failing against an unrelated local process.
+  - a clean local run no longer pretends an OpenAI-compatible provider exists by default.
+  - live iPlan search now completes with explicit degraded messaging instead of a 30-second silent wait.
+  - CI and runbook guidance now include the maintained React browser smoke instead of relying only on legacy Streamlit e2e coverage.
+
+## Historical Status
+
+Date: 2026-03-11
+
+## Objective Check
+- Objective: maintain a reliable local-first GIS planning assistant with coherent architecture, testability, and operational discipline.
+- This step advances objective by: shipping a planner-first frontend shell, recording an implementation-ready UX audit/handoff, and capturing current-state plus redesign evidence into one Figma review file.
+- Risks of misalignment: this packet intentionally changes frontend presentation only; deeper component extraction can wait until the redesigned shell is accepted as the new baseline.
+
+## Packet Metadata
+- Intensity mode: Standard
+- Entry mode: Existing Repo
+- Cycle stage: UX redesign and handoff
+- Scope state: bounded
+
+## Progress
+- Completed:
+  - redesigned the React frontend around Workspace / Investigation / Feasibility / Operations while preserving the existing route URLs.
+  - refactored the redesign shell into explicit route modules and shared redesign components.
+  - added additive backend support for the redesigned shell:
+    - `GET /api/workspace/overview`
+    - `GET /api/operations/overview`
+    - `POST /api/ui/events`
+  - routed lightweight UI instrumentation into the existing telemetry event sink.
+  - added a dedicated internal handoff route:
+    - `frontend/src/FigmaHandoff.tsx`
+  - generated baseline and redesign screenshot evidence under:
+    - `frontend/public/figma/*`
+  - created the redesign packet artifacts:
+    - `docs/implementation/reports/dashboard_ux_audit_redesign.md`
+    - `docs/implementation/checklists/10_dashboard_redesign.md`
+  - populated the Figma file:
+    - `https://www.figma.com/design/d6ExX1CAGJtmV6HzA1j73D`
+- Evidence:
+  - `./venv/bin/python -m pytest tests/unit/infrastructure/test_telemetry_backend.py -q`
+  - `./venv/bin/python -m pytest tests/integration/api/test_fastapi_endpoints.py -q`
+  - `cd frontend && npm run build`
+  - `cd frontend && npm run test:e2e`
+  - Figma captures in `GISArchAgent - Planner UX Redesign`:
+    - redesign workspace capture `node 1:2`
+    - current-state workspace capture `node 2:2`
+    - structured `/figma-handoff` board capture `node 3:2`
+- Result:
+  - the product now reads as one planner workflow instead of four adjacent tools.
+  - the new overview payloads remove noisy client orchestration and avoid slow blocking probes on top-level route load.
+  - engineering and design review now point at the same frontend implementation, additive backend support, and Figma-backed handoff artifacts.
+
+## Historical Status
+
+Date: 2026-03-11
+
+## Objective Check
+- Objective: maintain a reliable local-first GIS planning assistant with coherent architecture, testability, and operational discipline.
+- This step advances objective by: replacing stale front-door docs with a README and teaching page that match the current FastAPI + React product, the current provider model, and the current architecture-office workflow.
+- Risks of misalignment: manifest-era docs still contain legacy Streamlit/Gemini framing and should not be treated as the primary onboarding path until a broader docs refresh happens.
+
+## Packet Metadata
+- Intensity mode: Standard
+- Entry mode: Existing Repo
+- Cycle stage: Documentation refresh
+- Scope state: bounded
+
+## Progress
+- Completed:
+  - added concept-first teaching document:
+    - `docs/explanation/problem_landscape_and_solution.md`
+  - rewrote `README.md` around the current React + FastAPI stack and architecture-office workflow.
+  - updated `docs/INDEX.md` and `docs/explanation/architecture.md` to point to the new explanation page.
+- Evidence:
+  - `./setup.sh` -> reviewed and reconciled in docs as partially stale bootstrap automation.
+  - `./venv/bin/python -m pytest tests/integration/api/test_fastapi_endpoints.py -q`
+  - `cd frontend && npm run build`
+  - `cd frontend && npm run test:e2e`
+- Result:
+  - front-door onboarding now reflects the current maintained product surfaces.
+  - legacy Streamlit/Gemini instructions are demoted from the main onboarding path.
+
+## Historical Status
+
 Date: 2026-02-09
 
 ## Objective Check
@@ -652,3 +836,48 @@ Date: 2026-02-09
 - Optional live network coverage remains gated via `RUN_NETWORK_TESTS=1` with bounded rehearsal caps and CI block-by-default policy (`RUN_NETWORK_ALLOW_CI=1` override only for manual drills).
 - Aggregate full-suite order-run (`./venv/bin/python -m pytest -q`) may enter no-progress sleep state; tracked as non-blocking for prompt-10 DoD and should be revisited only if it recurs in subsequent implementation verification.
 - High-impact assumptions remain tracked in `docs/implementation/reports/assumptions_register.md`.
+
+## 2026-03-11 Repo Realignment Packet
+- Restored deterministic retrieval-only fallback answers in `src/application/services/regulation_query_service.py` and added the missing root `pytest.ini`.
+- Canonicalized bootstrap/runtime surfaces:
+  - `setup.sh` now installs Python + frontend dependencies and seeds `.env` from `.env.example`.
+  - `run_webapp.sh` now launches the FastAPI + React dev stack instead of Streamlit.
+  - `docs/getting_started/*`, `docs/reference/configuration.md`, `docs/manifest/00_overview.md`, and `docs/manifest/09_runbook.md` were updated to match the real entrypoints.
+- Refreshed dependency reproducibility artifacts:
+  - regenerated `requirements.lock`
+  - regenerated `docs/reference/dependencies.md`
+  - verified `python3 scripts/check_dependency_sync.py --requirements requirements.txt --dev-requirements requirements-dev.txt --lock requirements.lock --doc docs/reference/dependencies.md`
+- Integrated live iPlan search into the actual React workspace:
+  - added explicit `Local catalog` vs `Live iPlan` source selection
+  - defaulted `PlanSearchQuery.include_vision_analysis` to `False`
+  - added API + Playwright coverage for the live-search path
+- Removed dead product/runtime code:
+  - removed the shipped `/figma-handoff` route from FastAPI + React
+  - deleted `frontend/src/FigmaHandoff.tsx`, `frontend/src/styles.css`, and `src/vectorstore/manager.py`
+  - removed the stub `export` command from `scripts/build_vectordb_cli.py`
+- Verification:
+  - `./venv/bin/python -m pytest tests/unit/application/test_regulation_query_service__fallback.py tests/unit/application/test_external_dependency_degraded_modes.py -q` -> `7 passed`
+  - `./venv/bin/python -m pytest tests/integration/api/test_fastapi_endpoints.py -q` -> `11 passed`
+  - `./venv/bin/python -m pytest -m unit -q` -> `66 passed, 41 deselected`
+  - `./venv/bin/python -m pytest tests/integration/iplan/test_external_dependency_drills.py -q` -> `5 passed`
+  - `cd frontend && npm run build` -> pass
+  - `cd frontend && npm run test:e2e` -> `5 passed`
+
+## 2026-03-11 Scraper Reliability and Truthful Health Packet
+- Reworked scraper health semantics so passive status endpoints now return cached probe state or `unvalidated` rather than claiming `ready` when `pydoll` is merely installed.
+- Added in-memory fetcher probe caching in `src/api/app.py` with a 15-minute TTL and enriched scraper payload fields:
+  - `runtime_ready`
+  - `last_probe_at`
+  - `last_probe_duration_ms`
+  - `last_probe_count`
+- Hardened MAVAT diagnostics in `src/data_management/pydoll_fetcher.py`:
+  - classified `blocked`, `wrong_page`, `timeout`, `no_rows`, and `no_attachment_requests`
+  - preserved the latest document-fetch result for live rehearsal/debug surfaces
+  - replaced deprecated tab-level JS click fallback with `WebElement.execute_script()`
+- Updated the React operations flow so `Validate scraper` performs the bounded live probe explicitly and the passive shell surfaces consume cached results.
+- Synced troubleshooting/API/testing docs with the new passive-vs-probe distinction.
+- Verification:
+  - `./venv/bin/python -m pytest tests/unit/data_management/test_mavat_artifact_type_guessing.py tests/unit/data_management/test_pydoll_fetcher_status.py tests/integration/api/test_fastapi_endpoints.py -q` -> `23 passed`
+  - `cd frontend && npm run build` -> pass
+  - `cd frontend && npm run test:e2e -- --grep "data ops supports vector search and regulation authoring"` -> `1 passed`
+  - `RUN_NETWORK_TESTS=1 RUN_NETWORK_REHEARSAL_MAX_ATTEMPTS=1 RUN_NETWORK_REHEARSAL_TIMEOUT_SECONDS=45 ./venv/bin/python -m pytest tests/integration/iplan/test_pydoll_live_mavat_documents__optional.py -q -rs` -> `1 skipped` (`Live MAVAT scrape timed out...`, bounded provider-dependent path)

@@ -21,6 +21,7 @@ import logging
 import random
 import time
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 from urllib.parse import urlencode, urlparse, parse_qs
@@ -31,6 +32,10 @@ from pydoll.interactions.keyboard import Key
 import threading
 
 logger = logging.getLogger(__name__)
+
+
+def _utc_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 
 def _stable_cache_key(s: str) -> str:
@@ -86,6 +91,51 @@ class ExtractedArtifact:
     artifact_type: str
 
 
+class MavatScrapeError(RuntimeError):
+    def __init__(
+        self, status: str, detail: str, *, metadata: Optional[dict[str, Any]] = None
+    ) -> None:
+        super().__init__(detail)
+        self.status = status
+        self.detail = detail
+        self.metadata = dict(metadata or {})
+
+
+def _classify_mavat_page_text(text: str) -> tuple[str, str] | None:
+    value = (text or "").strip()
+    lower = value.lower()
+    if "access denied" in lower or "request blocked" in lower or "cloudflare" in lower:
+        return (
+            "blocked",
+            "MAVAT access appears blocked by upstream protection instead of loading the documents UI.",
+        )
+    if "אתר מידע תכנוני" in value and "מה מתוכנן" in value:
+        return (
+            "wrong_page",
+            "MAVAT deep-link resolved to a generic informational page instead of the plan UI.",
+        )
+    return None
+
+
+def _classify_mavat_error(exc: Exception) -> tuple[str, str]:
+    if isinstance(exc, MavatScrapeError):
+        return exc.status, exc.detail
+    if isinstance(exc, TimeoutError):
+        return "timeout", str(exc) or "MAVAT scrape timed out."
+    message = str(exc) or exc.__class__.__name__
+    lower = message.lower()
+    if (
+        "access denied" in lower
+        or "request blocked" in lower
+        or "cloudflare" in lower
+        or "blocked" in lower
+    ):
+        return "blocked", message
+    if "plan ui" in lower or "wrong page" in lower:
+        return "wrong_page", message
+    return "error", message
+
+
 class PydollFetcher:
     """
     Async browser fetcher using Pydoll (CDP).
@@ -112,6 +162,13 @@ class PydollFetcher:
 
         self._browser: Optional[Chrome] = None
         self._tab = None
+        self._last_mavat_result: dict[str, Any] = {
+            "status": "unvalidated",
+            "detail": "MAVAT documents path has not been validated in this process.",
+            "updated_at": _utc_now_iso(),
+            "attempt_count": 0,
+            "artifacts_found": 0,
+        }
 
     async def __aenter__(self) -> "PydollFetcher":
         await self.start()
@@ -192,6 +249,50 @@ class PydollFetcher:
 
     def _cache_path(self, key: str) -> Path:
         return self.cache_dir / f"{_stable_cache_key(key)}.json"
+
+    def _set_last_mavat_result(
+        self,
+        *,
+        plan_id: str,
+        status: str,
+        detail: Optional[str] = None,
+        **metadata: Any,
+    ) -> dict[str, Any]:
+        payload = {
+            "plan_id": plan_id,
+            "status": status,
+            "detail": detail,
+            "updated_at": _utc_now_iso(),
+            **metadata,
+        }
+        self._last_mavat_result = payload
+        return dict(payload)
+
+    def last_mavat_result(self) -> dict[str, Any]:
+        return dict(self._last_mavat_result)
+
+    async def _click_download_element(self, element: Any) -> bool:
+        try:
+            await element.click()
+            return True
+        except Exception:
+            pass
+
+        try:
+            await element.click_using_js()
+            return True
+        except Exception:
+            pass
+
+        execute_script = getattr(element, "execute_script", None)
+        if not callable(execute_script):
+            return False
+
+        try:
+            await execute_script("this.click()", user_gesture=True)
+            return True
+        except Exception:
+            return False
 
     async def fetch_json(
         self, url: str, *, use_cache: bool = True, timeout_s: int = 60
@@ -300,10 +401,12 @@ class PydollFetcher:
 
         return all_features
 
-    async def fetch_mavat_page(self, plan_id: str, *, timeout_s: int = 45) -> None:
+    async def fetch_mavat_page(
+        self, plan_id: str, *, timeout_s: int = 45
+    ) -> dict[str, Any]:
         url = f"https://mavat.iplan.gov.il/SV4/1/{plan_id}/310"
 
-        async def _mavat_ui_state() -> str:
+        async def _mavat_ui_state() -> tuple[str, Optional[str]]:
             # On a good load we see either the accordion titles or document rows.
             el = await self.tab.query(
                 ".uk-accordion-title, span.uk-text-lead.doc-info, div[role='row']",
@@ -312,7 +415,7 @@ class PydollFetcher:
                 raise_exc=False,
             )
             if el:
-                return "ready"
+                return "ready", None
 
             # Sometimes the deep-link resolves to a generic informational page.
             body = await self.tab.query(
@@ -324,17 +427,12 @@ class PydollFetcher:
                     if asyncio.iscoroutine(t):
                         t = await t
                     t = (t or "")[:2000]
-                    if "אתר מידע תכנוני" in t and "מה מתוכנן" in t:
-                        return "wrong_page"
-                    if (
-                        "access denied" in t.lower()
-                        or "request blocked" in t.lower()
-                        or "cloudflare" in t.lower()
-                    ):
-                        return "wrong_page"
+                    classified = _classify_mavat_page_text(t)
+                    if classified:
+                        return classified
                 except Exception:
                     pass
-            return "waiting"
+            return "waiting", None
 
         last_err: Exception | None = None
         for attempt in range(1, 5):
@@ -352,22 +450,55 @@ class PydollFetcher:
                 # Allow Angular UI to render; don't assume a fixed sleep is enough.
                 deadline = time.time() + timeout_s
                 while time.time() < deadline:
-                    state = await _mavat_ui_state()
+                    state, detail = await _mavat_ui_state()
                     if state == "ready":
-                        return None
-                    if state == "wrong_page":
-                        raise RuntimeError(
-                            "MAVAT deep-link did not resolve to the plan UI"
+                        return self._set_last_mavat_result(
+                            plan_id=plan_id,
+                            status="ready",
+                            detail="MAVAT plan UI became ready.",
+                            stage="page_ready",
+                            attempt_count=attempt,
+                            timeout_seconds=timeout_s,
+                        )
+                    if state in {"wrong_page", "blocked"}:
+                        raise MavatScrapeError(
+                            state,
+                            detail or "MAVAT deep-link did not resolve to the plan UI.",
+                            metadata={
+                                "stage": "page_ready_check",
+                                "attempt_count": attempt,
+                                "timeout_seconds": timeout_s,
+                            },
                         )
                     await asyncio.sleep(0.6 + random.random() * 0.4)
 
-                raise TimeoutError("MAVAT UI did not become ready before timeout")
+                raise MavatScrapeError(
+                    "timeout",
+                    "MAVAT UI did not become ready before timeout.",
+                    metadata={
+                        "stage": "page_ready_check",
+                        "attempt_count": attempt,
+                        "timeout_seconds": timeout_s,
+                    },
+                )
             except Exception as e:
                 last_err = e
                 logger.warning(f"fetch_mavat_page failed (attempt {attempt}/4): {e}")
                 await self.restart()
                 await asyncio.sleep(0.7 + random.random())
 
+        status, detail = _classify_mavat_error(
+            last_err or RuntimeError("fetch_mavat_page failed")
+        )
+        metadata = getattr(last_err, "metadata", {})
+        self._set_last_mavat_result(
+            plan_id=plan_id,
+            status=status,
+            detail=detail,
+            stage=metadata.get("stage", "page_ready_check"),
+            attempt_count=metadata.get("attempt_count", 4),
+            timeout_seconds=metadata.get("timeout_seconds", timeout_s),
+        )
         raise last_err or RuntimeError("fetch_mavat_page failed")
 
     async def extract_mavat_artifacts(
@@ -378,8 +509,19 @@ class PydollFetcher:
         clicking download icons to trigger `/rest/api/Attacments` requests.
         """
         rows = None
+        last_err: Exception | None = None
         for attempt in range(1, 5):
-            await self.fetch_mavat_page(plan_id)
+            try:
+                await self.fetch_mavat_page(plan_id)
+            except Exception as exc:
+                last_err = exc
+                logger.warning(
+                    "MAVAT page load did not complete (attempt %s/4) for plan %s: %s",
+                    attempt,
+                    plan_id,
+                    exc,
+                )
+                continue
 
             # If document rows are already present, skip expensive accordion expansion.
             doc_info = await self.tab.query(
@@ -414,10 +556,33 @@ class PydollFetcher:
             await self.restart()
 
         if not rows:
+            if last_err:
+                status, detail = _classify_mavat_error(last_err)
+                metadata = getattr(last_err, "metadata", {})
+                self._set_last_mavat_result(
+                    plan_id=plan_id,
+                    status=status,
+                    detail=detail,
+                    stage=metadata.get("stage", "page_ready_check"),
+                    attempt_count=metadata.get("attempt_count", 4),
+                    timeout_seconds=metadata.get("timeout_seconds", 45),
+                )
+            else:
+                self._set_last_mavat_result(
+                    plan_id=plan_id,
+                    status="no_rows",
+                    detail="MAVAT documents UI did not expose any document rows after retries.",
+                    stage="row_discovery",
+                    attempt_count=4,
+                    row_count=0,
+                    max_clicks=max_clicks,
+                )
             return []
 
         artifacts: list[ExtractedArtifact] = []
         seen_urls: set[str] = set()
+        row_count = len(rows)
+        rows_with_clickables = 0
 
         def _extract_attachment_urls(logs: list[dict[str, Any]]) -> set[str]:
             out: set[str] = set()
@@ -502,6 +667,7 @@ class PydollFetcher:
 
                 if not clickables:
                     continue
+                rows_with_clickables += 1
 
                 for el in clickables:
                     if clicks >= max_clicks:
@@ -524,22 +690,8 @@ class PydollFetcher:
                     except Exception:
                         pass
 
-                    try:
-                        await el.click()
-                    except Exception:
-                        try:
-                            # `click_using_js` still performs visibility checks in some cases;
-                            # fall back to a raw `Runtime.callFunctionOn` click.
-                            await el.click_using_js()
-                        except Exception:
-                            try:
-                                await self.tab.execute_script(
-                                    "arguments[0].click();",
-                                    element=el,
-                                    user_gesture=True,
-                                )
-                            except Exception:
-                                continue
+                    if not await self._click_download_element(el):
+                        continue
 
                     clicks += 1
                     new_urls = await _wait_for_new_attachment_urls(before)
@@ -570,7 +722,39 @@ class PydollFetcher:
 
         # De-dupe by URL (titles may repeat).
         uniq: dict[str, ExtractedArtifact] = {a.url: a for a in artifacts if a.url}
-        return list(uniq.values())
+        unique_artifacts = list(uniq.values())
+        if unique_artifacts:
+            self._set_last_mavat_result(
+                plan_id=plan_id,
+                status="ready",
+                detail=f"Captured {len(unique_artifacts)} MAVAT attachment URLs.",
+                stage="attachment_capture",
+                attempt_count=1,
+                row_count=row_count,
+                rows_with_clickables=rows_with_clickables,
+                click_count=clicks,
+                artifacts_found=len(unique_artifacts),
+                max_clicks=max_clicks,
+            )
+            return unique_artifacts
+
+        self._set_last_mavat_result(
+            plan_id=plan_id,
+            status="no_attachment_requests",
+            detail=(
+                "MAVAT document rows were present, but clicking the available download affordances produced no attachment requests."
+                if rows_with_clickables
+                else "MAVAT document rows were present, but no clickable download affordances were found."
+            ),
+            stage="attachment_capture",
+            attempt_count=1,
+            row_count=row_count,
+            rows_with_clickables=rows_with_clickables,
+            click_count=clicks,
+            artifacts_found=0,
+            max_clicks=max_clicks,
+        )
+        return []
 
 
 class IPlanPydollSource:
@@ -659,7 +843,23 @@ class IPlanPydollSource:
         logger.error(
             f"fetch_plan_documents giving up for plan {mavat_plan_id}: {last_err}"
         )
+        if last_err:
+            status, detail = _classify_mavat_error(last_err)
+            self.fetcher._set_last_mavat_result(
+                plan_id=mavat_plan_id,
+                status=status,
+                detail=detail,
+                stage="document_fetch",
+                attempt_count=3,
+                artifacts_found=0,
+            )
         return []
+
+    def last_document_fetch_result(self) -> dict[str, Any]:
+        return self.fetcher.last_mavat_result()
+
+    async def get_last_document_fetch_result(self) -> dict[str, Any]:
+        return self.last_document_fetch_result()
 
 
 class SyncIPlanPydollSource:
@@ -742,6 +942,10 @@ class SyncIPlanPydollSource:
     def fetch_plan_documents(self, mavat_plan_id: str) -> list[dict[str, str]]:
         assert self._source is not None
         return self._run(self._source.fetch_plan_documents(mavat_plan_id))
+
+    def last_document_fetch_result(self) -> dict[str, Any]:
+        assert self._source is not None
+        return self._run(self._source.get_last_document_fetch_result())
 
     def close(self):
         if self._closed:

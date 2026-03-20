@@ -1,27 +1,17 @@
 # Temporary formatting debt allowlist for CMD-030 changed-file checks.
 # Remove paths from this file as modules are reformatted and migrated to strict enforcement.
 LOAD_DATA_NOW.py
-app.py
-build_vectordb.py
 build_vectordb_simple.py
 check_db_status.py
 examples.py
 index_discovered_data.py
 load_data_simple.py
 load_sample_data.py
-pages/1_📍_Map_Viewer.py
-pages/2_📐_Plan_Analyzer.py
-pages/3_💾_Data_Management.py
 populate_real_data.py
 scripts/build_vectordb_cli.py
 scripts/data_cli.py
 scripts/import_sample_data.py
 scripts/quick_status.py
-scripts/utilities/fetch_iplan_data.py
-scripts/utilities/manage_data.py
-scripts/utilities/parse_iplan_response.py
-scripts/utilities/reinitialize_vectordb.py
-scripts/utilities/update_iplan_data.py
 sitecustomize.py
 src/config.py
 src/data_pipeline/__init__.py

@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import tempfile
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
+from uuid import uuid4
 
 from fastapi import FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,11 +19,21 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from src.api.serializers import serialize_data_feature, to_jsonable
-from src.application.dtos import BuildingRightsQuery, PlanSearchQuery, RegulationQuery
+from src.application.dtos import (
+    BuildingRightsQuery,
+    PlanSearchQuery,
+    PlanSearchResult,
+    RegulationQuery,
+)
 from src.data_management import DataFetcherFactory, DataStore
 from src.infrastructure.factory import ApplicationFactory
 from src.config import settings
+from src.telemetry import emit_observability_event, persist_ui_event
 from src.vectorstore.management_service import VectorDBManagementService
+
+
+logger = logging.getLogger(__name__)
+LIVE_PLAN_SEARCH_TIMEOUT_SECONDS = 10
 
 
 class RegulationQueryRequest(BaseModel):
@@ -60,6 +73,14 @@ class DataFetchRequest(BaseModel):
     timeout_seconds: int = Field(default=45, ge=5, le=180)
 
 
+class UiEventRequest(BaseModel):
+    event_name: str = Field(min_length=1, max_length=120)
+    route: Optional[str] = Field(default=None, max_length=120)
+    plan_number: Optional[str] = Field(default=None, max_length=120)
+    status: str = Field(default="success", max_length=40)
+    context: dict[str, Any] = Field(default_factory=dict)
+
+
 class AppContext:
     """Shared application state for API handlers."""
 
@@ -71,7 +92,7 @@ class AppContext:
         data_file = os.getenv("GISARCHAGENT_DATA_FILE", "data/raw/iplan_layers.json")
 
         self.factory = ApplicationFactory(
-            gemini_api_key=settings.openai_api_key,
+            openai_api_key=settings.openai_api_key,
             chroma_persist_dir=vectorstore_dir,
             cache_dir=cache_dir,
         )
@@ -79,6 +100,8 @@ class AppContext:
         self.vectordb = VectorDBManagementService(
             self.factory.get_regulation_repository()
         )
+        self.fetcher_probe_ttl = timedelta(minutes=15)
+        self.fetcher_probe_cache: dict[str, dict[str, Any]] = {}
 
 
 ctx = AppContext()
@@ -97,10 +120,12 @@ def create_app() -> FastAPI:
     @app.get("/api/health")
     def health() -> dict[str, Any]:
         provider_status = ctx.factory.get_provider_status()
-        fetcher_status = _fetcher_capabilities("iplan", service_name="xplan")
-        fetcher_status["status"] = "ready" if fetcher_status["available"] else "unavailable"
+        fetcher_status = _fetcher_status_summary(source="iplan", service_name="xplan")
         overall_status = "ok"
-        if not provider_status["text"]["healthy"] or not fetcher_status["available"]:
+        if (
+            not provider_status["text"]["healthy"]
+            or fetcher_status.get("status") != "ready"
+        ):
             overall_status = "degraded"
         return {
             "status": overall_status,
@@ -115,11 +140,38 @@ def create_app() -> FastAPI:
         vectordb = ctx.factory.get_vectordb_status()
         return {
             "provider": to_jsonable(ctx.factory.get_provider_status()),
-            "scraping": to_jsonable(_fetcher_capabilities("iplan", service_name="xplan")),
+            "scraping": to_jsonable(
+                _fetcher_status_summary(source="iplan", service_name="xplan")
+            ),
             "vector_db": to_jsonable(vectordb),
             "cache": to_jsonable(cache),
             "regulation_repository": to_jsonable(reg_repo.get_statistics()),
             "data_store": to_jsonable(ctx.data_store.get_statistics()),
+        }
+
+    @app.get("/api/workspace/overview")
+    def workspace_overview(plan_number: Optional[str] = None) -> dict[str, Any]:
+        feature = _resolve_plan_feature(plan_number)
+        return _build_workspace_overview(feature)
+
+    @app.get("/api/operations/overview")
+    def operations_overview() -> dict[str, Any]:
+        return _build_operations_overview()
+
+    @app.post("/api/ui/events")
+    def ui_events(request: UiEventRequest) -> dict[str, Any]:
+        payload = persist_ui_event(
+            logger,
+            event_name=request.event_name,
+            route=request.route,
+            plan_number=request.plan_number,
+            status=request.status,
+            context=request.context,
+        )
+        return {
+            "ok": True,
+            "event_id": payload["event_id"],
+            "received_at": payload["timestamp"],
         }
 
     @app.post("/api/regulations/query")
@@ -150,7 +202,7 @@ def create_app() -> FastAPI:
         include_vision_analysis: bool = False,
         max_results: int = Query(default=3, ge=1, le=10),
     ) -> dict[str, Any]:
-        result = ctx.factory.get_plan_search_service().search_plans(
+        result = _execute_plan_search(
             PlanSearchQuery(
                 plan_id=plan_id,
                 location=location,
@@ -158,7 +210,8 @@ def create_app() -> FastAPI:
                 status=status,
                 include_vision_analysis=include_vision_analysis,
                 max_results=max_results,
-            )
+            ),
+            timeout_seconds=LIVE_PLAN_SEARCH_TIMEOUT_SECONDS,
         )
         return to_jsonable(result)
 
@@ -417,6 +470,79 @@ def _fetcher_capabilities(source: str, *, service_name: str) -> dict[str, Any]:
     }
 
 
+def _fetcher_cache_key(source: str, service_name: str) -> str:
+    return f"{source}:{service_name}"
+
+
+def _utc_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _parse_utc(value: Any) -> datetime | None:
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def _normalize_fetcher_payload(
+    payload: dict[str, Any],
+    *,
+    source: str,
+    service_name: str,
+) -> dict[str, Any]:
+    capabilities = _fetcher_capabilities(source, service_name=service_name)
+    normalized = {
+        **capabilities,
+        "status": str(payload.get("status") or "unvalidated"),
+        "runtime_ready": bool(payload.get("runtime_ready", False)),
+        "detail": payload.get("detail"),
+        "fetched_at": payload.get("fetched_at"),
+        "count": int(payload.get("count") or 0),
+        "probe_limit": int(payload.get("probe_limit") or 0),
+        "timeout_seconds": int(payload.get("timeout_seconds") or 0),
+        "metadata": dict(payload.get("metadata") or {}),
+        "last_probe_at": payload.get("last_probe_at"),
+        "last_probe_duration_ms": payload.get("last_probe_duration_ms"),
+        "last_probe_count": int(payload.get("last_probe_count") or payload.get("count") or 0),
+    }
+    if normalized["status"] == "ready":
+        normalized["runtime_ready"] = True
+    if not normalized["available"]:
+        normalized["status"] = "unavailable"
+        normalized["runtime_ready"] = False
+        normalized["detail"] = (
+            normalized["detail"] or "Fetcher dependencies are not installed."
+        )
+    return normalized
+
+
+def _get_cached_fetcher_probe(*, source: str, service_name: str) -> dict[str, Any] | None:
+    cached = ctx.fetcher_probe_cache.get(_fetcher_cache_key(source, service_name))
+    if not cached:
+        return None
+    last_probe_at = _parse_utc(cached.get("last_probe_at"))
+    if last_probe_at is None:
+        return None
+    age = datetime.now(timezone.utc) - last_probe_at.astimezone(timezone.utc)
+    if age > ctx.fetcher_probe_ttl:
+        ctx.fetcher_probe_cache.pop(_fetcher_cache_key(source, service_name), None)
+        return None
+    return _normalize_fetcher_payload(cached, source=source, service_name=service_name)
+
+
+def _cache_fetcher_probe(
+    payload: dict[str, Any], *, source: str, service_name: str
+) -> dict[str, Any]:
+    normalized = _normalize_fetcher_payload(
+        payload, source=source, service_name=service_name
+    )
+    ctx.fetcher_probe_cache[_fetcher_cache_key(source, service_name)] = dict(normalized)
+    return normalized
+
+
 def _execute_fetch(
     *,
     source: str,
@@ -468,6 +594,49 @@ def _execute_fetch(
     return result
 
 
+def _execute_plan_search(
+    query: PlanSearchQuery,
+    *,
+    timeout_seconds: int,
+) -> PlanSearchResult:
+    service = ctx.factory.get_plan_search_service()
+    executor = ThreadPoolExecutor(max_workers=1)
+    request_id = uuid4().hex
+    future = executor.submit(service.search_plans, query)
+    try:
+        return future.result(timeout=timeout_seconds)
+    except FutureTimeoutError:
+        future.cancel()
+        emit_observability_event(
+            logger,
+            component="PlanSearchService",
+            operation="plan_search",
+            request_id=request_id,
+            outcome="degraded",
+            degraded_reasons=["live_search_timeout"],
+            timeout_seconds=timeout_seconds,
+            has_plan_id=bool(query.plan_id),
+            has_location=bool(query.location),
+            has_keyword=bool(query.keyword),
+            include_vision_analysis=query.include_vision_analysis,
+            max_results=query.max_results,
+            latency_ms=timeout_seconds * 1000,
+        )
+        return PlanSearchResult(
+            plans=[],
+            query=query,
+            total_found=0,
+            execution_time_ms=timeout_seconds * 1000,
+            warning=(
+                "Live iPlan search timed out before the upstream service responded. "
+                "Try again later or use the local catalog."
+            ),
+            warning_code="live_search_timeout",
+        )
+    finally:
+        executor.shutdown(wait=False, cancel_futures=True)
+
+
 def _probe_fetcher(
     *,
     source: str,
@@ -475,26 +644,45 @@ def _probe_fetcher(
     max_plans: int,
     timeout_seconds: int,
 ) -> dict[str, Any]:
+    started_at = datetime.now(timezone.utc)
     if os.getenv("GISARCHAGENT_SKIP_FETCHER_PROBE") == "1":
-        capabilities = _fetcher_capabilities(source, service_name=service_name)
-        return {
-            **capabilities,
-            "status": "skipped",
-            "detail": "Fetcher probe skipped by environment override.",
-            "fetched_at": None,
-            "count": 0,
-            "probe_limit": max_plans,
-            "timeout_seconds": timeout_seconds,
-            "metadata": {},
-        }
+        return _cache_fetcher_probe(
+            {
+                "status": "skipped",
+                "runtime_ready": False,
+                "detail": "Fetcher probe skipped by environment override.",
+                "fetched_at": None,
+                "count": 0,
+                "probe_limit": max_plans,
+                "timeout_seconds": timeout_seconds,
+                "metadata": {},
+                "last_probe_at": _utc_now_iso(),
+                "last_probe_duration_ms": 0,
+                "last_probe_count": 0,
+            },
+            source=source,
+            service_name=service_name,
+        )
 
     capabilities = _fetcher_capabilities(source, service_name=service_name)
     if not capabilities["available"]:
-        return {
-            **capabilities,
-            "status": "unavailable",
-            "detail": "Fetcher dependencies are not installed.",
-        }
+        return _cache_fetcher_probe(
+            {
+                "status": "unavailable",
+                "runtime_ready": False,
+                "detail": "Fetcher dependencies are not installed.",
+                "fetched_at": None,
+                "count": 0,
+                "probe_limit": max_plans,
+                "timeout_seconds": timeout_seconds,
+                "metadata": {},
+                "last_probe_at": _utc_now_iso(),
+                "last_probe_duration_ms": 0,
+                "last_probe_count": 0,
+            },
+            source=source,
+            service_name=service_name,
+        )
 
     result = _execute_fetch(
         source=source,
@@ -504,14 +692,289 @@ def _probe_fetcher(
         timeout_seconds=timeout_seconds,
     )
     metadata = result.get("metadata") or {}
-    status = metadata.get("status", "unknown")
+    raw_status = str(metadata.get("status") or "error")
+    if raw_status == "success":
+        status = "ready"
+        runtime_ready = True
+    elif raw_status == "timeout":
+        status = "timeout"
+        runtime_ready = False
+    else:
+        status = "error"
+        runtime_ready = False
+    detail = metadata.get("error")
+    if status == "error" and not detail and not result.get("features"):
+        detail = "Fetcher probe completed without returning any plan records."
+    duration_ms = int((datetime.now(timezone.utc) - started_at).total_seconds() * 1000)
+    return _cache_fetcher_probe(
+        {
+            "status": status,
+            "runtime_ready": runtime_ready,
+            "detail": detail,
+            "fetched_at": metadata.get("fetched_at"),
+            "count": len(result.get("features") or []),
+            "probe_limit": max_plans,
+            "timeout_seconds": timeout_seconds,
+            "metadata": metadata,
+            "last_probe_at": _utc_now_iso(),
+            "last_probe_duration_ms": duration_ms,
+            "last_probe_count": len(result.get("features") or []),
+        },
+        source=source,
+        service_name=service_name,
+    )
+
+
+def _fetcher_status_summary(*, source: str, service_name: str) -> dict[str, Any]:
+    cached = _get_cached_fetcher_probe(source=source, service_name=service_name)
+    if cached:
+        return cached
+    capabilities = _fetcher_capabilities(source, service_name=service_name)
+    return _normalize_fetcher_payload(
+        {
+            "status": "unvalidated" if capabilities["available"] else "unavailable",
+            "runtime_ready": False,
+            "detail": (
+                "Run Validate scraper to perform a bounded live probe."
+                if capabilities["available"]
+                else "Fetcher dependencies are not installed."
+            ),
+            "fetched_at": None,
+            "count": 0,
+            "probe_limit": 0,
+            "timeout_seconds": 0,
+            "metadata": {},
+            "last_probe_at": None,
+            "last_probe_duration_ms": None,
+            "last_probe_count": 0,
+        },
+        source=source,
+        service_name=service_name,
+    )
+
+
+def _resolve_plan_feature(plan_number: str | None) -> dict[str, Any] | None:
+    if not plan_number:
+        return None
+    return ctx.data_store.get_feature_by_plan_number(plan_number)
+
+
+def _attr(feature: dict[str, Any] | None, key: str, default: str = "") -> str:
+    if not feature:
+        return default
+    return str((feature.get("attributes") or {}).get(key) or default)
+
+
+def _plan_location(feature: dict[str, Any] | None) -> str:
+    city = _attr(feature, "plan_county_name", "Unknown city")
+    district = _attr(feature, "district_name", "Unknown district")
+    return f"{city}, {district}"
+
+
+def _plan_area_label(feature: dict[str, Any] | None) -> str:
+    try:
+        dunam = float((feature or {}).get("attributes", {}).get("pl_area_dunam") or 0)
+    except (TypeError, ValueError):
+        dunam = 0
+    if not dunam:
+        return "Unknown"
+    return f"{dunam:.2f} dunam"
+
+
+def _plan_url(feature: dict[str, Any] | None) -> str | None:
+    value = _attr(feature, "pl_url", "")
+    return value or None
+
+
+def _build_constraint_signals(feature: dict[str, Any]) -> list[str]:
+    attributes = feature.get("attributes") or {}
+    signals = [
+        f"Approval state: {_attr(feature, 'station_desc', _attr(feature, 'internet_short_status', 'Unknown status'))}.",
+        f"Municipality context: {_plan_location(feature)}.",
+        "Geometry is available for map review."
+        if feature.get("geometry")
+        else "Geometry is missing, so parcel context needs manual verification.",
+    ]
+    objectives = attributes.get("pl_objectives")
+    if objectives:
+        text = str(objectives)
+        signals.append(
+            f"Plan objective: {text[:120]}{'...' if len(text) > 120 else ''}"
+        )
+    return signals
+
+
+def _build_next_actions(feature: dict[str, Any], health: dict[str, Any]) -> list[str]:
+    actions = [
+        f"Verify municipality status: {_attr(feature, 'station_desc', _attr(feature, 'internet_short_status', 'Unknown status'))}.",
+        f"Run feasibility assumptions for {_attr(feature, 'pl_number', 'selected plan')} before client review.",
+        "Open the source plan package and confirm setbacks, parking, and approval notes.",
+    ]
+    provider_ok = bool(((health.get("provider") or {}).get("text") or {}).get("healthy"))
+    provider_configured = bool((health.get("provider") or {}).get("configured"))
+    if provider_configured and not provider_ok:
+        actions.append(
+            "Fix provider configuration before relying on synthesized summaries."
+        )
+    elif not provider_configured:
+        actions.append(
+            "Provider configuration is optional; retrieval-only answers remain available until synthesis is enabled."
+        )
+    if not feature.get("geometry"):
+        actions.append(
+            "Geometry is missing; confirm parcel boundaries before map-based review."
+        )
+    return actions
+
+
+def _build_shareable_brief(
+    feature: dict[str, Any] | None,
+    *,
+    vector_status: str,
+    health: dict[str, Any],
+) -> str | None:
+    if not feature:
+        return None
+    provider_ok = bool(((health.get("provider") or {}).get("text") or {}).get("healthy"))
+    provider_configured = bool((health.get("provider") or {}).get("configured"))
+    scraping_status = str((health.get("scraping") or {}).get("status") or "unknown")
+    if provider_ok:
+        provider_label = "Ready"
+    elif provider_configured:
+        provider_label = "Blocked"
+    else:
+        provider_label = "Optional"
+    scraper_label = scraping_status.replace("_", " ").title()
+    return "\n".join(
+        [
+            f"Project dossier: {_attr(feature, 'pl_number', 'No plan number')} - {_attr(feature, 'pl_name', 'Untitled plan')}",
+            f"Location: {_plan_location(feature)}",
+            f"Approval state: {_attr(feature, 'station_desc', _attr(feature, 'internet_short_status', 'Unknown status'))}",
+            f"Area: {_plan_area_label(feature)}",
+            f"Geometry: {'available' if feature.get('geometry') else 'missing'}",
+            f"Vector DB status: {vector_status.replace('_', ' ').title()}",
+            f"Provider status: {provider_label}",
+            f"Scraper status: {scraper_label}",
+            "Next review step: validate feasibility assumptions and confirm source regulations before client output.",
+        ]
+    )
+
+
+def _build_workspace_overview(feature: dict[str, Any] | None) -> dict[str, Any]:
+    provider_status = ctx.factory.get_provider_status()
+    fetcher_status = _fetcher_status_summary(source="iplan", service_name="xplan")
+    vector_payload = to_jsonable(ctx.factory.get_vectordb_status())
+    data_payload = to_jsonable(ctx.data_store.get_statistics())
+    vector_status = str(
+        (vector_payload or {}).get("health")
+        or (vector_payload or {}).get("status")
+        or "unknown"
+    )
+    selected_plan = serialize_data_feature(feature) if feature else None
     return {
-        **capabilities,
-        "status": "ready" if status == "success" else status,
-        "detail": metadata.get("error"),
-        "fetched_at": metadata.get("fetched_at"),
-        "count": len(result.get("features") or []),
-        "probe_limit": max_plans,
-        "timeout_seconds": timeout_seconds,
-        "metadata": metadata,
+        "selected_plan": selected_plan,
+        "brief": {
+            "plan_number": _attr(feature, "pl_number", "No plan number"),
+            "title": _attr(feature, "pl_name", "No plan selected"),
+            "location": _plan_location(feature) if feature else "—",
+            "district": _attr(feature, "district_name", "—"),
+            "city": _attr(feature, "plan_county_name", "—"),
+            "status": _attr(
+                feature,
+                "station_desc",
+                _attr(feature, "internet_short_status", "—"),
+            ),
+            "area": _plan_area_label(feature),
+            "geometry": "Available" if feature and feature.get("geometry") else "Missing",
+            "source_url": _plan_url(feature),
+        }
+        if feature
+        else None,
+        "summary_metrics": {
+            "tracked_plans": int((data_payload or {}).get("total_plans") or 0),
+            "vector_status": vector_status,
+            "provider_status": "Ready"
+            if ((provider_status.get("text") or {}).get("healthy"))
+            else (
+                "Optional"
+                if not provider_status.get("configured")
+                else "Attention"
+            ),
+            "scraper_status": str(fetcher_status.get("status") or "unknown"),
+        },
+        "constraint_signals": _build_constraint_signals(feature) if feature else [],
+        "next_actions": _build_next_actions(
+            feature, {"provider": provider_status, "scraping": fetcher_status}
+        )
+        if feature
+        else [],
+        "shareable_brief": _build_shareable_brief(
+            feature,
+            vector_status=vector_status,
+            health={"provider": provider_status, "scraping": fetcher_status},
+        ),
+        "readiness": {
+            "has_selected_plan": bool(feature),
+            "provider_ready": bool((provider_status.get("text") or {}).get("healthy")),
+            "scraper_ready": fetcher_status.get("status") == "ready",
+            "vector_status": vector_status,
+        },
+    }
+
+
+def _build_operations_overview() -> dict[str, Any]:
+    data_status_payload = to_jsonable(ctx.data_store.get_statistics())
+    vector_payload = to_jsonable(ctx.vectordb.get_status())
+    fetcher_payload = _fetcher_status_summary(source="iplan", service_name="xplan")
+    provider_status = ctx.factory.get_provider_status()
+    health_payload = {
+        "status": "ok"
+        if (provider_status.get("text") or {}).get("healthy") and fetcher_payload.get("status") == "ready"
+        else "degraded",
+        "provider": provider_status,
+        "scraping": fetcher_payload,
+    }
+    metadata = data_status_payload.get("metadata") or {}
+    inventory = {
+        "total_plans": int(data_status_payload.get("total_plans") or 0),
+        "districts": len(data_status_payload.get("by_district") or {}),
+        "cities": len(data_status_payload.get("by_city") or {}),
+        "statuses": len(data_status_payload.get("by_status") or {}),
+    }
+    recommended_actions = []
+    if not ((health_payload.get("provider") or {}).get("text") or {}).get("healthy"):
+        recommended_actions.append(
+            "Restore the OpenAI-compatible provider before trusting synthesis-heavy workflows."
+        )
+    if fetcher_payload.get("status") != "ready":
+        recommended_actions.append(
+            "Validate the scraper path before running a bounded data refresh."
+        )
+    if str(vector_payload.get("status") or "") not in {"healthy", "warning"}:
+        recommended_actions.append(
+            "Initialize or rebuild the vector knowledge base before relying on regulation search."
+        )
+    if not recommended_actions:
+        recommended_actions.append(
+            "Runtime looks healthy. Use bounded refresh or regulation authoring only when new source material arrives."
+        )
+
+    return {
+        "provider": health_payload.get("provider"),
+        "scraper": fetcher_payload,
+        "data_store": data_status_payload,
+        "vector_db": vector_payload,
+        "inventory": inventory,
+        "freshness": {
+            "last_updated": metadata.get("last_updated") or metadata.get("fetched_at"),
+            "update_note": metadata.get("update_note"),
+            "source": metadata.get("source"),
+            "endpoint": metadata.get("endpoint"),
+            "fetched_at": metadata.get("fetched_at"),
+            "probe_status": fetcher_payload.get("status"),
+            "probe_detail": fetcher_payload.get("detail"),
+            "last_probe_at": fetcher_payload.get("last_probe_at"),
+            "last_probe_duration_ms": fetcher_payload.get("last_probe_duration_ms"),
+        },
+        "recommended_actions": recommended_actions,
     }

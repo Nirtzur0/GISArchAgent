@@ -82,15 +82,17 @@ class RegulationQueryService:
                     if not answer:
                         degraded_reasons.append("llm_synthesis_unavailable")
                         answer_status = "retrieval_only"
-                        answer_warning = (
-                            "MockChat synthesis is unavailable. Showing retrieved regulations only."
+                        answer_warning = "LLM synthesis is unavailable. Showing retrieved regulations only."
+                        answer = self._build_retrieval_only_answer(
+                            query=query, regulations=regulations
                         )
                     else:
                         answer_status = "synthesized"
                 else:
                     answer_status = "retrieval_only"
-                    answer_warning = (
-                        "MockChat is not configured. Showing retrieved regulations only."
+                    answer_warning = "LLM synthesis is unavailable. Showing retrieved regulations only."
+                    answer = self._build_retrieval_only_answer(
+                        query=query, regulations=regulations
                     )
 
             duration_ms = round((perf_counter() - started_at) * 1000, 2)
@@ -231,6 +233,28 @@ Jurisdiction: {reg.jurisdiction}
             )
 
         return "\n---\n".join(context_parts)
+
+    def _build_retrieval_only_answer(
+        self, query: RegulationQuery, regulations: List[Regulation]
+    ) -> str:
+        """
+        Build a deterministic fallback answer when LLM synthesis is unavailable.
+
+        This keeps the response useful for callers and preserves a stable
+        degraded-mode contract for tests and API consumers.
+        """
+        titles = ", ".join(reg.title for reg in regulations[:3])
+        summary = f"Matched {len(regulations)} regulation"
+        if len(regulations) != 1:
+            summary += "s"
+        if titles:
+            summary += f": {titles}"
+        if len(regulations) > 3:
+            summary += ", and more"
+        return (
+            "LLM synthesis is unavailable. Showing retrieved regulations only. "
+            f"{summary}. Query: {query.query_text}"
+        )
 
     def get_tama_info(self, tama_number: str) -> List[Regulation]:
         """

@@ -41,13 +41,17 @@ class ApplicationFactory:
 
     def __init__(
         self,
-        gemini_api_key: Optional[str] = None,
+        openai_api_key: Optional[str] = None,
         chroma_persist_dir: str = "data/vectorstore",
         cache_dir: str = "data/cache",
+        gemini_api_key: Optional[str] = None,
     ):
         """Set up the factory with your config."""
-        self.openai_api_key = gemini_api_key or settings.openai_api_key
-        self.openai_base_url = settings.openai_base_url
+        resolved_api_key = openai_api_key
+        if resolved_api_key is None:
+            resolved_api_key = gemini_api_key
+        self.openai_api_key = resolved_api_key or settings.openai_api_key
+        self.openai_base_url = settings.openai_base_url.strip()
         self.openai_model = settings.openai_model
         self.openai_vision_model = settings.openai_vision_model
         self.chroma_persist_dir = chroma_persist_dir
@@ -73,7 +77,9 @@ class ApplicationFactory:
     def get_plan_repository(self) -> IPlanRepository:
         """Get the plan repository (talks to iPlan API)."""
         if not self._plan_repository:
-            self._plan_repository = IPlanGISRepository()
+            self._plan_repository = IPlanGISRepository(
+                timeout=settings.iplan_request_timeout_seconds
+            )
             logger.info("Plan repository created")
 
         return self._plan_repository
@@ -171,6 +177,9 @@ class ApplicationFactory:
                 "initialized": health_result.is_healthy
                 or health_result.status == "warning",
                 "status": health_result.status,
+                "health": "healthy"
+                if (health_result.is_healthy or health_result.status == "warning")
+                else "needs_initialization",
                 "total_regulations": health_result.stats.get("total_regulations", 0),
                 "last_updated": (
                     health_result.last_updated.isoformat()
@@ -188,6 +197,8 @@ class ApplicationFactory:
 
     def get_vision_service(self) -> Optional[OpenAICompatibleVisionService]:
         """Get the OpenAI-compatible vision service for image analysis."""
+        if not self.openai_base_url:
+            return None
         if not self._vision_service:
             try:
                 self._vision_service = OpenAICompatibleVisionService(
@@ -204,6 +215,8 @@ class ApplicationFactory:
 
     def get_llm_service(self) -> Optional[OpenAICompatibleLLMService]:
         """Get OpenAI-compatible LLM service for answer synthesis."""
+        if not self.openai_base_url:
+            return None
         if not self._llm_service:
             try:
                 self._llm_service = OpenAICompatibleLLMService(
@@ -227,7 +240,7 @@ class ApplicationFactory:
         )
         return {
             "configured": bool(self.openai_base_url),
-            "base_url": self.openai_base_url,
+            "base_url": self.openai_base_url or None,
             "model": self.openai_model,
             "vision_model": self.openai_vision_model,
             "text": base_probe,

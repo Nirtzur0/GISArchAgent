@@ -10,13 +10,6 @@ scripts/
 ├── data_cli.py                  # Data management CLI
 ├── build_vectordb_cli.py        # 🆕 Vector DB builder CLI (integrated)
 ├── import_sample_data.py        # Import sample data utility
-└── utilities/                   # Utility scripts
-    ├── README.md
-    ├── reinitialize_vectordb.py
-    ├── manage_data.py
-    ├── fetch_iplan_data.py
-    ├── update_iplan_data.py
-    └── parse_iplan_response.py
 ```
 
 ## Active Scripts
@@ -134,10 +127,8 @@ python3 scripts/import_sample_data.py --verbose
 
 These scripts integrate with:
 - **Data Management System** (`src/data_management/`)
-- **Generic Pipeline** (`src/data_pipeline/`)
+- **FastAPI runtime** (`src/api/`)
 - **Vector Database** (`src/vectorstore/`)
-
-The same modules power the Streamlit UI, ensuring consistency.
 
 ## Python API
 
@@ -183,7 +174,7 @@ from src.data_management import DataFetcherFactory
 DataFetcherFactory.register_fetcher("my_source", MyNewFetcher())
 ```
 
-3. Use in Streamlit or CLI:
+3. Use in the API, React app, or CLI:
 ```python
 data_store = DataStore()
 fetcher = DataFetcherFactory.get_fetcher("my_source")
@@ -197,9 +188,9 @@ data_store.save(backup=True)
 ```
 External Source → Fetcher → DataStore → JSON File
                                 ↓
-                          Streamlit UI
+                     FastAPI + React / CLI tools
                                 ↓
-                            User Display
+                          User workflows
 ```
 
 ## Quick Reference
@@ -227,9 +218,9 @@ External Source → Fetcher → DataStore → JSON File
 - Check that `populate_real_data.py` exists in root directory
 - Verify JSON structure in that file
 
-### Data not showing in Streamlit
+### Data not showing in the app
 - Run `python3 scripts/data_cli.py status` to verify data exists
-- Click "Reload Data" in the Streamlit sidebar
+- Restart `./run_webapp.sh` or refresh the React page after importing data
 - Check file permissions on `data/raw/iplan_layers.json`
 
 ### Search returns no results
@@ -246,4 +237,3 @@ External Source → Fetcher → DataStore → JSON File
 
 - [../docs/DATA_MANAGEMENT.md](../docs/DATA_MANAGEMENT.md) - Complete data management guide
 - [../src/data_management/](../src/data_management/) - Source code
-- [../pages/3_💾_Data_Management.py](../pages/3_💾_Data_Management.py) - Streamlit UI

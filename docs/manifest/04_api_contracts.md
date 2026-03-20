@@ -5,7 +5,7 @@
 | Boundary | Input Contract | Output Contract | Evidence |
 | --- | --- | --- | --- |
 | UI -> Regulation query service | `RegulationQuery` (`query_text`, optional `location`, optional `regulation_type`, `max_results`) | `RegulationResult` (`regulations`, `query`, `total_found`, optional `answer`) | `src/application/dtos.py`, `src/application/services/regulation_query_service.py` |
-| UI -> Plan search service | `PlanSearchQuery` (`plan_id`/`location`/`keyword`, `max_results`, optional vision flag) | `PlanSearchResult` (`plans`, `query`, `total_found`, `execution_time_ms`) | `src/application/dtos.py`, `src/application/services/plan_search_service.py` |
+| UI -> Plan search service | `PlanSearchQuery` (`plan_id`/`location`/`keyword`, `max_results`, optional vision flag defaulting to `False`) | `PlanSearchResult` (`plans`, `query`, `total_found`, `execution_time_ms`) | `src/application/dtos.py`, `src/application/services/plan_search_service.py`, `frontend/src/redesign/pages/WorkspacePage.tsx` |
 | Application -> Plan repository | `get_by_id`, `search_by_location`, `search_by_keyword`, `search_by_status`, `get_plan_image` | `Plan` entities / image bytes / empty results on failure | `src/domain/repositories/__init__.py`, `src/infrastructure/repositories/iplan_repository.py` |
 | Application -> Regulation repository | `search`, `get_by_id`, `get_by_type`, `get_applicable_to_location`, `add_regulation`, `get_statistics` | `Regulation` entities + stats dictionary | `src/domain/repositories/__init__.py`, `src/infrastructure/repositories/chroma_repository.py` |
 | CLI -> Vector build pipeline | `build/status/check` CLI args | terminal output + persisted Chroma updates + optional stats artifacts | `scripts/build_vectordb_cli.py`, `src/vectorstore/unified_pipeline.py` |
@@ -31,8 +31,13 @@
 ## Request and Response Invariants
 - `RegulationQuery.query_text` must be non-empty for meaningful retrieval.
 - `PlanSearchQuery` precedence is deterministic: `plan_id` > `location` > `keyword`.
+- React workspace search is explicitly split into `Local catalog` and `Live iPlan`; live search must stay opt-in and tolerate empty/degraded upstream results without breaking local workflows.
 - Service boundaries should return structured empty/degraded results on dependency failures, not uncaught exceptions.
 - DTO timestamps and execution metadata are generated in application services.
+- Scraper health is probe-based, not dependency-import-based:
+  - `/api/data/fetcher-health` is the only route that performs a bounded live scraper probe.
+  - `/api/health`, `/api/system/status`, `/api/workspace/overview`, and `/api/operations/overview` return the latest cached probe result when present, otherwise `scraping.status="unvalidated"`.
+  - `scraping.available` means dependencies are installed; `scraping.runtime_ready` means a bounded live probe succeeded.
 
 ## Error Semantics
 - External boundary failures are logged and converted to safe result objects where possible.
@@ -48,5 +53,4 @@
 - CI enforces the marker contract gates in `.github/workflows/ci.yml`.
 
 ## Known Gaps
-- No stable public HTTP API boundary is currently exposed as the canonical runtime interface.
 - Contract versioning policy for output payloads is still lightweight and docs-driven.

@@ -1,1 +1,1 @@
-{"root":["./src/app.tsx","./src/main.tsx","./src/types.ts","./src/vite-env.d.ts","./src/lib/api.ts"],"version":"5.9.3"}
+{"root":["./src/app.tsx","./src/appredesign.tsx","./src/main.tsx","./src/types.ts","./src/vite-env.d.ts","./src/lib/api.ts","./src/redesign/components.tsx","./src/redesign/model.ts","./src/redesign/tracking.ts","./src/redesign/pages/feasibilitypage.tsx","./src/redesign/pages/investigationpage.tsx","./src/redesign/pages/operationspage.tsx","./src/redesign/pages/workspacepage.tsx"],"version":"5.9.3"}

@@ -33,8 +33,13 @@ class OpenAICompatibleVisionService:
         model: str = "gpt-4o-mini",
         timeout_seconds: int = 120,
     ) -> None:
+        normalized_base_url = base_url.strip()
+        if not normalized_base_url:
+            raise ValueError(
+                "OPENAI_BASE_URL must be configured before enabling vision."
+            )
         self.api_key = api_key or "chatmock-local"
-        self.base_url = base_url.rstrip("/")
+        self.base_url = normalized_base_url.rstrip("/")
         self.model_name = model
         self.timeout_seconds = timeout_seconds
         logger.info(

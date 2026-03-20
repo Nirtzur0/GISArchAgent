@@ -3,12 +3,6 @@
 # Keep versions as ranges to avoid dependency resolution failures across
 # platforms, while still preventing major-version breaking changes.
 
-# Web UI
-streamlit>=1.52,<2
-streamlit-folium>=0.25,<1
-folium>=0.20,<1
-plotly>=6,<7
-
 # Core data + utils
 pandas>=2.2,<3
 python-dotenv>=1,<2
@@ -49,12 +43,3 @@ python-multipart>=0.0.9,<1
 # Settings
 pydantic>=2.6,<3
 pydantic-settings>=2.1,<3
-
-# LangChain integrations (optional; used by src/vectorstore/manager.py)
-langchain>=1.2,<2
-langchain-core>=1.2,<2
-langchain-openai>=1.1,<2
-langchain-chroma>=1.1,<2
-langchain-text-splitters>=1.1,<2
-langgraph>=0.0.20
-langsmith>=0.5,<1

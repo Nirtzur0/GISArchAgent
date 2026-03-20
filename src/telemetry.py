@@ -8,6 +8,7 @@ import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 DEFAULT_OBSERVABILITY_DIR = Path("data/cache/observability")
 DEFAULT_EVENTS_SINK = DEFAULT_OBSERVABILITY_DIR / "events_backend.jsonl"
@@ -219,3 +220,31 @@ def route_alert(
         "OBS_ALERT %s", json.dumps(alert_payload, ensure_ascii=False, sort_keys=True)
     )
     return alert_payload
+
+
+def persist_ui_event(
+    logger: logging.Logger,
+    *,
+    event_name: str,
+    route: str | None = None,
+    plan_number: str | None = None,
+    status: str = "success",
+    context: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Persist a lightweight UI interaction event without alert routing."""
+    payload = {
+        "timestamp": utc_timestamp(),
+        "event_id": uuid4().hex,
+        "kind": "ui_event",
+        "component": "frontend",
+        "operation": event_name,
+        "outcome": status,
+        "route": route,
+        "plan_number": plan_number,
+        "context": context or {},
+    }
+    logger.info("UI_EVENT %s", json.dumps(payload, ensure_ascii=False, sort_keys=True))
+    if _backend_enabled():
+        events_path, _ = _observability_sinks()
+        append_jsonl_record(events_path, payload)
+    return payload

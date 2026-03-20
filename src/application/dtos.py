@@ -17,7 +17,7 @@ class PlanSearchQuery:
     location: Optional[str] = None
     keyword: Optional[str] = None
     status: Optional[str] = None
-    include_vision_analysis: bool = True
+    include_vision_analysis: bool = False
     max_results: int = 3
 
 
@@ -39,6 +39,8 @@ class PlanSearchResult:
     total_found: int
     timestamp: datetime = field(default_factory=datetime.now)
     execution_time_ms: float = 0.0
+    warning: Optional[str] = None
+    warning_code: Optional[str] = None
 
 
 @dataclass

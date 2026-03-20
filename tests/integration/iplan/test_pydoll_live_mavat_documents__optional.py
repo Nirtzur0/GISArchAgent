@@ -1,4 +1,5 @@
 import os
+from datetime import datetime, timezone
 
 import pytest
 
@@ -58,27 +59,39 @@ def test_pydoll__can_extract_mavat_document_urls_for_known_plan():
             # The target is JS-heavy and occasionally serves a partial shell; bounded
             # retries reduce false negatives while keeping this rehearsal short.
             last = []
+            diagnostics = src.last_document_fetch_result()
             for attempt in range(max_attempts):
-                docs = await asyncio.wait_for(
-                    src.fetch_plan_documents("1000216487"), timeout=timeout_seconds
-                )
+                try:
+                    docs = await asyncio.wait_for(
+                        src.fetch_plan_documents("1000216487"), timeout=timeout_seconds
+                    )
+                except asyncio.TimeoutError:
+                    diagnostics = src.last_document_fetch_result()
+                    diagnostics.setdefault("status", "timeout")
+                    diagnostics.setdefault(
+                        "detail",
+                        f"Live MAVAT scrape exceeded the bounded timeout of {timeout_seconds}s.",
+                    )
+                    diagnostics.setdefault(
+                        "updated_at", datetime.now(timezone.utc).isoformat()
+                    )
+                    return [], diagnostics
                 if docs:
-                    return docs
+                    return docs, src.last_document_fetch_result()
                 last = docs
+                diagnostics = src.last_document_fetch_result()
                 if attempt < max_attempts - 1:
                     await asyncio.sleep(backoff_seconds)
-            return last
+            return last, diagnostics
 
-    try:
-        docs = asyncio.run(_run())
-    except TimeoutError:
-        pytest.skip(
-            f"Live MAVAT scrape timed out (attempts={max_attempts}, timeout={timeout_seconds}s, target likely throttling/blocked)"
-        )
+    docs, diagnostics = asyncio.run(_run())
 
     if not docs:
+        status = diagnostics.get("status") or "unknown"
+        detail = diagnostics.get("detail") or "No diagnostic detail recorded."
+        updated_at = diagnostics.get("updated_at") or "unknown"
         pytest.skip(
-            "Live MAVAT returned no artifacts (target likely throttling/blocked)"
+            f"Live MAVAT returned no artifacts (status={status}, updated_at={updated_at}, detail={detail})"
         )
 
     assert all(d.get("url") for d in docs), "All docs must have a URL"

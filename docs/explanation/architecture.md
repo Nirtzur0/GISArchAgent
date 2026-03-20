@@ -2,6 +2,9 @@
 
 This page explains the runtime architecture at a high level.
 
+For a concept-first walkthrough of the problem domain, tradeoffs, and code mapping, see:
+- `docs/explanation/problem_landscape_and_solution.md`
+
 For canonical engineering details, see:
 - `docs/manifest/01_architecture.md`
 - `docs/manifest/04_api_contracts.md`

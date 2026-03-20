@@ -21,11 +21,20 @@ For canonical command IDs and latest command-map truth, use `docs/manifest/09_ru
 ./run_webapp.sh
 ```
 
-Then open `http://localhost:8501`.
+Then open the frontend URL printed by the script, usually `http://127.0.0.1:5173`.
+If `8000` or `5173` are already occupied, the launcher prints the next free local ports and keeps the frontend pointed at the resolved backend automatically.
 
 ## 2) Core Verification (Automated)
 
-Run marker suites from the repository venv:
+Run the narrow canonical checks first:
+
+```bash
+./venv/bin/python -m pytest tests/integration/api/test_fastapi_endpoints.py -q
+cd frontend && npm run build
+cd frontend && npm run test:e2e
+```
+
+Then run the broader marker suites from the repository venv:
 
 ```bash
 ./venv/bin/python -m pytest -m unit
@@ -44,20 +53,21 @@ Optional full-suite run:
 
 After `./run_webapp.sh`, verify these flows:
 
-### Main page (Query Assistant)
-- Query regulations in English and Hebrew.
-- Confirm result cards render and fallback/degraded messaging is understandable.
+### Workspace page
+- Select a plan from the local catalog.
+- Run a grounded regulation query and confirm retrieval-only messaging is understandable when no provider is configured.
+- Switch to `Live iPlan` and confirm degraded live-search warnings are explicit instead of hanging silently.
 
-### Map Viewer page
+### Investigation page
 - Load map layers and apply filters.
 - Confirm marker popups and summary counters update.
 
-### Plan Analyzer page
+### Feasibility page
 - Run building-rights calculations with sample inputs.
 - Validate charts/tables render and no UI errors appear.
 
-### Data Management page
-- Check vector DB status.
+### Operations page
+- Check provider state, scraper state, and vector DB status.
 - Run safe maintenance actions (status/check paths before rebuild).
 
 ## 4) CLI Operations

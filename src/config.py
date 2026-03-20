@@ -15,13 +15,13 @@ class Settings(BaseSettings):
         protected_namespaces=("settings_",),
     )
 
-    # OpenAI-compatible provider configuration (used for ChatMock)
-    openai_base_url: str = "http://127.0.0.1:8080/v1"
+    # Canonical provider configuration.
+    openai_base_url: str = ""
     openai_api_key: Optional[str] = None
     openai_model: str = "gpt-4o-mini"
     openai_vision_model: str = "gpt-4o-mini"
 
-    # Legacy provider settings kept for compatibility with existing docs/data.
+    # Legacy compatibility fields retained for older docs/config only.
     anthropic_api_key: Optional[str] = None
     google_api_key: Optional[str] = None
     gemini_api_key: Optional[str] = None
@@ -46,6 +46,7 @@ class Settings(BaseSettings):
     iplan_api_url: str = (
         "https://ags.iplan.gov.il/arcgisiplan/rest/services/PlanningPublic/"
     )
+    iplan_request_timeout_seconds: int = 8
 
     # ArcGIS (optional)
     arcgis_username: Optional[str] = None

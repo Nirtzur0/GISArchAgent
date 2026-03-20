@@ -8,7 +8,6 @@ import logging
 from typing import List, Optional, Dict, Any
 import chromadb
 from chromadb.config import Settings
-from pathlib import Path
 
 from src.domain.repositories import IRegulationRepository
 from src.domain.entities.regulation import Regulation, RegulationType
@@ -43,19 +42,19 @@ class ChromaRegulationRepository(IRegulationRepository):
         self.persist_directory = persist_directory
         self.collection_name = collection_name
 
-        # Avoid implicit embedding-model downloads for fresh installs/tests by
-        # using a deterministic local embedding unless the caller provides one.
-        # For existing persisted DBs, keep default behavior to avoid dimension
-        # mismatch with already-stored vectors.
-        if embedding_function is None:
-            db_file = Path(persist_directory) / "chroma.sqlite3"
-            if not db_file.exists():
-                embedding_function = DeterministicHashEmbeddingFunction(dim=128)
-
-        # Initialize ChromaDB client
+        # Initialize ChromaDB client first so we can inspect existing
+        # collection metadata before choosing a default local embedding.
         self._client = chromadb.PersistentClient(
             path=persist_directory, settings=Settings(anonymized_telemetry=False)
         )
+
+        # Always bind a deterministic local embedding unless the caller
+        # explicitly overrides it. Re-opened collections still need an
+        # embedding function for query-time vectorization; omitting it makes
+        # local vector stores unreadable across process restarts. If the
+        # collection already exists, match its stored vector dimension.
+        if embedding_function is None:
+            embedding_function = self._build_default_embedding_function()
 
         # Get or create collection
         self._collection = self._client.get_or_create_collection(
@@ -63,6 +62,23 @@ class ChromaRegulationRepository(IRegulationRepository):
         )
 
         logger.info(f"ChromaDB repository initialized: {collection_name}")
+
+    def _build_default_embedding_function(self) -> DeterministicHashEmbeddingFunction:
+        """Choose a deterministic embedding compatible with the stored collection."""
+        dimension = 128
+
+        try:
+            existing = self._client.get_collection(self.collection_name)
+            stored_dimension = getattr(
+                getattr(existing, "_model", None), "dimension", None
+            )
+            if isinstance(stored_dimension, int) and stored_dimension > 0:
+                dimension = stored_dimension
+        except Exception:
+            # Collection does not exist yet or metadata is unavailable.
+            pass
+
+        return DeterministicHashEmbeddingFunction(dim=dimension)
 
     def search(
         self, query: str, filters: Optional[Dict[str, Any]] = None, limit: int = 10

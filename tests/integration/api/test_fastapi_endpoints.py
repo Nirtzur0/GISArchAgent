@@ -1,10 +1,14 @@
 import importlib
 import json
 import shutil
+import time
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+
+from src.application.dtos import AnalyzedPlan, PlanSearchQuery, PlanSearchResult
+from src.domain.entities.plan import Plan, PlanStatus, ZoneType
 
 
 pytestmark = [pytest.mark.integration]
@@ -21,6 +25,8 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setenv("GISARCHAGENT_CACHE_DIR", str(cache_dir))
     monkeypatch.setenv("GISARCHAGENT_DATA_FILE", str(data_file))
     monkeypatch.setenv("GISARCHAGENT_SKIP_FETCHER_PROBE", "1")
+    monkeypatch.setenv("OPENAI_BASE_URL", "")
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
 
     import src.api.app as api_app_module
 
@@ -36,6 +42,8 @@ def test_health__reports_provider_shape(client):
     assert payload["status"] in {"ok", "degraded"}
     assert "base_url" in payload["provider"]
     assert "scraping" in payload
+    assert payload["provider"]["configured"] is False
+    assert payload["provider"]["text"]["status"] == "unconfigured"
 
 
 def test_system_status__returns_core_sections(client):
@@ -46,6 +54,51 @@ def test_system_status__returns_core_sections(client):
     assert "data_store" in payload
     assert "provider" in payload
     assert "scraping" in payload
+
+
+def test_workspace_overview__returns_summary_and_selected_plan(client):
+    search_payload = client.get("/api/data/search").json()
+    plan_number = search_payload["items"][0]["attributes"]["pl_number"]
+
+    response = client.get(f"/api/workspace/overview?plan_number={plan_number}")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["summary_metrics"]["tracked_plans"] >= 1
+    assert payload["selected_plan"]["attributes"]["pl_number"] == plan_number
+    assert payload["brief"]["title"]
+    assert payload["shareable_brief"]
+    assert payload["summary_metrics"]["vector_status"] == "healthy"
+    assert "Vector DB status: Healthy" in payload["shareable_brief"]
+
+
+def test_operations_overview__returns_grouped_status(client):
+    response = client.get("/api/operations/overview")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["inventory"]["total_plans"] >= 1
+    assert "provider" in payload
+    assert "scraper" in payload
+    assert "vector_db" in payload
+    assert payload["recommended_actions"]
+    assert payload["freshness"]["last_updated"] == payload["freshness"]["fetched_at"]
+    assert payload["freshness"]["source"] == "iPlan ArcGIS REST API"
+
+
+def test_ui_events__persists_lightweight_event(client):
+    response = client.post(
+        "/api/ui/events",
+        json={
+            "event_name": "workspace_plan_selected",
+            "route": "/",
+            "plan_number": "101-0001",
+            "context": {"source": "playwright"},
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["ok"] is True
+    assert payload["event_id"]
+    assert payload["received_at"]
 
 
 def test_regulation_query__returns_sources(client):
@@ -128,3 +181,146 @@ def test_fetcher_health__returns_probe_payload(client):
     payload = response.json()
     assert payload["source"] == "iplan"
     assert "status" in payload
+
+
+def test_health_surfaces__default_scraper_state_is_unvalidated_without_probe(client, monkeypatch):
+    import src.api.app as api_app_module
+
+    def _unexpected_fetch(**kwargs):
+        raise AssertionError("Passive health surfaces must not launch a live probe")
+
+    monkeypatch.setattr(api_app_module, "_execute_fetch", _unexpected_fetch)
+
+    health_payload = client.get("/api/health").json()
+    operations_payload = client.get("/api/operations/overview").json()
+    system_payload = client.get("/api/system/status").json()
+
+    assert health_payload["scraping"]["status"] == "unvalidated"
+    assert health_payload["scraping"]["runtime_ready"] is False
+    assert operations_payload["scraper"]["status"] == "unvalidated"
+    assert system_payload["scraping"]["status"] == "unvalidated"
+
+
+def test_fetcher_health__successful_probe_is_cached_for_status_endpoints(client, monkeypatch):
+    import src.api.app as api_app_module
+
+    monkeypatch.delenv("GISARCHAGENT_SKIP_FETCHER_PROBE", raising=False)
+
+    monkeypatch.setattr(
+        api_app_module,
+        "_execute_fetch",
+        lambda **kwargs: {
+            "metadata": {
+                "status": "success",
+                "fetched_at": "2026-03-11T10:00:00+00:00",
+            },
+            "features": [{"attributes": {"pl_number": "101-0001"}}],
+        },
+    )
+
+    probe_payload = client.get("/api/data/fetcher-health?probe_limit=1&timeout_seconds=5").json()
+    health_payload = client.get("/api/health").json()
+    operations_payload = client.get("/api/operations/overview").json()
+    system_payload = client.get("/api/system/status").json()
+
+    assert probe_payload["status"] == "ready"
+    assert probe_payload["runtime_ready"] is True
+    assert probe_payload["last_probe_count"] == 1
+    assert health_payload["scraping"]["status"] == "ready"
+    assert operations_payload["scraper"]["runtime_ready"] is True
+    assert system_payload["scraping"]["status"] == "ready"
+
+
+def test_fetcher_health__timeout_probe_is_cached_with_detail(client, monkeypatch):
+    import src.api.app as api_app_module
+
+    monkeypatch.delenv("GISARCHAGENT_SKIP_FETCHER_PROBE", raising=False)
+
+    monkeypatch.setattr(
+        api_app_module,
+        "_execute_fetch",
+        lambda **kwargs: {
+            "metadata": {
+                "status": "timeout",
+                "error": "Scrape timed out before the provider returned data.",
+                "fetched_at": None,
+            },
+            "features": [],
+        },
+    )
+
+    probe_payload = client.get("/api/data/fetcher-health?probe_limit=1&timeout_seconds=5").json()
+    operations_payload = client.get("/api/operations/overview").json()
+
+    assert probe_payload["status"] == "timeout"
+    assert probe_payload["runtime_ready"] is False
+    assert "timed out" in probe_payload["detail"]
+    assert operations_payload["scraper"]["status"] == "timeout"
+    assert operations_payload["freshness"]["probe_detail"] == probe_payload["detail"]
+
+
+def test_live_plan_search__defaults_to_no_vision_and_returns_payload(client, monkeypatch):
+    import src.api.app as api_app_module
+
+    class _FakePlanSearchService:
+        def search_plans(self, query: PlanSearchQuery) -> PlanSearchResult:
+            assert query.include_vision_analysis is False
+            return PlanSearchResult(
+                plans=[
+                    AnalyzedPlan(
+                        plan=Plan(
+                            id="LIVE-101",
+                            name="Live Test Plan",
+                            location="Tel Aviv",
+                            region="Tel Aviv District",
+                            status=PlanStatus.APPROVED,
+                            zone_type=ZoneType.RESIDENTIAL,
+                            document_url="https://example.com/live-plan",
+                        )
+                    )
+                ],
+                query=query,
+                total_found=1,
+                execution_time_ms=12.5,
+            )
+
+    monkeypatch.setattr(
+        api_app_module.ctx.factory,
+        "get_plan_search_service",
+        lambda: _FakePlanSearchService(),
+    )
+
+    response = client.get("/api/plans/search?location=Tel+Aviv&max_results=1")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["query"]["include_vision_analysis"] is False
+    assert payload["total_found"] == 1
+    assert payload["plans"][0]["plan"]["id"] == "LIVE-101"
+
+
+def test_live_plan_search__timeout_returns_warning_payload(client, monkeypatch):
+    import src.api.app as api_app_module
+
+    class _SlowPlanSearchService:
+        def search_plans(self, query: PlanSearchQuery) -> PlanSearchResult:
+            time.sleep(0.05)
+            return PlanSearchResult(
+                plans=[],
+                query=query,
+                total_found=0,
+                execution_time_ms=50.0,
+            )
+
+    monkeypatch.setattr(api_app_module, "LIVE_PLAN_SEARCH_TIMEOUT_SECONDS", 0.01)
+    monkeypatch.setattr(
+        api_app_module.ctx.factory,
+        "get_plan_search_service",
+        lambda: _SlowPlanSearchService(),
+    )
+
+    response = client.get("/api/plans/search?location=Jerusalem&max_results=1")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["warning_code"] == "live_search_timeout"
+    assert "timed out" in payload["warning"]
+    assert payload["total_found"] == 0

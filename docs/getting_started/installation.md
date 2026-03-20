@@ -13,14 +13,16 @@
 
 What `setup.sh` does (repo-sourced):
 - creates `venv/`
-- installs dependencies from `requirements.txt`
-- creates `.env` if missing
+- installs Python dependencies from `requirements.txt` and `requirements-dev.txt`
+- installs frontend dependencies from `frontend/package-lock.json`
+- creates `.env` from `.env.example` if missing
 - prepares `data/` directories
-- attempts vector DB initialization
+- does not auto-build the vector DB
 
 ## Verify installation
 ```bash
 ./venv/bin/python -m pytest -m unit
+cd frontend && npm run build
 ```
 
 ## Optional dependency fix

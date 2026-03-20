@@ -110,7 +110,7 @@ def main(force, verbose, source):
         for status, count in sorted(stats["by_status"].items(), key=lambda x: x[1], reverse=True):
             print(f"    {status}: {count}")
     
-    print(f"\n✨ Data ready to use in the Streamlit app!")
+    print(f"\n✨ Data ready to use in the local GISArchAgent workspace!")
 
 
 if __name__ == "__main__":

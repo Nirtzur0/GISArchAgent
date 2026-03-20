@@ -97,14 +97,16 @@ class PlanSearchService:
 
             # Step 3: Build result
             execution_time = (datetime.now() - start_time).total_seconds() * 1000
+            deduped_reasons = sorted(set(degraded_reasons))
 
             result = PlanSearchResult(
                 plans=analyzed_plans,
                 query=query,
                 total_found=len(plans),
                 execution_time_ms=execution_time,
+                warning=self._build_warning_message(deduped_reasons),
+                warning_code=self._build_warning_code(deduped_reasons),
             )
-            deduped_reasons = sorted(set(degraded_reasons))
             emit_observability_event(
                 logger,
                 component="PlanSearchService",
@@ -311,6 +313,39 @@ class PlanSearchService:
         if not operation:
             operation = default_operation
         return [f"iplan_{operation}_failed"]
+
+    @staticmethod
+    def _build_warning_code(degraded_reasons: list[str]) -> Optional[str]:
+        if not degraded_reasons:
+            return None
+        if any(reason.startswith("iplan_") for reason in degraded_reasons):
+            return "live_search_unavailable"
+        if "vision_service_unavailable" in degraded_reasons:
+            return "vision_service_unavailable"
+        if "vision_analysis_unavailable" in degraded_reasons:
+            return "vision_analysis_unavailable"
+        return "live_search_degraded"
+
+    @staticmethod
+    def _build_warning_message(degraded_reasons: list[str]) -> Optional[str]:
+        if not degraded_reasons:
+            return None
+        if any(reason.startswith("iplan_") for reason in degraded_reasons):
+            return (
+                "Live iPlan search is currently degraded. Upstream requests failed, so "
+                "results may be empty or incomplete."
+            )
+        if "vision_service_unavailable" in degraded_reasons:
+            return (
+                "Vision analysis is unavailable for live results. Search results are still "
+                "returned without image analysis."
+            )
+        if "vision_analysis_unavailable" in degraded_reasons:
+            return (
+                "Some live plan images could not be analyzed. Search results are still "
+                "returned without vision details."
+            )
+        return "Live plan search is degraded. Results may be incomplete."
 
     def get_plan_by_id(self, plan_id: str) -> Optional[Plan]:
         """
