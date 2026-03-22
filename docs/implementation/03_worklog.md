@@ -1,5 +1,28 @@
 # Worklog
 
+## 2026-03-22
+- Executed bounded brand asset refresh packet.
+  - Why this packet: the maintained React shell still used a generic icon for the product mark, so the repo lacked a distinct logo despite having a stable product identity and public-facing README.
+  - Updated:
+    - `frontend/public/logo.svg`
+    - `frontend/public/favicon.svg`
+    - `frontend/index.html`
+    - `frontend/src/AppRedesign.tsx`
+    - `frontend/src/styles.redesign.css`
+    - `docs/implementation/00_status.md`
+    - `docs/implementation/03_worklog.md`
+  - Evidence:
+    - `python3 project-prompts/scripts/prompts_manifest.py --check`
+    - `python3 project-prompts/scripts/system_integrity.py --mode prompt_pack`
+    - `python3 project-prompts/scripts/prompt_router.py select --target-root . --phase auto --output docs/implementation/reports/prompt_execution_plan.md` -> blocked because the documented script path is missing from `project-prompts/scripts/`
+    - `xmllint --noout frontend/public/logo.svg frontend/public/favicon.svg`
+    - `cd frontend && npm run build`
+    - `qlmanage -t -s 512 -o output/review frontend/public/logo.svg`
+  - Result:
+    - the product now has a repo-owned logo asset with a cleaner Apple-adjacent visual language.
+    - the sidebar brand mark and browser icon now use the same mark instead of a placeholder Lucide glyph.
+    - the new mark was rendered locally once for a quick visual check before handoff.
+
 ## 2026-03-20
 - Executed bounded README refinement and product-shot packet.
   - Why this packet: the README was accurate but still read more like an internal engineering summary than a production front door, and it lacked real product evidence.

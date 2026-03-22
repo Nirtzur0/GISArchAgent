@@ -3,7 +3,6 @@ import {
   ArrowUpRight,
   ClipboardList,
   Database,
-  Layers3,
   Map as MapIcon,
   Radar,
 } from "lucide-react";
@@ -94,7 +93,7 @@ function AppRedesign() {
       <aside className="app-sidebar">
         <div className="brand-block">
           <div className="brand-mark">
-            <Layers3 size={20} />
+            <img src="/logo.svg" alt="" />
           </div>
           <div>
             <p className="eyebrow">Planning workspace</p>
